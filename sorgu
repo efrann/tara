@@ -2,8 +2,8 @@ SELECT
     f.name AS folder_name,
     s.name AS scan_name,
     sr.scan_run_id,
-    FROM_UNIXTIME(sr.scan_start) AS scan_start_time,
-    FROM_UNIXTIME(sr.scan_end) AS scan_end_time,
+    sr.scan_start,
+    sr.scan_end,
     sr.host_count,
     sr.critical_count,
     sr.high_count,
@@ -16,13 +16,7 @@ SELECT
     p.name AS vulnerability_name,
     p.severity,
     p.family AS plugin_family,
-    p.synopsis,
-    p.description,
-    p.solution,
-    p.cvss_base_score,
-    p.cvss3_base_score,
-    vo.port,
-    vo.output
+    vo.port
 FROM 
     folder f
 JOIN 
@@ -45,7 +39,5 @@ LEFT JOIN
     plugin p ON hv.plugin_id = p.plugin_id
 LEFT JOIN
     vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
-WHERE
-    p.plugin_id IS NOT NULL
 ORDER BY 
     f.name, s.name, sr.scan_start, h.host_ip, p.severity DESC, p.name;
