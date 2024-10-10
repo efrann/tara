@@ -1,3 +1,5 @@
+En güncel tarihli tarama ait full detaylı zafiyet listesi çekmek için:
+
 SELECT 
     f.name AS folder_name,
     s.name AS scan_name,
