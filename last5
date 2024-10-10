@@ -281,11 +281,8 @@ def insert_scan_run(scan_id, history_id):
 #Bu işlem, Nessus'taki tarama verilerinin veritabanında tam ve güncel bir kopyasını oluşturur, böylece bu verilere daha kolay erişilebilir ve analiz edilebilir.    
 
 def format_timestamp(timestamp):
-    if timestamp and timestamp != 'Bilinmiyor':
-        # Convert timestamp to datetime object
-        dt = datetime.fromtimestamp(int(timestamp))
-        # Format datetime as string
-        return dt.strftime("%d %b %Y, %H:%M:%S")
+    if timestamp:
+        return datetime.fromtimestamp(int(timestamp)).strftime("%d %b %Y, %H:%M:%S")
     return 'Bilinmiyor'
 
 def update_scans():
@@ -318,13 +315,18 @@ def update_scans():
 
         if scan_details['history'] != None:
             sorted_history = sorted(scan_details['history'], key=itemgetter('creation_date'), reverse=True)
+            
+            print("Tüm tarama geçmişi:")
+            for idx, history_item in enumerate(sorted_history):
+                print(f"  {idx + 1}. Tarih: {format_timestamp(history_item['creation_date'])}, ID: {history_item['history_id']}")
+            
             latest_scan = sorted_history[0]  # En güncel tarama
             other_scans = sorted_history[1:3]  # Sonraki 2 tarama
             scans_to_process = [latest_scan] + other_scans
-            print(f"  Bu tarama için {len(scans_to_process)} en güncel çalıştırma işlenecek.")
+            print(f"\nİşlenecek {len(scans_to_process)} en güncel çalıştırma:")
             
-            for scan_run in scans_to_process:
-                print(f"    Çalıştırma ID: {scan_run['history_id']}, Durum: {scan_run['status']}")
+            for idx, scan_run in enumerate(scans_to_process):
+                print(f"  {idx + 1}. Tarih: {format_timestamp(scan_run['creation_date'])}, ID: {scan_run['history_id']}, Durum: {scan_run['status']}")
                 
                 if scan_run['status'] == 'completed':
                     # Get detailed information about this scan run
