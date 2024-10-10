@@ -234,13 +234,16 @@ def update_scans():
     folders = get_folders()
     for folder in folders['folders']:
         print(f"Processing folder: {folder['name']}")
-        scans = get_scans(folder['id'])  # Her klasör için taramaları al
-        with connection.cursor() as cursor:
-            # Upsert scans
-            for scan in scans['scans']:
-                sql = "INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`)\
-                        VALUES (%s, %s, %s, %s)\
-                        ON DUPLICATE KEY UPDATE folder_id=%s, type=%s, name=%s"
+        scans = get_scans(folder['id'])
+        
+        for scan in scans['scans']:
+            print(f"Processing scan: {scan['name']}")
+            
+            # Taramayı veritabanına ekle veya güncelle
+            with connection.cursor() as cursor:
+                sql = """INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`)
+                         VALUES (%s, %s, %s, %s)
+                         ON DUPLICATE KEY UPDATE folder_id=%s, type=%s, name=%s"""
                 cursor.execute(sql, (
                     scan['id'], 
                     scan['folder_id'], 
@@ -249,33 +252,32 @@ def update_scans():
                     scan['folder_id'], 
                     scan['type'], 
                     scan['name']
-                    ))
-        
-        connection.commit()
-
-        # Her klasörden sadece ilk 5 taramayı işle
-        for scan in scans['scans'][:5]:
-            print(f"Processing scan: {scan['name']}")
+                ))
+            connection.commit()
             
-            # Retrieve details about the current scan
+            # Tarama detaylarını al
             scan_details = get_scan(scan['id'])
-
+            
             if scan_details['history'] is not None:
-                # Check each run of each scan
-                for scan_run in scan_details['history']:
-                    # Only import if scan finished completely
+                # Tarama geçmişini tersine çevir (en yeniden en eskiye)
+                sorted_history = sorted(scan_details['history'], key=lambda x: x['history_id'], reverse=True)
+                
+                # En güncel 5 tamamlanmış tarama sonucunu işle
+                processed_count = 0
+                for scan_run in sorted_history:
                     if scan_run['status'] == 'completed':
-                        
-                        result = None
                         with connection.cursor() as cursor:    
                             sql = "SELECT * FROM `scan_run` WHERE `scan_run_id` = %s"
                             cursor.execute(sql, (scan_run['history_id'],))
                             result = cursor.fetchone()
-
-                        # If scan run hasn't yet been inserted
+                        
                         if result is None:
                             print(f"Inserting scan run: {scan_run['history_id']}")
                             insert_scan_run(scan['id'], scan_run['history_id'])
+                            processed_count += 1
+                        
+                        if processed_count >= 5:
+                            break
     
 update_folders()
 update_scans()
