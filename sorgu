@@ -1,3 +1,12 @@
+WITH LatestScanRuns AS (
+    SELECT 
+        scan_id,
+        MAX(scan_start) as latest_scan_start
+    FROM 
+        scan_run
+    GROUP BY 
+        scan_id
+)
 SELECT 
     s.name AS scan_name,
     sr.scan_run_id,
@@ -13,15 +22,12 @@ SELECT
     h.host_fqdn,
     h.os
 FROM 
-    scan_run sr
+    scan s
 JOIN 
-    scan s ON sr.scan_id = s.scan_id
+    LatestScanRuns lsr ON s.scan_id = lsr.scan_id
+JOIN 
+    scan_run sr ON lsr.scan_id = sr.scan_id AND lsr.latest_scan_start = sr.scan_start
 LEFT JOIN 
     host h ON sr.scan_run_id = h.scan_run_id
-WHERE 
-    sr.scan_start = (
-        SELECT MAX(scan_start) 
-        FROM scan_run
-    )
 ORDER BY 
     s.name, h.host_ip;
