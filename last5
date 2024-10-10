@@ -5,6 +5,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import pymysql.cursors
 import os
 from datetime import datetime
+from operator import itemgetter
 
 # Disable SSL warnings
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -290,10 +291,14 @@ def format_timestamp(timestamp):
 def update_scans():
     scans = get_scans()
     print(f"Toplam {len(scans['scans'])} tarama bulundu.")
+    # Sort scans by last_modification_date in descending order and get the latest 3
+    sorted_scans = sorted(scans['scans'], key=itemgetter('last_modification_date'), reverse=True)[:3]
+    
+    print(f"En güncel 3 tarama işlenecek.")
     
     with connection.cursor() as cursor:
         # Upsert scans
-        for scan in scans['scans']:
+        for scan in sorted_scans:
             sql = "INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`)\
                     VALUES (%s, %s, %s, %s)\
                     ON DUPLICATE KEY UPDATE folder_id=%s, type=%s, name=%s"
@@ -310,7 +315,7 @@ def update_scans():
     connection.commit()
     print("Tarama bilgileri veritabanına kaydedildi.")
 
-    for scan in scans['scans']:
+    for scan in sorted_scans:
         print(f"\nİşleniyor: {scan['name']} (ID: {scan['id']})")
         
         # Retrieve details about the current scan
@@ -347,7 +352,7 @@ def update_scans():
         else:
             print("  Bu tarama için geçmiş çalıştırma bulunamadı.")
 
-    print("\nTüm taramalar işlendi.")
+    print("\nEn güncel 3 tarama işlendi.")
     
 update_folders()
 update_scans()
