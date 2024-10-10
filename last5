@@ -319,6 +319,12 @@ def update_scans():
                 
                 # Only import if scan finished completely
                 if scan_run['status'] == 'completed':
+                    # Get detailed information about this scan run
+                    scan_run_details = get_scan_run(scan['id'], scan_run['history_id'])
+                    host_start = scan_run_details['info'].get('scanner_start', 'Bilinmiyor')
+                    host_end = scan_run_details['info'].get('scanner_end', 'Bilinmiyor')
+                    print(f"    Host Başlangıç: {host_start}, Host Bitiş: {host_end}")
+                    
                     result = None
                     with connection.cursor() as cursor:    
                         sql = "SELECT * FROM `scan_run` WHERE `scan_run_id` = %s"
