@@ -1,0 +1,46 @@
+En güncel tarihli hangi taramada kaç zafiet bulunduğuna dair bilgi veren sql kodu.
+Zafiyet isimleri yok. Özet bilgi
+
+SELECT 
+    f.name AS folder_name,
+    s.name AS scan_name,
+    sr.scan_run_id,
+    FROM_UNIXTIME(sr.scan_start) AS scan_start_time,
+    FROM_UNIXTIME(sr.scan_end) AS scan_end_time,
+    sr.host_count,
+    sr.critical_count,
+    sr.high_count,
+    sr.medium_count,
+    sr.low_count,
+    sr.info_count,
+    h.host_ip,
+    h.host_fqdn,
+    p.name AS vulnerability_name,
+    p.severity,
+    p.description,
+    p.solution,
+    vo.port
+FROM 
+    folder f
+JOIN 
+    scan s ON f.folder_id = s.folder_id
+JOIN 
+    (SELECT 
+        scan_id, 
+        MAX(scan_start) AS latest_scan_start
+     FROM 
+        scan_run
+     GROUP BY 
+        scan_id) latest ON s.scan_id = latest.scan_id
+JOIN 
+    scan_run sr ON latest.scan_id = sr.scan_id AND latest.latest_scan_start = sr.scan_start
+LEFT JOIN
+    host h ON sr.scan_run_id = h.scan_run_id
+LEFT JOIN
+    host_vuln hv ON h.host_id = hv.nessus_host_id AND sr.scan_run_id = hv.scan_run_id
+LEFT JOIN
+    plugin p ON hv.plugin_id = p.plugin_id
+LEFT JOIN
+    vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
+ORDER BY 
+    f.name, s.name, sr.scan_start_time, h.host_ip, p.severity DESC, p.name;
