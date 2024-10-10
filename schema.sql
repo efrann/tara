@@ -26,8 +26,8 @@ DROP TABLE IF EXISTS `folder`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `folder` (
   `folder_id` INT NOT NULL,
-  `type` varchar(45) DEFAULT NULL,
-  `name` varchar(45) DEFAULT NULL,
+  `type` varchar(100) DEFAULT NULL,
+  `name` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`folder_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -102,11 +102,11 @@ CREATE TABLE `plugin` (
   `solution` longtext,
   `cvss_base_score` double DEFAULT NULL,
   `cvss3_base_score` double DEFAULT NULL,
-  `cvss_vector` varchar(45) DEFAULT NULL,
-  `cvss3_vector` varchar(45) DEFAULT NULL,
+  `cvss_vector` varchar(255) DEFAULT NULL,
+  `cvss3_vector` varchar(255) DEFAULT NULL,
   `ref` longtext,
-  `pub_date` varchar(45) DEFAULT NULL,
-  `mod_date` varchar(45) DEFAULT NULL,
+  `pub_date` varchar(100) DEFAULT NULL,
+  `mod_date` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`plugin_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -121,8 +121,8 @@ DROP TABLE IF EXISTS `scan`;
 CREATE TABLE `scan` (
   `scan_id` INT NOT NULL,
   `folder_id` INT DEFAULT NULL,
-  `type` varchar(45) DEFAULT NULL,
-  `name` varchar(45) DEFAULT NULL,
+  `type` varchar(100) DEFAULT NULL,
+  `name` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`scan_id`),
   KEY `fk_folder_id_idx` (`folder_id`),
   CONSTRAINT `fk_scan-folder` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`folder_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
