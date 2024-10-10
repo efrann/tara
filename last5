@@ -72,8 +72,18 @@ def get_plugin_output(scan_id, host_id, plugin_id, history_id):
     return request(PLUGIN_OUTPUT.format(scan_id=scan_id, host_id=host_id, plugin_id=plugin_id, history_id=history_id))
 
 # Nessus export functions
+#Nessustaki tüm klasörleri alır
+#Her klasör için döngü başlatır.
+# Klasör ID'si ve türü ve adını içeren SQL sorgusu çalıştırılır.
+# UPSERT işlemi yapar, yani klasör zaten varsa
 def update_folders():
+    print("Klasör güncelleme işlemi başlıyor...")
     folders = get_folders()
+    print(f"Toplam {len(folders['folders'])} klasör bulundu.")
+    
+    updated_count = 0
+    inserted_count = 0
+    
     with connection.cursor() as cursor:
         # Upsert folders
         for folder in folders['folders']:
@@ -81,7 +91,16 @@ def update_folders():
                     VALUES (%s, %s, %s)\
                     ON DUPLICATE KEY UPDATE type=%s, name=%s"
             cursor.execute(sql, (folder['id'], folder['type'], folder['name'], folder['type'], folder['name']))
+            
+            if cursor.rowcount == 1:
+                inserted_count += 1
+                print(f"Yeni klasör eklendi: ID={folder['id']}, Ad={folder['name']}")
+            elif cursor.rowcount == 2:
+                updated_count += 1
+                print(f"Klasör güncellendi: ID={folder['id']}, Ad={folder['name']}")
+    
     connection.commit()
+    print(f"Klasör güncelleme işlemi tamamlandı. {inserted_count} yeni klasör eklendi, {updated_count} klasör güncellendi.")
 
 def update_plugin(plugin, cursor):
     # Check existing plugin_id in plugin DB
