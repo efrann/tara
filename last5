@@ -232,11 +232,15 @@ def insert_scan_run(scan_id, history_id):
 
 def update_scans():
     folders = get_folders()
+    scans = get_scans()  # Tüm taramaları bir kere al
+    
     for folder in folders['folders']:
         print(f"Processing folder: {folder['name']}")
-        scans = get_scans(folder['id'])
         
-        for scan in scans['scans']:
+        # Bu klasöre ait taramaları filtrele
+        folder_scans = [scan for scan in scans['scans'] if scan['folder_id'] == folder['id']]
+        
+        for scan in folder_scans:
             print(f"Processing scan: {scan['name']}")
             
             # Taramayı veritabanına ekle veya güncelle
