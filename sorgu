@@ -1,0 +1,27 @@
+SELECT 
+    s.name AS scan_name,
+    sr.scan_run_id,
+    FROM_UNIXTIME(sr.scan_start) AS scan_start_time,
+    FROM_UNIXTIME(sr.scan_end) AS scan_end_time,
+    sr.host_count,
+    sr.critical_count,
+    sr.high_count,
+    sr.medium_count,
+    sr.low_count,
+    sr.info_count,
+    h.host_ip,
+    h.host_fqdn,
+    h.os
+FROM 
+    scan_run sr
+JOIN 
+    scan s ON sr.scan_id = s.scan_id
+LEFT JOIN 
+    host h ON sr.scan_run_id = h.scan_run_id
+WHERE 
+    sr.scan_start = (
+        SELECT MAX(scan_start) 
+        FROM scan_run
+    )
+ORDER BY 
+    s.name, h.host_ip;
