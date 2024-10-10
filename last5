@@ -73,19 +73,10 @@ def get_plugin_output(scan_id, host_id, plugin_id, history_id):
 
 # Nessus export functions
 def update_folders():
-    folders_response = get_folders()
-    
-    # Yanıtın yapısını kontrol et
-    if 'folders' not in folders_response:
-        print("Uyarı: 'folders' anahtarı API yanıtında bulunamadı.")
-        print("API yanıtı:", folders_response)
-        return  # Fonksiyondan çık
-
-    folders = folders_response['folders']
-    
+    folders = get_folders()
     with connection.cursor() as cursor:
         # Upsert folders
-        for folder in folders:
+        for folder in folders['folders']:
             sql = "INSERT INTO `folder` (`folder_id`, `type`, `name`)\
                     VALUES (%s, %s, %s)\
                     ON DUPLICATE KEY UPDATE type=%s, name=%s"
@@ -239,75 +230,53 @@ def insert_scan_run(scan_id, history_id):
 
     connection.commit()
 
-def get_latest_scans(limit=5):
-    scans = get_scans()
-    return sorted(scans['scans'], key=lambda x: x['last_modification_date'], reverse=True)[:limit]
-
 def update_scans():
+    scans = get_scans()
     with connection.cursor() as cursor:
-        # Get the number of existing scans in the database
-        cursor.execute("SELECT COUNT(*) as count FROM `scan`")
-        existing_scans_count = cursor.fetchone()['count']
-
-    if existing_scans_count == 0:
-        # First run: get latest 5 scans
-        latest_scans = get_latest_scans(5)
-    else:
-        # Subsequent runs: get only the latest scan
-        latest_scans = get_latest_scans(1)
-
-    with connection.cursor() as cursor:
-        for scan in latest_scans:
-            # Hata ayıklama için yazdırma
-            print("İşlenen tarama:", scan)
-            
-            # Gerekli alanların varlığını kontrol et
-            if 'id' not in scan or 'folder_id' not in scan or 'type' not in scan or 'name' not in scan or 'last_modification_date' not in scan:
-                print(f"Uyarı: Tarama {scan.get('id', 'Bilinmeyen ID')} için gerekli alanlar eksik. Bu tarama atlanıyor.")
-                continue
-
-            sql = "INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`, `last_modification_date`)\
-                    VALUES (%s, %s, %s, %s, %s)\
-                    ON DUPLICATE KEY UPDATE folder_id=%s, type=%s, name=%s, last_modification_date=%s"
-            try:
-                cursor.execute(sql, (
-                    scan['id'], 
-                    scan['folder_id'], 
-                    scan['type'], 
-                    scan['name'],
-                    scan['last_modification_date'],
-                    scan['folder_id'], 
-                    scan['type'], 
-                    scan['name'],
-                    scan['last_modification_date']
+        # Upsert scans
+        for scan in scans['scans']:
+            sql = "INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`)\
+                    VALUES (%s, %s, %s, %s)\
+                    ON DUPLICATE KEY UPDATE folder_id=%s, type=%s, name=%s"
+            cursor.execute(sql, (
+                scan['id'], 
+                scan['folder_id'], 
+                scan['type'], 
+                scan['name'], 
+                scan['folder_id'], 
+                scan['type'], 
+                scan['name']
                 ))
-            except Exception as e:
-                print(f"Hata: Tarama {scan['id']} eklenirken/güncellenirken bir hata oluştu: {str(e)}")
-                print("Tarama verisi:", scan)
-                continue
     
     connection.commit()
 
-    for scan in latest_scans:
-        print('Processing: ' + scan['name'])
+    # Sadece ilk 3 taramayı işle
+    for scan in scans['scans'][:3]:
+        print ('Processing: ' + scan['name'])
         
+        # Retreive details about the current scan
         scan_details = get_scan(scan['id'])
 
-        if scan_details['history'] is not None:
-            latest_run = max(scan_details['history'], key=lambda x: x['history_id'])
-            if latest_run['status'] == 'completed':
-                print('Inserting scan run: ' + str(latest_run['history_id']))
-                insert_scan_run(scan['id'], latest_run['history_id'])
+        if scan_details['history'] != None:
+            # Check each run of each scan
+            for scan_run in scan_details['history']:
+                # Only import if scan finished completely
+                if scan_run['status'] == 'completed':
+                    
+                    result = None
+                    with connection.cursor() as cursor:    
+                        sql = "SELECT * FROM `scan_run` WHERE `scan_run_id` = %s"
+                        cursor.execute(sql, (scan_run['history_id']))
+                        result = cursor.fetchone()
 
-    # Remove oldest scan if we have more than 5 scans
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT COUNT(*) as count FROM `scan`")
-        total_scans = cursor.fetchone()['count']
-        
-        if total_scans > 5:
-            cursor.execute("DELETE FROM `scan` WHERE `scan_id` = (SELECT `scan_id` FROM (SELECT `scan_id` FROM `scan` ORDER BY `last_modification_date` ASC LIMIT 1) as t)")
+                    # If scan run hasn't yet been inserted
+                    if result == None:
+                        print ('Inserting scan run: ' + str(scan_run['history_id']))
+                        insert_scan_run(scan['id'], scan_run['history_id'])
     
-    connection.commit()
-
 update_folders()
 update_scans()
+
+if __name__ == "__main__":
+    update_folders()
+    update_scans()
