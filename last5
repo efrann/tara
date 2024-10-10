@@ -312,7 +312,11 @@ def update_scans():
             print(f"  Bu tarama için {len(scan_details['history'])} geçmiş çalıştırma bulundu.")
             # Check each run of each scan
             for scan_run in scan_details['history']:
+                start_time = scan_run.get('start_time', 'Bilinmiyor')
+                end_time = scan_run.get('end_time', 'Bilinmiyor')
                 print(f"    Çalıştırma ID: {scan_run['history_id']}, Durum: {scan_run['status']}")
+                print(f"    Başlangıç: {start_time}, Bitiş: {end_time}")
+                
                 # Only import if scan finished completely
                 if scan_run['status'] == 'completed':
                     result = None
