@@ -9,7 +9,8 @@ SELECT
     sr.high_count,
     sr.medium_count,
     sr.low_count,
-    sr.info_count
+    sr.info_count,
+    GROUP_CONCAT(DISTINCT h.host_ip ORDER BY h.host_ip SEPARATOR ', ') AS host_ips
 FROM 
     folder f
 JOIN 
@@ -24,5 +25,10 @@ JOIN
         scan_id) latest ON s.scan_id = latest.scan_id
 JOIN 
     scan_run sr ON latest.scan_id = sr.scan_id AND latest.latest_scan_start = sr.scan_start
+LEFT JOIN
+    host h ON sr.scan_run_id = h.scan_run_id
+GROUP BY
+    f.name, s.name, sr.scan_run_id, sr.scan_start, sr.scan_end, sr.host_count,
+    sr.critical_count, sr.high_count, sr.medium_count, sr.low_count, sr.info_count
 ORDER BY 
     f.name, s.name;
