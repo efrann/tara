@@ -317,11 +317,13 @@ def update_scans():
         scan_details = get_scan(scan['id'])
 
         if scan_details['history'] != None:
-            # En güncel 3 tarama yerine en güncel 4 taramayı al
-            sorted_history = sorted(scan_details['history'], key=itemgetter('creation_date'), reverse=True)[:4]
-            print(f"  Bu tarama için {len(sorted_history)} en güncel çalıştırma işlenecek.")
+            sorted_history = sorted(scan_details['history'], key=itemgetter('creation_date'), reverse=True)
+            latest_scan = sorted_history[0]  # En güncel tarama
+            other_scans = sorted_history[1:3]  # Sonraki 2 tarama
+            scans_to_process = [latest_scan] + other_scans
+            print(f"  Bu tarama için {len(scans_to_process)} en güncel çalıştırma işlenecek.")
             
-            for scan_run in sorted_history:
+            for scan_run in scans_to_process:
                 print(f"    Çalıştırma ID: {scan_run['history_id']}, Durum: {scan_run['status']}")
                 
                 if scan_run['status'] == 'completed':
