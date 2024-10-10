@@ -254,8 +254,35 @@ def insert_scan_run(scan_id, history_id):
 
     connection.commit()
 
+#get_scans() fonksiyonu ile Nessus'tan tüm taramaları alır.
+
+#İlk döngüde, her tarama için veritabanında bir kayıt oluşturur veya günceller:
+#  Tarama ID'si, klasör ID'si, türü ve adı gibi bilgileri kaydeder.
+#  Eğer tarama zaten varsa, bilgilerini günceller (UPSERT işlemi).
+
+#Değişiklikleri veritabanına kaydeder (connection.commit()).
+
+#İkinci döngüde, her tarama için detaylı işlemler yapar:
+#  Her taramanın adını yazdırır.
+#  get_scan() fonksiyonu ile taramanın detaylarını alır.
+#  Taramanın geçmiş çalıştırmalarını kontrol eder.
+
+#Her tamamlanmış tarama çalıştırması için:
+    #Veritabanında bu çalıştırmanın kaydının olup olmadığını kontrol eder.
+    #Eğer kayıt yoksa, insert_scan_run() fonksiyonu ile yeni bir kayıt oluşturur.
+
+#Bu fonksiyon, Nessus'taki tüm taramaları ve bu taramaların geçmiş çalıştırmalarını veritabanına aktarır veya günceller. Bu sayede:
+    #Tüm taramaların güncel bir listesi veritabanında tutulur.
+    #Her taramanın tamamlanmış çalıştırmaları kaydedilir.
+    #Daha önce kaydedilmemiş tarama çalıştırmaları tespit edilip eklenir.
+    
+#Bu işlem, Nessus'taki tarama verilerinin veritabanında tam ve güncel bir kopyasını oluşturur, böylece bu verilere daha kolay erişilebilir ve analiz edilebilir.
+
+
 def update_scans():
     scans = get_scans()
+    print(f"Toplam {len(scans['scans'])} tarama bulundu.")
+    
     with connection.cursor() as cursor:
         # Upsert scans
         for scan in scans['scans']:
@@ -273,19 +300,21 @@ def update_scans():
                 ))
     
     connection.commit()
+    print("Tarama bilgileri veritabanına kaydedildi.")
 
     for scan in scans['scans']:
-        print ('Processing: ' + scan['name'])
+        print(f"\nİşleniyor: {scan['name']} (ID: {scan['id']})")
         
-        # Retreive details about the current scan
+        # Retrieve details about the current scan
         scan_details = get_scan(scan['id'])
 
         if scan_details['history'] != None:
+            print(f"  Bu tarama için {len(scan_details['history'])} geçmiş çalıştırma bulundu.")
             # Check each run of each scan
             for scan_run in scan_details['history']:
+                print(f"    Çalıştırma ID: {scan_run['history_id']}, Durum: {scan_run['status']}")
                 # Only import if scan finished completely
                 if scan_run['status'] == 'completed':
-                    
                     result = None
                     with connection.cursor() as cursor:    
                         sql = "SELECT * FROM `scan_run` WHERE `scan_run_id` = %s"
@@ -294,8 +323,16 @@ def update_scans():
 
                     # If scan run hasn't yet been inserted
                     if result == None:
-                        print ('Inserting scan run: ' + str(scan_run['history_id']))
+                        print(f"      Yeni çalıştırma ekleniyor: {scan_run['history_id']}")
                         insert_scan_run(scan['id'], scan_run['history_id'])
+                    else:
+                        print(f"      Çalıştırma zaten mevcut: {scan_run['history_id']}")
+                else:
+                    print(f"      Tamamlanmamış çalıştırma, atlanıyor: {scan_run['history_id']}")
+        else:
+            print("  Bu tarama için geçmiş çalıştırma bulunamadı.")
+
+    print("\nTüm taramalar işlendi.")
     
 update_folders()
 update_scans()
