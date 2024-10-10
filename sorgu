@@ -48,4 +48,4 @@ LEFT JOIN
 WHERE
     p.plugin_id IS NOT NULL
 ORDER BY 
-    f.name, s.name, sr.scan_start_time, h.host_ip, p.severity DESC, p.name;
+    f.name, s.name, sr.scan_start, h.host_ip, p.severity DESC, p.name;
