@@ -79,8 +79,13 @@ def get_plugin_output(scan_id, host_id, plugin_id, history_id):
 def update_folders():
     print("Klasör güncelleme işlemi başlıyor...")
     folders = get_folders()
-    print(f"Toplam {len(folders['folders'])} klasör bulundu.")
+    print(f"Toplam {len(folders['folders'])} klasör bulundu:")
     
+    # Klasör isimlerini yazdır
+    for folder in folders['folders']:
+        print(f"- {folder['name']} (ID: {folder['id']}, Tür: {folder['type']})")
+    
+    print("\nKlasör güncelleme detayları:")
     updated_count = 0
     inserted_count = 0
     
@@ -100,7 +105,7 @@ def update_folders():
                 print(f"Klasör güncellendi: ID={folder['id']}, Ad={folder['name']}")
     
     connection.commit()
-    print(f"Klasör güncelleme işlemi tamamlandı. {inserted_count} yeni klasör eklendi, {updated_count} klasör güncellendi.")
+    print(f"\nKlasör güncelleme işlemi tamamlandı. {inserted_count} yeni klasör eklendi, {updated_count} klasör güncellendi.")
 
 def update_plugin(plugin, cursor):
     # Check existing plugin_id in plugin DB
