@@ -299,5 +299,19 @@ def update_scans():
             if latest_run:
                 # Tarama çalıştırmasını kontrol et ve gerekirse ekle
                 cursor.execute("SELECT * FROM `scan_run` WHERE `scan_run_id` = %s", (latest_run['history_id'],))
-                if cursor.fetchone() is None:
-                    print(f"
+
+            if cursor.fetchone() is None:
+                                print(f"Inserting scan run: {latest_run['history_id']}")
+                                insert_scan_run(scan['id'], latest_run['history_id'])
+                    
+                    # Eğer REPORTS_TO_KEEP'ten fazla rapor varsa, en eski olanları sil
+                    while current_scan_count + len(scans_to_process) > REPORTS_TO_KEEP:
+                        cursor.execute("DELETE FROM scan_run WHERE scan_end = (SELECT MIN(scan_end) FROM (SELECT scan_end FROM scan_run) AS temp)")
+                        current_scan_count -= 1
+                
+                connection.commit()
+
+# Ana kod bloğu
+if __name__ == "__main__":
+    update_folders()
+    update_scans()
