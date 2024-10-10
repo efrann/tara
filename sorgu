@@ -12,11 +12,17 @@ SELECT
     sr.info_count,
     h.host_ip,
     h.host_fqdn,
+    p.plugin_id,
     p.name AS vulnerability_name,
     p.severity,
+    p.family AS plugin_family,
+    p.synopsis,
     p.description,
     p.solution,
-    vo.port
+    p.cvss_base_score,
+    p.cvss3_base_score,
+    vo.port,
+    vo.output
 FROM 
     folder f
 JOIN 
@@ -34,10 +40,12 @@ JOIN
 LEFT JOIN
     host h ON sr.scan_run_id = h.scan_run_id
 LEFT JOIN
-    host_vuln hv ON h.host_id = hv.nessus_host_id AND sr.scan_run_id = hv.scan_run_id
+    host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND sr.scan_run_id = hv.scan_run_id
 LEFT JOIN
     plugin p ON hv.plugin_id = p.plugin_id
 LEFT JOIN
     vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
+WHERE
+    p.plugin_id IS NOT NULL
 ORDER BY 
     f.name, s.name, sr.scan_start_time, h.host_ip, p.severity DESC, p.name;
