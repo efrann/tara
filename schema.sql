@@ -25,9 +25,9 @@ DROP TABLE IF EXISTS `folder`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `folder` (
-  `folder_id` int NOT NULL,
-  `type` varchar(100) DEFAULT NULL,
-  `name` varchar(255) DEFAULT NULL,
+  `folder_id` INT NOT NULL,
+  `type` varchar(45) DEFAULT NULL,
+  `name` varchar(45) DEFAULT NULL,
   PRIMARY KEY (`folder_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -40,20 +40,20 @@ DROP TABLE IF EXISTS `host`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `host` (
-  `host_id` int(11) NOT NULL AUTO_INCREMENT,
-  `nessus_host_id` int(11) DEFAULT NULL,
-  `scan_run_id` int(11) DEFAULT NULL,
-  `scan_id` int(11) DEFAULT NULL,
+  `host_id` INT NOT NULL AUTO_INCREMENT,
+  `nessus_host_id` INT DEFAULT NULL,
+  `scan_run_id` INT DEFAULT NULL,
+  `scan_id` INT DEFAULT NULL,
   `host_ip` varchar(45) DEFAULT NULL,
   `host_fqdn` varchar(255) DEFAULT NULL,
   `host_start` varchar(255) DEFAULT NULL,
   `host_end` varchar(255) DEFAULT NULL,
   `os` longtext,
-  `critical_count` int(11) DEFAULT NULL,
-  `high_count` int(11) DEFAULT NULL,
-  `medium_count` int(11) DEFAULT NULL,
-  `low_count` int(11) DEFAULT NULL,
-  `info_count` int(11) DEFAULT NULL,
+  `critical_count` INT DEFAULT NULL,
+  `high_count` INT DEFAULT NULL,
+  `medium_count` INT DEFAULT NULL,
+  `low_count` INT DEFAULT NULL,
+  `info_count` INT DEFAULT NULL,
   PRIMARY KEY (`host_id`),
   KEY `fk_host_scan_id_idx` (`scan_id`),
   KEY `fk_host_scan_run_id_idx` (`scan_run_id`),
@@ -71,10 +71,10 @@ DROP TABLE IF EXISTS `host_vuln`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `host_vuln` (
-  `host_vuln_id` int(11) NOT NULL AUTO_INCREMENT,
-  `nessus_host_id` int(11) DEFAULT NULL,
-  `scan_run_id` int(11) DEFAULT NULL,
-  `plugin_id` int(11) DEFAULT NULL,
+  `host_vuln_id` INT NOT NULL AUTO_INCREMENT,
+  `nessus_host_id` INT DEFAULT NULL,
+  `scan_run_id` INT DEFAULT NULL,
+  `plugin_id` INT DEFAULT NULL,
   PRIMARY KEY (`host_vuln_id`),
   KEY `fk_host_scan_run_id_idx` (`scan_run_id`),
   KEY `fk_host_vuln-host_idx` (`nessus_host_id`),
@@ -93,8 +93,8 @@ DROP TABLE IF EXISTS `plugin`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `plugin` (
-  `plugin_id` int(11) NOT NULL,
-  `severity` int(11) DEFAULT NULL,
+  `plugin_id` INT NOT NULL,
+  `severity` INT DEFAULT NULL,
   `name` longtext,
   `family` longtext,
   `synopsis` longtext,
@@ -119,11 +119,10 @@ DROP TABLE IF EXISTS `scan`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `scan` (
-  `scan_id` int NOT NULL,
-  `folder_id` int DEFAULT NULL,
-  `type` varchar(100) DEFAULT NULL,
-  `name` varchar(255) DEFAULT NULL,
-  `last_modification_date` int DEFAULT NULL,
+  `scan_id` INT NOT NULL,
+  `folder_id` INT DEFAULT NULL,
+  `type` varchar(45) DEFAULT NULL,
+  `name` varchar(45) DEFAULT NULL,
   PRIMARY KEY (`scan_id`),
   KEY `fk_folder_id_idx` (`folder_id`),
   CONSTRAINT `fk_scan-folder` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`folder_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -138,17 +137,17 @@ DROP TABLE IF EXISTS `scan_run`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `scan_run` (
-  `scan_run_id` int(11) NOT NULL,
-  `scan_id` int(11) DEFAULT NULL,
-  `scan_start` int(11) DEFAULT NULL,
-  `scan_end` int(11) DEFAULT NULL,
+  `scan_run_id` INT NOT NULL,
+  `scan_id` INT DEFAULT NULL,
+  `scan_start` INT DEFAULT NULL,
+  `scan_end` INT DEFAULT NULL,
   `targets` longtext,
-  `host_count` int(11) DEFAULT NULL,
-  `critical_count` int(11) DEFAULT NULL,
-  `high_count` int(11) DEFAULT NULL,
-  `medium_count` int(11) DEFAULT NULL,
-  `low_count` int(11) DEFAULT NULL,
-  `info_count` int(11) DEFAULT NULL,
+  `host_count` INT DEFAULT NULL,
+  `critical_count` INT DEFAULT NULL,
+  `high_count` INT DEFAULT NULL,
+  `medium_count` INT DEFAULT NULL,
+  `low_count` INT DEFAULT NULL,
+  `info_count` INT DEFAULT NULL,
   PRIMARY KEY (`scan_run_id`),
   KEY `fk_scan_id_idx` (`scan_id`),
   CONSTRAINT `fk_scan_run-scan` FOREIGN KEY (`scan_id`) REFERENCES `scan` (`scan_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -163,8 +162,8 @@ DROP TABLE IF EXISTS `vuln_output`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `vuln_output` (
-  `vuln_output_id` int(11) NOT NULL AUTO_INCREMENT,
-  `host_vuln_id` int(11) DEFAULT NULL,
+  `vuln_output_id` INT NOT NULL AUTO_INCREMENT,
+  `host_vuln_id` INT DEFAULT NULL,
   `port` varchar(45) DEFAULT NULL,
   `output` longtext,
   PRIMARY KEY (`vuln_output_id`),
