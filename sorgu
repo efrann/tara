@@ -1,13 +1,5 @@
-WITH LatestScanRuns AS (
-    SELECT 
-        scan_id,
-        MAX(scan_start) as latest_scan_start
-    FROM 
-        scan_run
-    GROUP BY 
-        scan_id
-)
 SELECT 
+    f.name AS folder_name,
     s.name AS scan_name,
     sr.scan_run_id,
     FROM_UNIXTIME(sr.scan_start) AS scan_start_time,
@@ -17,17 +9,20 @@ SELECT
     sr.high_count,
     sr.medium_count,
     sr.low_count,
-    sr.info_count,
-    h.host_ip,
-    h.host_fqdn,
-    h.os
+    sr.info_count
 FROM 
-    scan s
+    folder f
 JOIN 
-    LatestScanRuns lsr ON s.scan_id = lsr.scan_id
+    scan s ON f.folder_id = s.folder_id
 JOIN 
-    scan_run sr ON lsr.scan_id = sr.scan_id AND lsr.latest_scan_start = sr.scan_start
-LEFT JOIN 
-    host h ON sr.scan_run_id = h.scan_run_id
+    (SELECT 
+        scan_id, 
+        MAX(scan_start) AS latest_scan_start
+     FROM 
+        scan_run
+     GROUP BY 
+        scan_id) latest ON s.scan_id = latest.scan_id
+JOIN 
+    scan_run sr ON latest.scan_id = sr.scan_id AND latest.latest_scan_start = sr.scan_start
 ORDER BY 
-    s.name, h.host_ip;
+    f.name, s.name;
