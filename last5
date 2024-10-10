@@ -4,13 +4,9 @@ import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import pymysql.cursors
 import os
-from datetime import datetime
 
 # Disable SSL warnings
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-
-# Sabit değer olarak tutulacak rapor sayısını tanımlayalım
-REPORTS_TO_KEEP = 5
 
 # Read configuration
 config = configparser.ConfigParser()
@@ -50,9 +46,6 @@ connection = pymysql.connect(host=db_hostname,
                              autocommit=False)
 
 # ---Functions---
-def truncate_string(string, max_length=255):
-    return string[:max_length] if string else None
-
 # Nessus API functions
 def request(url):
     url = base + url
@@ -78,19 +71,6 @@ def get_host_vuln(scan_id, host_id, history_id):
 def get_plugin_output(scan_id, host_id, plugin_id, history_id):
     return request(PLUGIN_OUTPUT.format(scan_id=scan_id, host_id=host_id, plugin_id=plugin_id, history_id=history_id))
 
-def get_latest_scans(limit=None):
-    scans = get_scans()
-    sorted_scans = sorted(scans['scans'], key=lambda x: x['last_modification_date'], reverse=True)
-    return sorted_scans[:limit] if limit else sorted_scans
-
-def get_latest_scan_run(scan_id):
-    scan_details = get_scan(scan_id)
-    if scan_details['history']:
-        latest_run = max(scan_details['history'], key=lambda x: x['creation_date'])
-        if latest_run['status'] == 'completed':
-            return latest_run
-    return None
-
 # Nessus export functions
 def update_folders():
     folders = get_folders()
@@ -100,13 +80,7 @@ def update_folders():
             sql = "INSERT INTO `folder` (`folder_id`, `type`, `name`)\
                     VALUES (%s, %s, %s)\
                     ON DUPLICATE KEY UPDATE type=%s, name=%s"
-            cursor.execute(sql, (
-                folder['id'], 
-                truncate_string(folder['type'], 45),
-                truncate_string(folder['name'], 255),
-                truncate_string(folder['type'], 45),
-                truncate_string(folder['name'], 255)
-            ))
+            cursor.execute(sql, (folder['id'], folder['type'], folder['name'], folder['type'], folder['name']))
     connection.commit()
 
 def update_plugin(plugin, cursor):
@@ -213,12 +187,12 @@ def insert_host(scan_id, host_id, history_id, cursor):
         history_id, 
         scan_id, 
         host['info']['host-ip'], 
-        truncate_string(host['info'].get('host-fqdn', None)), 
-        truncate_string(host['info'].get('host_start', None)), 
-        truncate_string(host['info'].get('host_end', None)), 
+        host['info'].get('host-fqdn', None), 
+        host['info'].get('host_start', None), 
+        host['info'].get('host_end', None), 
         host['info'].get('operating-system', None),
         sev_count[4], sev_count[3], sev_count[2], sev_count[1], sev_count[0]
-    ))
+        ))
 
     # Insert host vulnerabilities
     for vuln in host['vulnerabilities']:
@@ -248,7 +222,7 @@ def insert_scan_run(scan_id, history_id):
             scan_run['info']['targets'], 
             scan_run['info']['hostcount'],
             sev_count[4], sev_count[3], sev_count[2], sev_count[1], sev_count[0]
-        ))
+            ))
         
         # Insert hosts in scan run
         for host in scan_run['hosts']:
@@ -256,62 +230,62 @@ def insert_scan_run(scan_id, history_id):
 
     connection.commit()
 
+def get_latest_scans(limit=5):
+    scans = get_scans()
+    return sorted(scans['scans'], key=lambda x: x['last_modification_date'], reverse=True)[:limit]
+
 def update_scans():
     with connection.cursor() as cursor:
-        # Veritabanındaki en yeni tarama tarihini al
-        cursor.execute("SELECT MAX(scan_end) FROM scan_run")
-        newest_processed_date = cursor.fetchone()['MAX(scan_end)']
-        
-        # Veritabanındaki tarama sayısını al
-        cursor.execute("SELECT COUNT(*) FROM scan_run")
-        current_scan_count = cursor.fetchone()['COUNT(*)']
-        
-        if newest_processed_date is None or current_scan_count < REPORTS_TO_KEEP:
-            # İlk çalıştırma veya REPORTS_TO_KEEP'ten az rapor varsa
-            scans_to_process = get_latest_scans(REPORTS_TO_KEEP - current_scan_count)
-        else:
-            # Sonraki çalıştırmalar
-            all_scans = get_latest_scans()
-            scans_to_process = [scan for scan in all_scans if scan['last_modification_date'] > newest_processed_date]
-        
-        if not scans_to_process:
-            print("No new reports to process.")
-            return
-        
-        for scan in scans_to_process:
-            print(f"Processing: {scan['name']}")
-            
-            # Taramayı veritabanına ekle veya güncelle
-            sql = "INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`)\
-                    VALUES (%s, %s, %s, %s)\
-                    ON DUPLICATE KEY UPDATE folder_id=%s, type=%s, name=%s"
+        # Get the number of existing scans in the database
+        cursor.execute("SELECT COUNT(*) as count FROM `scan`")
+        existing_scans_count = cursor.fetchone()['count']
+
+    if existing_scans_count == 0:
+        # First run: get latest 5 scans
+        latest_scans = get_latest_scans(5)
+    else:
+        # Subsequent runs: get only the latest scan
+        latest_scans = get_latest_scans(1)
+
+    with connection.cursor() as cursor:
+        for scan in latest_scans:
+            sql = "INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`, `last_modification_date`)\
+                    VALUES (%s, %s, %s, %s, %s)\
+                    ON DUPLICATE KEY UPDATE folder_id=%s, type=%s, name=%s, last_modification_date=%s"
             cursor.execute(sql, (
                 scan['id'], 
                 scan['folder_id'], 
-                truncate_string(scan['type'], 45),
-                truncate_string(scan['name'], 255),
+                scan['type'], 
+                scan['name'],
+                scan['last_modification_date'],
                 scan['folder_id'], 
-                truncate_string(scan['type'], 45),
-                truncate_string(scan['name'], 255)
+                scan['type'], 
+                scan['name'],
+                scan['last_modification_date']
             ))
-            
-            latest_run = get_latest_scan_run(scan['id'])
-            if latest_run:
-                # Tarama çalıştırmasını kontrol et ve gerekirse ekle
-                cursor.execute("SELECT * FROM `scan_run` WHERE `scan_run_id` = %s", (latest_run['history_id'],))
+    
+    connection.commit()
 
-            if cursor.fetchone() is None:
-                                print(f"Inserting scan run: {latest_run['history_id']}")
-                                insert_scan_run(scan['id'], latest_run['history_id'])
-                    
-                    # Eğer REPORTS_TO_KEEP'ten fazla rapor varsa, en eski olanları sil
-                    while current_scan_count + len(scans_to_process) > REPORTS_TO_KEEP:
-                        cursor.execute("DELETE FROM scan_run WHERE scan_end = (SELECT MIN(scan_end) FROM (SELECT scan_end FROM scan_run) AS temp)")
-                        current_scan_count -= 1
-                
-                connection.commit()
+    for scan in latest_scans:
+        print('Processing: ' + scan['name'])
+        
+        scan_details = get_scan(scan['id'])
 
-# Ana kod bloğu
-if __name__ == "__main__":
-    update_folders()
-    update_scans()
+        if scan_details['history'] is not None:
+            latest_run = max(scan_details['history'], key=lambda x: x['history_id'])
+            if latest_run['status'] == 'completed':
+                print('Inserting scan run: ' + str(latest_run['history_id']))
+                insert_scan_run(scan['id'], latest_run['history_id'])
+
+    # Remove oldest scan if we have more than 5 scans
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) as count FROM `scan`")
+        total_scans = cursor.fetchone()['count']
+        
+        if total_scans > 5:
+            cursor.execute("DELETE FROM `scan` WHERE `scan_id` = (SELECT `scan_id` FROM (SELECT `scan_id` FROM `scan` ORDER BY `last_modification_date` ASC LIMIT 1) as t)")
+    
+    connection.commit()
+
+update_folders()
+update_scans()
