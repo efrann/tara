@@ -4,6 +4,7 @@ import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import pymysql.cursors
 import os
+from datetime import datetime
 
 # Disable SSL warnings
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -276,8 +277,15 @@ def insert_scan_run(scan_id, history_id):
     #Her taramanın tamamlanmış çalıştırmaları kaydedilir.
     #Daha önce kaydedilmemiş tarama çalıştırmaları tespit edilip eklenir.
     
-#Bu işlem, Nessus'taki tarama verilerinin veritabanında tam ve güncel bir kopyasını oluşturur, böylece bu verilere daha kolay erişilebilir ve analiz edilebilir.
+#Bu işlem, Nessus'taki tarama verilerinin veritabanında tam ve güncel bir kopyasını oluşturur, böylece bu verilere daha kolay erişilebilir ve analiz edilebilir.    
 
+def format_timestamp(timestamp):
+    if timestamp and timestamp != 'Bilinmiyor':
+        # Convert timestamp to datetime object
+        dt = datetime.fromtimestamp(int(timestamp))
+        # Format datetime as string
+        return dt.strftime("%d %b %Y, %H:%M:%S")
+    return 'Bilinmiyor'
 
 def update_scans():
     scans = get_scans()
@@ -312,8 +320,8 @@ def update_scans():
             print(f"  Bu tarama için {len(scan_details['history'])} geçmiş çalıştırma bulundu.")
             # Check each run of each scan
             for scan_run in scan_details['history']:
-                start_time = scan_run.get('start_time', 'Bilinmiyor')
-                end_time = scan_run.get('end_time', 'Bilinmiyor')
+                start_time = format_timestamp(scan_run.get('start_time'))
+                end_time = format_timestamp(scan_run.get('end_time'))
                 print(f"    Çalıştırma ID: {scan_run['history_id']}, Durum: {scan_run['status']}")
                 print(f"    Başlangıç: {start_time}, Bitiş: {end_time}")
                 
@@ -321,8 +329,8 @@ def update_scans():
                 if scan_run['status'] == 'completed':
                     # Get detailed information about this scan run
                     scan_run_details = get_scan_run(scan['id'], scan_run['history_id'])
-                    host_start = scan_run_details['info'].get('scanner_start', 'Bilinmiyor')
-                    host_end = scan_run_details['info'].get('scanner_end', 'Bilinmiyor')
+                    host_start = format_timestamp(scan_run_details['info'].get('scanner_start'))
+                    host_end = format_timestamp(scan_run_details['info'].get('scanner_end'))
                     print(f"    Host Başlangıç: {host_start}, Host Bitiş: {host_end}")
                     
                     result = None
