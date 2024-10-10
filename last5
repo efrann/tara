@@ -73,10 +73,19 @@ def get_plugin_output(scan_id, host_id, plugin_id, history_id):
 
 # Nessus export functions
 def update_folders():
-    folders = get_folders()
+    folders_response = get_folders()
+    
+    # Yanıtın yapısını kontrol et
+    if 'folders' not in folders_response:
+        print("Uyarı: 'folders' anahtarı API yanıtında bulunamadı.")
+        print("API yanıtı:", folders_response)
+        return  # Fonksiyondan çık
+
+    folders = folders_response['folders']
+    
     with connection.cursor() as cursor:
         # Upsert folders
-        for folder in folders['folders']:
+        for folder in folders:
             sql = "INSERT INTO `folder` (`folder_id`, `type`, `name`)\
                     VALUES (%s, %s, %s)\
                     ON DUPLICATE KEY UPDATE type=%s, name=%s"
