@@ -288,17 +288,18 @@ def format_timestamp(timestamp):
         return dt.strftime("%d %b %Y, %H:%M:%S")
     return 'Bilinmiyor'
 
+def get_latest_scans(limit=3):
+    all_scans = get_scans()
+    sorted_scans = sorted(all_scans['scans'], key=itemgetter('last_modification_date'), reverse=True)
+    return sorted_scans[:limit]
+
 def update_scans():
-    scans = get_scans()
-    print(f"Toplam {len(scans['scans'])} tarama bulundu.")
-    # Sort scans by last_modification_date in descending order and get the latest 3
-    sorted_scans = sorted(scans['scans'], key=itemgetter('last_modification_date'), reverse=True)[:3]
-    
-    print(f"En güncel 3 tarama işlenecek.")
+    latest_scans = get_latest_scans(3)
+    print(f"En güncel {len(latest_scans)} tarama işlenecek.")
     
     with connection.cursor() as cursor:
         # Upsert scans
-        for scan in sorted_scans:
+        for scan in latest_scans:
             sql = "INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`)\
                     VALUES (%s, %s, %s, %s)\
                     ON DUPLICATE KEY UPDATE folder_id=%s, type=%s, name=%s"
@@ -315,7 +316,7 @@ def update_scans():
     connection.commit()
     print("Tarama bilgileri veritabanına kaydedildi.")
 
-    for scan in sorted_scans:
+    for scan in latest_scans:
         print(f"\nİşleniyor: {scan['name']} (ID: {scan['id']})")
         
         # Retrieve details about the current scan
