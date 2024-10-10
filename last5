@@ -258,20 +258,33 @@ def update_scans():
 
     with connection.cursor() as cursor:
         for scan in latest_scans:
+            # Hata ayıklama için yazdırma
+            print("İşlenen tarama:", scan)
+            
+            # Gerekli alanların varlığını kontrol et
+            if 'id' not in scan or 'folder_id' not in scan or 'type' not in scan or 'name' not in scan or 'last_modification_date' not in scan:
+                print(f"Uyarı: Tarama {scan.get('id', 'Bilinmeyen ID')} için gerekli alanlar eksik. Bu tarama atlanıyor.")
+                continue
+
             sql = "INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`, `last_modification_date`)\
                     VALUES (%s, %s, %s, %s, %s)\
                     ON DUPLICATE KEY UPDATE folder_id=%s, type=%s, name=%s, last_modification_date=%s"
-            cursor.execute(sql, (
-                scan['id'], 
-                scan['folder_id'], 
-                scan['type'], 
-                scan['name'],
-                scan['last_modification_date'],
-                scan['folder_id'], 
-                scan['type'], 
-                scan['name'],
-                scan['last_modification_date']
-            ))
+            try:
+                cursor.execute(sql, (
+                    scan['id'], 
+                    scan['folder_id'], 
+                    scan['type'], 
+                    scan['name'],
+                    scan['last_modification_date'],
+                    scan['folder_id'], 
+                    scan['type'], 
+                    scan['name'],
+                    scan['last_modification_date']
+                ))
+            except Exception as e:
+                print(f"Hata: Tarama {scan['id']} eklenirken/güncellenirken bir hata oluştu: {str(e)}")
+                print("Tarama verisi:", scan)
+                continue
     
     connection.commit()
 
