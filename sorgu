@@ -3,41 +3,12 @@ SELECT
     s.name AS scan_name,
     sr.scan_run_id,
     sr.scan_start,
-    sr.scan_end,
-    sr.host_count,
-    sr.critical_count,
-    sr.high_count,
-    sr.medium_count,
-    sr.low_count,
-    sr.info_count,
-    h.host_ip,
-    h.host_fqdn,
-    p.plugin_id,
-    p.name AS vulnerability_name,
-    p.severity,
-    p.family AS plugin_family,
-    vo.port
+    sr.scan_end
 FROM 
     folder f
 JOIN 
     scan s ON f.folder_id = s.folder_id
 JOIN 
-    (SELECT 
-        scan_id, 
-        MAX(scan_start) AS latest_scan_start
-     FROM 
-        scan_run
-     GROUP BY 
-        scan_id) latest ON s.scan_id = latest.scan_id
-JOIN 
-    scan_run sr ON latest.scan_id = sr.scan_id AND latest.latest_scan_start = sr.scan_start
-LEFT JOIN
-    host h ON sr.scan_run_id = h.scan_run_id
-LEFT JOIN
-    host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND sr.scan_run_id = hv.scan_run_id
-LEFT JOIN
-    plugin p ON hv.plugin_id = p.plugin_id
-LEFT JOIN
-    vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
+    scan_run sr ON s.scan_id = sr.scan_id
 ORDER BY 
-    f.name, s.name, sr.scan_start, h.host_ip, p.severity DESC, p.name;
+    f.name, s.name, sr.scan_start;
