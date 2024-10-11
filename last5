@@ -189,8 +189,12 @@ def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
             output = plugin_output['outputs'][0]
             print(f"Output: {output}")
             if isinstance(output, dict):
-                if 'ports' in output and output['ports']:
-                    port = output['ports'][0]
+                if 'ports' in output:
+                    ports = output['ports']
+                    if isinstance(ports, dict):
+                        port = list(ports.keys())[0] if ports else None
+                    elif isinstance(ports, list):
+                        port = ports[0] if ports else None
                 plugin_output_text = output.get('plugin_output', '')
             else:
                 print(f"Beklenmeyen output türü: {type(output)}")
