@@ -158,6 +158,8 @@ def update_plugin(plugin, cursor):
         ))
 
 def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
+    print(f"insert_host_vuln çağrıldı: scan_id={scan_id}, host_id={host_id}, plugin_id={plugin_id}, history_id={history_id}")
+    
     sql = "SELECT `host_vuln_id` FROM `host_vuln` WHERE `nessus_host_id` = %s AND `scan_run_id` = %s AND `plugin_id` = %s"
     cursor.execute(sql, (host_id, history_id, plugin_id))
     result = cursor.fetchone()
@@ -175,6 +177,7 @@ def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
         host_vuln_id = cursor.lastrowid
 
         plugin_output = get_plugin_output(scan_id, host_id, plugin_id, history_id)
+        print(f"Plugin output: {plugin_output}")
 
         sql = "INSERT INTO `vuln_output` (`host_vuln_id`, `port`, `output`)\
         VALUES (%s, %s, %s)"
@@ -182,17 +185,27 @@ def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
         port = None
         plugin_output_text = ''
 
-        if 'outputs' in plugin_output and plugin_output['outputs']:
+        if isinstance(plugin_output, dict) and 'outputs' in plugin_output and plugin_output['outputs']:
             output = plugin_output['outputs'][0]
-            if 'ports' in output and output['ports']:
-                port = output['ports'][0]
-            plugin_output_text = output.get('plugin_output', '')
+            print(f"Output: {output}")
+            if isinstance(output, dict):
+                if 'ports' in output and output['ports']:
+                    port = output['ports'][0]
+                plugin_output_text = output.get('plugin_output', '')
+            else:
+                print(f"Beklenmeyen output türü: {type(output)}")
+        else:
+            print(f"Beklenmeyen plugin_output yapısı: {type(plugin_output)}")
+
+        print(f"Port: {port}, Plugin output text: {plugin_output_text}")
 
         cursor.execute(sql, (
         host_vuln_id,
         port,
         plugin_output_text
         ))
+    else:
+        print("Host vuln zaten mevcut, atlanıyor.")
 
 def insert_host(scan_id, host_id, history_id, cursor):
     host = get_host_vuln(scan_id, host_id, history_id)
@@ -227,11 +240,16 @@ def insert_host(scan_id, host_id, history_id, cursor):
 
 def insert_scan_run(scan_id, history_id):
     try:
+        print(f"insert_scan_run çağrıldı: scan_id={scan_id}, history_id={history_id}")
         scan_run = get_scan_run(scan_id, history_id)
+        print(f"Scan run bilgileri alındı: {scan_run}")
 
         sev_count = [0] * 5
-        for vuln in scan_run['vulnerabilities']:
-            sev_count[vuln['severity']] += vuln['count']
+        if 'vulnerabilities' in scan_run:
+            for vuln in scan_run['vulnerabilities']:
+                sev_count[vuln['severity']] += vuln['count']
+        else:
+            print("Uyarı: scan_run'da 'vulnerabilities' anahtarı bulunamadı")
 
         with connection.cursor() as cursor:
             sql = "INSERT INTO `scan_run` (`scan_run_id`, `scan_id`, `scan_start`,`scan_end`, `targets`, `host_count`,\
@@ -251,10 +269,12 @@ def insert_scan_run(scan_id, history_id):
                 sev_count[4], sev_count[3], sev_count[2], sev_count[1], sev_count[0]
                 ))
             
-            for host in scan_run['hosts']:
+            for host in scan_run.get('hosts', []):
+                print(f"Host işleniyor: {host}")
                 insert_host(scan_id, host['host_id'], history_id, cursor)
 
         connection.commit()
+        print("Scan run başarıyla eklendi")
     except Exception as e:
         print(f"Hata oluştu: {e}")
         print(f"Scan ID: {scan_id}, History ID: {history_id}")
