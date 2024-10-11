@@ -179,13 +179,14 @@ def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
         sql = "INSERT INTO `vuln_output` (`host_vuln_id`, `port`, `output`)\
         VALUES (%s, %s, %s)"
 
+        port = None
+        plugin_output_text = ''
+
         if 'outputs' in plugin_output and plugin_output['outputs']:
             output = plugin_output['outputs'][0]
-            port = output.get('ports', [None])[0]
+            if 'ports' in output and output['ports']:
+                port = output['ports'][0]
             plugin_output_text = output.get('plugin_output', '')
-        else:
-            port = None
-            plugin_output_text = ''
 
         cursor.execute(sql, (
         host_vuln_id,
