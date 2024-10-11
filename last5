@@ -73,17 +73,11 @@ def get_host_vuln(scan_id, host_id, history_id):
 def get_plugin_output(scan_id, host_id, plugin_id, history_id):
     return request(PLUGIN_OUTPUT.format(scan_id=scan_id, host_id=host_id, plugin_id=plugin_id, history_id=history_id))
 
-# Nessus export functions
-#Nessustaki tüm klasörleri alır
-#Her klasör için döngü başlatır.
-# Klasör ID'si ve türü ve adını içeren SQL sorgusu çalıştırılır.
-# UPSERT işlemi yapar, yani klasör zaten varsa
 def update_folders():
     print("Klasör güncelleme işlemi başlıyor...")
     folders = get_folders()
     print(f"Toplam {len(folders['folders'])} klasör bulundu:")
     
-    # Klasör isimlerini yazdır
     for folder in folders['folders']:
         print(f"- {folder['name']} (ID: {folder['id']}, Tür: {folder['type']})")
     
@@ -92,7 +86,6 @@ def update_folders():
     inserted_count = 0
     
     with connection.cursor() as cursor:
-        # Upsert folders
         for folder in folders['folders']:
             sql = "INSERT INTO `folder` (`folder_id`, `type`, `name`)\
                     VALUES (%s, %s, %s)\
@@ -110,19 +103,16 @@ def update_folders():
     print(f"\nKlasör güncelleme işlemi tamamlandı. {inserted_count} yeni klasör eklendi, {updated_count} klasör güncellendi.")
 
 def update_plugin(plugin, cursor):
-    # Check existing plugin_id in plugin DB
     sql = "SELECT `plugin_id`, `mod_date` FROM `plugin` WHERE `plugin_id` = %s"
     cursor.execute(sql, (plugin['pluginid']))
     result = cursor.fetchone()
 
-    # Split references array into string delimited by new line
     reference = None
     if plugin['pluginattributes'].get('see_also', None) != None:
         reference = '\n'.join(plugin['pluginattributes'].get('see_also', None))
 
     if result != None:
         if result['mod_date'] != plugin['pluginattributes']['plugin_information'].get('plugin_modification_date', None):
-            # New version of plugin exists, build update query
             sql = "UPDATE `plugin` \
             SET `severity` = %s, `name` = %s, `family` = %s, `synopsis` = %s, `description` = %s, `solution` = %s,\
             `cvss_base_score` = %s, `cvss3_base_score` = %s, `cvss_vector` = %s, `cvss3_vector` = %s, `ref` = %s, `pub_date` = %s, `mod_date` = %s\
@@ -146,7 +136,6 @@ def update_plugin(plugin, cursor):
             ))
 
     else:
-        # Plugin doesn't exist, build insert query
         sql = "INSERT INTO `plugin` (`plugin_id`, `severity`, `name`, `family`, `synopsis`, `description`, `solution`,\
         `cvss_base_score`, `cvss3_base_score`, `cvss_vector`, `cvss3_vector`, `ref`, `pub_date`, `mod_date`)\
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
@@ -169,13 +158,11 @@ def update_plugin(plugin, cursor):
         ))
 
 def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
-    # Check existing host_vuln in host_vuln DB
     sql = "SELECT `host_vuln_id` FROM `host_vuln` WHERE `nessus_host_id` = %s AND `scan_run_id` = %s AND `plugin_id` = %s"
     cursor.execute(sql, (host_id, history_id, plugin_id))
     result = cursor.fetchone()
 
     if result == None:
-        # Host vuln doesn't exist, build insert query
         sql = "INSERT INTO `host_vuln` (`nessus_host_id`, `scan_run_id`, `plugin_id`)\
         VALUES (%s, %s, %s)"
 
@@ -187,36 +174,37 @@ def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
 
         host_vuln_id = cursor.lastrowid
 
-        # Get plugin output
         plugin_output = get_plugin_output(scan_id, host_id, plugin_id, history_id)
 
-        # Insert vuln output
         sql = "INSERT INTO `vuln_output` (`host_vuln_id`, `port`, `output`)\
         VALUES (%s, %s, %s)"
 
+        if 'outputs' in plugin_output and plugin_output['outputs']:
+            output = plugin_output['outputs'][0]
+            port = output.get('ports', [None])[0]
+            plugin_output_text = output.get('plugin_output', '')
+        else:
+            port = None
+            plugin_output_text = ''
+
         cursor.execute(sql, (
         host_vuln_id,
-        plugin_output['outputs'][0]['ports'][0],
-        plugin_output['outputs'][0]['plugin_output']
+        port,
+        plugin_output_text
         ))
 
 def insert_host(scan_id, host_id, history_id, cursor):
-    # Get host vulnerabilities
     host = get_host_vuln(scan_id, host_id, history_id)
 
-    # Count number of vulns of each severity for this host
-    # 0 is informational, 4 is critical
     sev_count = [0] * 5
     for vuln in host['vulnerabilities']:
         sev_count[vuln['severity']] += 1
 
-    # Check existing host in host DB
     sql = "SELECT `host_id` FROM `host` WHERE `nessus_host_id` = %s AND `scan_run_id` = %s"
     cursor.execute(sql, (host_id, history_id))
     result = cursor.fetchone()
 
     if result == None:
-        # Host doesn't exist, build insert query
         sql = "INSERT INTO `host` (`nessus_host_id`, `scan_run_id`, `scan_id`, `host_ip`, `host_fqdn`, `host_start`, `host_end`, `os`,\
         `critical_count`, `high_count`, `medium_count`, `low_count`, `info_count`)\
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
@@ -233,45 +221,45 @@ def insert_host(scan_id, host_id, history_id, cursor):
         sev_count[4], sev_count[3], sev_count[2], sev_count[1], sev_count[0]
         ))
 
-    # Insert host vulnerabilities
     for vuln in host['vulnerabilities']:
         insert_host_vuln(scan_id, host_id, vuln['plugin_id'], history_id, cursor)
 
 def insert_scan_run(scan_id, history_id):
-    # Get scan runs for a scan
-    scan_run = get_scan_run(scan_id, history_id)
+    try:
+        scan_run = get_scan_run(scan_id, history_id)
 
-    # Count number of vulns of each severity for this scan run
-    # 0 is informational, 4 is critical
-    sev_count = [0] * 5
-    for vuln in scan_run['vulnerabilities']:
-        sev_count[vuln['severity']] += vuln['count']
+        sev_count = [0] * 5
+        for vuln in scan_run['vulnerabilities']:
+            sev_count[vuln['severity']] += vuln['count']
 
-    with connection.cursor() as cursor:
-        # Insert scan run details
-        sql = "INSERT INTO `scan_run` (`scan_run_id`, `scan_id`, `scan_start`,`scan_end`, `targets`, `host_count`,\
-            `critical_count`, `high_count`, `medium_count`, `low_count`, `info_count`)\
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        
-        # Use .get() method with a default value for scanner_start and scanner_end
-        scanner_start = scan_run['info'].get('scanner_start', 0)
-        scanner_end = scan_run['info'].get('scanner_end', 0)
-        
-        cursor.execute(sql, (
-            history_id, 
-            scan_id, 
-            scanner_start, 
-            scanner_end,
-            scan_run['info'].get('targets', ''), 
-            scan_run['info'].get('hostcount', 0),
-            sev_count[4], sev_count[3], sev_count[2], sev_count[1], sev_count[0]
-            ))
-        
-        # Insert hosts in scan run
-        for host in scan_run['hosts']:
-            insert_host(scan_id, host['host_id'], history_id, cursor)
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO `scan_run` (`scan_run_id`, `scan_id`, `scan_start`,`scan_end`, `targets`, `host_count`,\
+                `critical_count`, `high_count`, `medium_count`, `low_count`, `info_count`)\
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            
+            scanner_start = scan_run['info'].get('scanner_start', 0)
+            scanner_end = scan_run['info'].get('scanner_end', 0)
+            
+            cursor.execute(sql, (
+                history_id, 
+                scan_id, 
+                scanner_start, 
+                scanner_end,
+                scan_run['info'].get('targets', ''), 
+                scan_run['info'].get('hostcount', 0),
+                sev_count[4], sev_count[3], sev_count[2], sev_count[1], sev_count[0]
+                ))
+            
+            for host in scan_run['hosts']:
+                insert_host(scan_id, host['host_id'], history_id, cursor)
 
-    connection.commit()
+        connection.commit()
+    except Exception as e:
+        print(f"Hata oluştu: {e}")
+        print(f"Scan ID: {scan_id}, History ID: {history_id}")
+        print(f"Scan Run Detayları: {scan_run}")
+        connection.rollback()
+        raise
 
 def format_timestamp(timestamp):
     if timestamp:
@@ -283,7 +271,6 @@ def update_scans():
     print(f"Toplam {len(scans['scans'])} tarama bulundu.")
     
     with connection.cursor() as cursor:
-        # Upsert scans
         for scan in scans['scans']:
             sql = "INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`)\
                     VALUES (%s, %s, %s, %s)\
@@ -313,7 +300,6 @@ def update_scans():
             for idx, history_item in enumerate(sorted_history):
                 print(f"  {idx + 1}. Tarih: {format_timestamp(history_item['creation_date'])}, ID: {history_item['history_id']}")
             
-            # Sadece en güncel 3 taramayı al
             scans_to_process = sorted_history[:3]
             print(f"\nİşlenecek {len(scans_to_process)} en güncel çalıştırma:")
             
@@ -321,7 +307,6 @@ def update_scans():
                 print(f"  {idx + 1}. Tarih: {format_timestamp(scan_run['creation_date'])}, ID: {scan_run['history_id']}, Durum: {scan_run['status']}")
                 
                 if scan_run['status'] == 'completed':
-                    # Get detailed information about this scan run
                     scan_run_details = get_scan_run(scan['id'], scan_run['history_id'])
                     host_start = format_timestamp(scan_run_details['info'].get('scanner_start'))
                     host_end = format_timestamp(scan_run_details['info'].get('scanner_end'))
@@ -333,7 +318,6 @@ def update_scans():
                         cursor.execute(sql, (scan_run['history_id']))
                         result = cursor.fetchone()
 
-                    # If scan run hasn't yet been inserted
                     if result == None:
                         print(f"      Yeni çalıştırma ekleniyor: {scan_run['history_id']}")
                         insert_scan_run(scan['id'], scan_run['history_id'])
