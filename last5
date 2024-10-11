@@ -145,18 +145,14 @@ def update_plugin(plugin, cursor):
             plugin['pluginid']
             ))
 
-        else:
-            # Looks like the plugin version is the same skipping
-            return None
-
     else:
-        # Doesn't exist, build insert query
+        # Plugin doesn't exist, build insert query
         sql = "INSERT INTO `plugin` (`plugin_id`, `severity`, `name`, `family`, `synopsis`, `description`, `solution`,\
-            `cvss_base_score`, `cvss3_base_score`, `cvss_vector`, `cvss3_vector`, `ref`, `pub_date`, `mod_date`)\
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        `cvss_base_score`, `cvss3_base_score`, `cvss_vector`, `cvss3_vector`, `ref`, `pub_date`, `mod_date`)\
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
         cursor.execute(sql, (
-        plugin['pluginid'], 
+        plugin['pluginid'],
         plugin['severity'], 
         plugin['pluginname'], 
         plugin['pluginfamily'],
@@ -172,43 +168,60 @@ def update_plugin(plugin, cursor):
         plugin['pluginattributes']['plugin_information'].get('plugin_modification_date', None)
         ))
 
-def insert_vuln_output(vuln_output, host_vuln_id, cursor):
-    for output in vuln_output:
-        for port in output['ports'].keys():
-            sql = "INSERT INTO `vuln_output` (`host_vuln_id`, `port`, `output`)\
-                    VALUES (%s, %s, %s)"
-            cursor.execute(sql, (host_vuln_id, port, output['plugin_output']))
-
 def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
-    # Need to insert plugin first to have FK relationship
-    # Get vuln output which includes plugin info
-    vuln_output = get_plugin_output(scan_id, host_id, plugin_id, history_id)
-    update_plugin(vuln_output['info']['plugindescription'], cursor)
-
-    # Insert host vuln
-    sql = "INSERT INTO `host_vuln` (`nessus_host_id`, `scan_run_id`, `plugin_id`)\
-            VALUES (%s, %s, %s)"
+    # Check existing host_vuln in host_vuln DB
+    sql = "SELECT `host_vuln_id` FROM `host_vuln` WHERE `nessus_host_id` = %s AND `scan_run_id` = %s AND `plugin_id` = %s"
     cursor.execute(sql, (host_id, history_id, plugin_id))
+    result = cursor.fetchone()
 
-    # Finally insert vuln output
-    insert_vuln_output(vuln_output['outputs'], cursor.lastrowid, cursor)
+    if result == None:
+        # Host vuln doesn't exist, build insert query
+        sql = "INSERT INTO `host_vuln` (`nessus_host_id`, `scan_run_id`, `plugin_id`)\
+        VALUES (%s, %s, %s)"
+
+        cursor.execute(sql, (
+        host_id,
+        history_id,
+        plugin_id
+        ))
+
+        host_vuln_id = cursor.lastrowid
+
+        # Get plugin output
+        plugin_output = get_plugin_output(scan_id, host_id, plugin_id, history_id)
+
+        # Insert vuln output
+        sql = "INSERT INTO `vuln_output` (`host_vuln_id`, `port`, `output`)\
+        VALUES (%s, %s, %s)"
+
+        cursor.execute(sql, (
+        host_vuln_id,
+        plugin_output['outputs'][0]['ports'][0],
+        plugin_output['outputs'][0]['plugin_output']
+        ))
 
 def insert_host(scan_id, host_id, history_id, cursor):
-    # Get host vulnerabilities for a scan run
-    host = get_host_vuln(scan_id, host_id, history_id) 
+    # Get host vulnerabilities
+    host = get_host_vuln(scan_id, host_id, history_id)
 
-    # Count number of vulns of each severity for this host in this scan run
+    # Count number of vulns of each severity for this host
     # 0 is informational, 4 is critical
     sev_count = [0] * 5
     for vuln in host['vulnerabilities']:
-        sev_count[vuln['severity']] += vuln['count']
-    
-    # Insert host information
-    sql = "INSERT INTO `host` (`nessus_host_id`, `scan_run_id`, `scan_id`, `host_ip`, `host_fqdn`, `host_start`, `host_end`, `os`,\
-        `critical_count`, `high_count`, `medium_count`, `low_count`, `info_count`)\
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        sev_count[vuln['severity']] += 1
 
-    cursor.execute(sql, (
+    # Check existing host in host DB
+    sql = "SELECT `host_id` FROM `host` WHERE `nessus_host_id` = %s AND `scan_run_id` = %s"
+    cursor.execute(sql, (host_id, history_id))
+    result = cursor.fetchone()
+
+    if result == None:
+        # Host doesn't exist, build insert query
+        sql = "INSERT INTO `host` (`nessus_host_id`, `scan_run_id`, `scan_id`, `host_ip`, `host_fqdn`, `host_start`, `host_end`, `os`,\
+        `critical_count`, `high_count`, `medium_count`, `low_count`, `info_count`)\
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+
+        cursor.execute(sql, (
         host_id, 
         history_id, 
         scan_id, 
@@ -240,13 +253,17 @@ def insert_scan_run(scan_id, history_id):
             `critical_count`, `high_count`, `medium_count`, `low_count`, `info_count`)\
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         
+        # Use .get() method with a default value for scanner_start and scanner_end
+        scanner_start = scan_run['info'].get('scanner_start', 0)
+        scanner_end = scan_run['info'].get('scanner_end', 0)
+        
         cursor.execute(sql, (
             history_id, 
             scan_id, 
-            scan_run['info']['scanner_start'], 
-            scan_run['info']['scanner_end'],
-            scan_run['info']['targets'], 
-            scan_run['info']['hostcount'],
+            scanner_start, 
+            scanner_end,
+            scan_run['info'].get('targets', ''), 
+            scan_run['info'].get('hostcount', 0),
             sev_count[4], sev_count[3], sev_count[2], sev_count[1], sev_count[0]
             ))
         
@@ -255,35 +272,6 @@ def insert_scan_run(scan_id, history_id):
             insert_host(scan_id, host['host_id'], history_id, cursor)
 
     connection.commit()
-
-#get_scans() fonksiyonu ile Nessus'tan tüm taramaları alır.
-
-#İlk döngüde, her tarama için veritabanında bir kayıt oluşturur veya günceller:
-#  Tarama ID'si, klasör ID'si, türü ve adı gibi bilgileri kaydeder.
-#  Eğer tarama zaten varsa, bilgilerini günceller (UPSERT işlemi).
-
-#Değişiklikleri veritabanına kaydeder (connection.commit()).
-
-#İkinci döngüde, her tarama için detaylı işlemler yapar:
-#  Her taramanın adını yazdırır.
-#  get_scan() fonksiyonu ile taramanın detaylarını alır.
-#  Taramanın geçmiş çalıştırmalarını kontrol eder.
-
-#Her tamamlanmış tarama çalıştırması için:
-    #Veritabanında bu çalıştırmanın kaydının olup olmadığını kontrol eder.
-    #Eğer kayıt yoksa, insert_scan_run() fonksiyonu ile yeni bir kayıt oluşturur.
-
-#Bu fonksiyon, Nessus'taki tüm taramaları ve bu taramaların geçmiş çalıştırmalarını veritabanına aktarır veya günceller. Bu sayede:
-    #Tüm taramaların güncel bir listesi veritabanında tutulur.
-    #Her taramanın tamamlanmış çalıştırmaları kaydedilir.
-    #Daha önce kaydedilmemiş tarama çalıştırmaları tespit edilip eklenir.
-    
-#Bu işlem, Nessus'taki tarama verilerinin veritabanında tam ve güncel bir kopyasını oluşturur, böylece bu verilere daha kolay erişilebilir ve analiz edilebilir.    
-
-def format_timestamp(timestamp):
-    if timestamp:
-        return datetime.fromtimestamp(int(timestamp)).strftime("%d %b %Y, %H:%M:%S")
-    return 'Bilinmiyor'
 
 def format_timestamp(timestamp):
     if timestamp:
@@ -318,7 +306,7 @@ def update_scans():
         
         scan_details = get_scan(scan['id'])
 
-        if scan_details['history'] != None:
+        if scan_details.get('history'):
             sorted_history = sorted(scan_details['history'], key=itemgetter('creation_date'), reverse=True)
             
             print("Tüm tarama geçmişi:")
