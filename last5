@@ -103,59 +103,69 @@ def update_folders():
     print(f"\nKlasör güncelleme işlemi tamamlandı. {inserted_count} yeni klasör eklendi, {updated_count} klasör güncellendi.")
 
 def update_plugin(plugin, cursor):
+    print(f"update_plugin çağrıldı: {plugin}")
+    
+    plugin_id = plugin.get('pluginid') or plugin.get('plugin_id')
+    if not plugin_id:
+        print(f"Uyarı: Plugin ID bulunamadı: {plugin}")
+        return
+
     sql = "SELECT `plugin_id`, `mod_date` FROM `plugin` WHERE `plugin_id` = %s"
-    cursor.execute(sql, (plugin['pluginid']))
+    cursor.execute(sql, (plugin_id,))
     result = cursor.fetchone()
 
     reference = None
-    if plugin['pluginattributes'].get('see_also', None) != None:
-        reference = '\n'.join(plugin['pluginattributes'].get('see_also', None))
+    if 'see_also' in plugin and plugin['see_also']:
+        reference = '\n'.join(plugin['see_also'])
 
-    if result != None:
-        if result['mod_date'] != plugin['pluginattributes']['plugin_information'].get('plugin_modification_date', None):
-            sql = "UPDATE `plugin` \
-            SET `severity` = %s, `name` = %s, `family` = %s, `synopsis` = %s, `description` = %s, `solution` = %s,\
-            `cvss_base_score` = %s, `cvss3_base_score` = %s, `cvss_vector` = %s, `cvss3_vector` = %s, `ref` = %s, `pub_date` = %s, `mod_date` = %s\
-            WHERE `plugin_id` = %s"
+    plugin_info = plugin.get('pluginattributes', {}).get('plugin_information', {})
+    risk_info = plugin.get('pluginattributes', {}).get('risk_information', {})
 
-            cursor.execute(sql, (
-            plugin['severity'], 
-            plugin['pluginname'], 
-            plugin['pluginfamily'],
-            plugin['pluginattributes']['synopsis'],
-            plugin['pluginattributes']['description'],
-            plugin['pluginattributes']['solution'],
-            plugin['pluginattributes']['risk_information'].get('cvss_base_score', None),
-            plugin['pluginattributes']['risk_information'].get('cvss3_base_score', None),
-            plugin['pluginattributes']['risk_information'].get('cvss_vector', None),
-            plugin['pluginattributes']['risk_information'].get('cvss3_vector', None),
-            reference,
-            plugin['pluginattributes']['plugin_information'].get('plugin_publication_date', None),
-            plugin['pluginattributes']['plugin_information'].get('plugin_modification_date', None),
-            plugin['pluginid']
-            ))
+    if result:
+        sql = "UPDATE `plugin` \
+        SET `severity` = %s, `name` = %s, `family` = %s, `synopsis` = %s, `description` = %s, `solution` = %s,\
+        `cvss_base_score` = %s, `cvss3_base_score` = %s, `cvss_vector` = %s, `cvss3_vector` = %s, `ref` = %s, `pub_date` = %s, `mod_date` = %s\
+        WHERE `plugin_id` = %s"
 
+        cursor.execute(sql, (
+        plugin.get('severity', 0),
+        plugin.get('pluginname', ''),
+        plugin.get('pluginfamily', ''),
+        plugin.get('synopsis', ''),
+        plugin.get('description', ''),
+        plugin.get('solution', ''),
+        risk_info.get('cvss_base_score'),
+        risk_info.get('cvss3_base_score'),
+        risk_info.get('cvss_vector'),
+        risk_info.get('cvss3_vector'),
+        reference,
+        plugin_info.get('plugin_publication_date'),
+        plugin_info.get('plugin_modification_date'),
+        plugin_id
+        ))
     else:
         sql = "INSERT INTO `plugin` (`plugin_id`, `severity`, `name`, `family`, `synopsis`, `description`, `solution`,\
         `cvss_base_score`, `cvss3_base_score`, `cvss_vector`, `cvss3_vector`, `ref`, `pub_date`, `mod_date`)\
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
         cursor.execute(sql, (
-        plugin['pluginid'],
-        plugin['severity'], 
-        plugin['pluginname'], 
-        plugin['pluginfamily'],
-        plugin['pluginattributes']['synopsis'],
-        plugin['pluginattributes']['description'],
-        plugin['pluginattributes']['solution'],
-        plugin['pluginattributes']['risk_information'].get('cvss_base_score', None),
-        plugin['pluginattributes']['risk_information'].get('cvss3_base_score', None),
-        plugin['pluginattributes']['risk_information'].get('cvss_vector', None),
-        plugin['pluginattributes']['risk_information'].get('cvss3_vector', None),
+        plugin_id,
+        plugin.get('severity', 0),
+        plugin.get('pluginname', ''),
+        plugin.get('pluginfamily', ''),
+        plugin.get('synopsis', ''),
+        plugin.get('description', ''),
+        plugin.get('solution', ''),
+        risk_info.get('cvss_base_score'),
+        risk_info.get('cvss3_base_score'),
+        risk_info.get('cvss_vector'),
+        risk_info.get('cvss3_vector'),
         reference,
-        plugin['pluginattributes']['plugin_information'].get('plugin_publication_date', None),
-        plugin['pluginattributes']['plugin_information'].get('plugin_modification_date', None)
+        plugin_info.get('plugin_publication_date'),
+        plugin_info.get('plugin_modification_date')
         ))
+
+    print(f"Plugin güncellendi/eklendi: {plugin_id}")
 
 def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
     print(f"insert_host_vuln çağrıldı: scan_id={scan_id}, host_id={host_id}, plugin_id={plugin_id}, history_id={history_id}")
@@ -213,16 +223,17 @@ def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
 
 def insert_host(scan_id, host_id, history_id, cursor):
     host = get_host_vuln(scan_id, host_id, history_id)
+    print(f"Host verisi alındı: {host}")
 
     sev_count = [0] * 5
-    for vuln in host['vulnerabilities']:
-        sev_count[vuln['severity']] += 1
+    for vuln in host.get('vulnerabilities', []):
+        sev_count[vuln.get('severity', 0)] += 1
 
     sql = "SELECT `host_id` FROM `host` WHERE `nessus_host_id` = %s AND `scan_run_id` = %s"
     cursor.execute(sql, (host_id, history_id))
     result = cursor.fetchone()
 
-    if result == None:
+    if result is None:
         sql = "INSERT INTO `host` (`nessus_host_id`, `scan_run_id`, `scan_id`, `host_ip`, `host_fqdn`, `host_start`, `host_end`, `os`,\
         `critical_count`, `high_count`, `medium_count`, `low_count`, `info_count`)\
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
@@ -231,19 +242,19 @@ def insert_host(scan_id, host_id, history_id, cursor):
         host_id, 
         history_id, 
         scan_id, 
-        host['info']['host-ip'], 
-        host['info'].get('host-fqdn', None), 
-        host['info'].get('host_start', None), 
-        host['info'].get('host_end', None), 
-        host['info'].get('operating-system', None),
+        host.get('info', {}).get('host-ip', ''), 
+        host.get('info', {}).get('host-fqdn', ''), 
+        host.get('info', {}).get('host_start'), 
+        host.get('info', {}).get('host_end'), 
+        host.get('info', {}).get('operating-system', ''),
         sev_count[4], sev_count[3], sev_count[2], sev_count[1], sev_count[0]
         ))
 
-    for vuln in host['vulnerabilities']:
-        # Önce plugin'i güncelle veya ekle
+    for vuln in host.get('vulnerabilities', []):
         update_plugin(vuln, cursor)
-        # Sonra host_vuln'u ekle
-        insert_host_vuln(scan_id, host_id, vuln['plugin_id'], history_id, cursor)
+        insert_host_vuln(scan_id, host_id, vuln.get('plugin_id'), history_id, cursor)
+
+    print(f"Host eklendi/güncellendi: {host_id}")
 
 def insert_scan_run(scan_id, history_id):
     try:
