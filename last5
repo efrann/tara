@@ -240,6 +240,9 @@ def insert_host(scan_id, host_id, history_id, cursor):
         ))
 
     for vuln in host['vulnerabilities']:
+        # Önce plugin'i güncelle veya ekle
+        update_plugin(vuln, cursor)
+        # Sonra host_vuln'u ekle
         insert_host_vuln(scan_id, host_id, vuln['plugin_id'], history_id, cursor)
 
 def insert_scan_run(scan_id, history_id):
