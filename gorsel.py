@@ -15,7 +15,7 @@ db = pymysql.connect(
 )
 
 # Verileri çekme fonksiyonu
-def get_data(severity=None, scan_name=None):
+def get_data(severity=None, scan_name=None, vulnerability_name=None):
     with db.cursor(pymysql.cursors.DictCursor) as cursor:
         # Severity filtresi için WHERE koşulu
         severity_condition = ""
@@ -26,6 +26,11 @@ def get_data(severity=None, scan_name=None):
         scan_name_condition = ""
         if scan_name:
             scan_name_condition = f"AND s.name LIKE '%{scan_name}%'"
+        
+        # Vulnerability name filtresi için WHERE koşulu
+        vulnerability_name_condition = ""
+        if vulnerability_name:
+            vulnerability_name_condition = f"AND p.name LIKE '%{vulnerability_name}%'"
 
         # Özet bilgi sorgusu
         summary_query = f"""
@@ -113,7 +118,7 @@ def get_data(severity=None, scan_name=None):
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition}
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition}
         ORDER BY 
             sr.scan_start DESC, p.severity DESC
         LIMIT 1000
@@ -212,6 +217,10 @@ app.layout = html.Div([
             html.Label("Tarama Adı:", style={'color': 'white'}),
             dcc.Input(id='scan-name-input', type='text', style={'backgroundColor': '#34495e', 'color': 'white'}),
         ], style={'display': 'inline-block', 'marginLeft': '20px'}),
+        html.Div([
+            html.Label("Zafiyet Adı:", style={'color': 'white'}),
+            dcc.Input(id='vulnerability-name-input', type='text', style={'backgroundColor': '#34495e', 'color': 'white'}),
+        ], style={'display': 'inline-block', 'marginLeft': '20px'}),
         html.Button('Filtrele', id='filter-button', style={'marginLeft': '20px', 'backgroundColor': '#e74c3c', 'color': 'white'}),
     ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
 
@@ -286,10 +295,11 @@ app.layout = html.Div([
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals')],
     [State('severity-dropdown', 'value'),
-     State('scan-name-input', 'value')]
+     State('scan-name-input', 'value'),
+     State('vulnerability-name-input', 'value')]
 )
-def update_data(n_clicks, n_intervals, severity, scan_name):
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data = get_data(severity, scan_name)
+def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data = get_data(severity, scan_name, vulnerability_name)
     
     # Özet tablo verisi
     summary_table_data = summary_data
