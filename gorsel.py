@@ -32,7 +32,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         if vulnerability_name:
             vulnerability_name_condition = f"AND p.name LIKE '%{vulnerability_name}%'"
 
-        # Özet bilgi sorgusu
+        # ��zet bilgi sorgusu
         summary_query = f"""
         SELECT 
             s.name AS scan_name,
@@ -95,7 +95,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         SELECT 
             s.name AS scan_name,
             h.host_ip,
-            p.name AS vulnerability_name,
+            COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
             p.severity,
             p.family AS plugin_family,
             vo.port,
@@ -130,7 +130,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         # En çok görülen 10 zafiyet sorgusu
         top_vulnerabilities_query = f"""
         SELECT 
-            p.name AS vulnerability_name,
+            COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
             p.severity,
             COUNT(*) as count
         FROM 
@@ -147,7 +147,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition}
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition}
         GROUP BY 
             p.plugin_id, p.name, p.severity
         ORDER BY 
@@ -210,18 +210,18 @@ app.layout = html.Div([
                     {'label': 'Info', 'value': 0}
                 ],
                 multi=True,
-                style={'width': '200px', 'backgroundColor': '#34495e'}
+                style={'width': '200px', 'backgroundColor': '#34495e', 'color': 'black'}
             ),
-        ], style={'display': 'inline-block', 'marginLeft': '20px'}),
+        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
         html.Div([
             html.Label("Tarama Adı:", style={'color': 'white'}),
-            dcc.Input(id='scan-name-input', type='text', style={'backgroundColor': '#34495e', 'color': 'white'}),
-        ], style={'display': 'inline-block', 'marginLeft': '20px'}),
+            dcc.Input(id='scan-name-input', type='text', style={'width': '200px', 'backgroundColor': '#34495e', 'color': 'white'}),
+        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
         html.Div([
             html.Label("Zafiyet Adı:", style={'color': 'white'}),
-            dcc.Input(id='vulnerability-name-input', type='text', style={'backgroundColor': '#34495e', 'color': 'white'}),
-        ], style={'display': 'inline-block', 'marginLeft': '20px'}),
-        html.Button('Filtrele', id='filter-button', style={'marginLeft': '20px', 'backgroundColor': '#e74c3c', 'color': 'white'}),
+            dcc.Input(id='vulnerability-name-input', type='text', style={'width': '200px', 'backgroundColor': '#34495e', 'color': 'white'}),
+        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
+        html.Button('Filtrele', id='filter-button', style={'marginTop': '20px', 'backgroundColor': '#e74c3c', 'color': 'white'}),
     ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
 
     html.Div([
