@@ -193,25 +193,15 @@ def update_plugin(plugin):
 def insert_host_vuln(scan_id, host_id, plugin_id, history_id):
     print(f"insert_host_vuln çağrıldı: scan_id={scan_id}, host_id={host_id}, plugin_id={plugin_id}, history_id={history_id}")
     
-    result = execute_query("SELECT `host_vuln_id` FROM `host_vuln` WHERE `nessus_host_id` = %s AND `scan_run_id` = %s AND `plugin_id` = %s", (host_id, history_id, plugin_id))
+    result = execute_query("SELECT `host_vuln_id` FROM `host_vuln` WHERE `nessus_host_id` = %s AND `scan_run_id` = %s AND `plugin_id` = %s", 
+                           (host_id, history_id, plugin_id))
 
-    if result == None:
-        sql = "INSERT INTO `host_vuln` (`nessus_host_id`, `scan_run_id`, `plugin_id`)\
-        VALUES (%s, %s, %s)"
-
-        execute_insert(sql, (
-        host_id,
-        history_id,
-        plugin_id
-        ))
-
-        host_vuln_id = cursor.lastrowid
+    if not result:
+        host_vuln_id = execute_insert("INSERT INTO `host_vuln` (`nessus_host_id`, `scan_run_id`, `plugin_id`) VALUES (%s, %s, %s)", 
+                                      (host_id, history_id, plugin_id))
 
         plugin_output = get_plugin_output(scan_id, host_id, plugin_id, history_id)
         print(f"Plugin output: {plugin_output}")
-
-        sql = "INSERT INTO `vuln_output` (`host_vuln_id`, `port`, `output`)\
-        VALUES (%s, %s, %s)"
 
         port = None
         plugin_output_text = ''
@@ -234,11 +224,8 @@ def insert_host_vuln(scan_id, host_id, plugin_id, history_id):
 
         print(f"Port: {port}, Plugin output text: {plugin_output_text}")
 
-        execute_insert(sql, (
-        host_vuln_id,
-        port,
-        plugin_output_text
-        ))
+        execute_insert("INSERT INTO `vuln_output` (`host_vuln_id`, `port`, `output`) VALUES (%s, %s, %s)", 
+                       (host_vuln_id, port, plugin_output_text))
     else:
         print("Host vuln zaten mevcut, atlanıyor.")
 
@@ -250,23 +237,24 @@ def insert_host(scan_id, host_id, history_id):
     for vuln in host.get('vulnerabilities', []):
         sev_count[vuln.get('severity', 0)] += 1
 
-    result = execute_query("SELECT `host_id` FROM `host` WHERE `nessus_host_id` = %s AND `scan_run_id` = %s", (host_id, history_id))
+    result = execute_query("SELECT `host_id` FROM `host` WHERE `nessus_host_id` = %s AND `scan_run_id` = %s", 
+                           (host_id, history_id))
 
-    if result is None:
-        sql = "INSERT INTO `host` (`nessus_host_id`, `scan_run_id`, `scan_id`, `host_ip`, `host_fqdn`, `host_start`, `host_end`, `os`,\
-        `critical_count`, `high_count`, `medium_count`, `low_count`, `info_count`)\
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-
-        execute_insert(sql, (
-        host_id, 
-        history_id, 
-        scan_id, 
-        host.get('info', {}).get('host-ip', ''), 
-        host.get('info', {}).get('host-fqdn', ''), 
-        host.get('info', {}).get('host_start'), 
-        host.get('info', {}).get('host_end'), 
-        host.get('info', {}).get('operating-system', ''),
-        sev_count[4], sev_count[3], sev_count[2], sev_count[1], sev_count[0]
+    if not result:
+        execute_insert("""
+            INSERT INTO `host` (`nessus_host_id`, `scan_run_id`, `scan_id`, `host_ip`, `host_fqdn`, `host_start`, `host_end`, `os`,
+            `critical_count`, `high_count`, `medium_count`, `low_count`, `info_count`)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            host_id, 
+            history_id, 
+            scan_id, 
+            host.get('info', {}).get('host-ip', ''), 
+            host.get('info', {}).get('host-fqdn', ''), 
+            host.get('info', {}).get('host_start'), 
+            host.get('info', {}).get('host_end'), 
+            host.get('info', {}).get('operating-system', ''),
+            sev_count[4], sev_count[3], sev_count[2], sev_count[1], sev_count[0]
         ))
 
     for vuln in host.get('vulnerabilities', []):
@@ -336,9 +324,9 @@ def update_scans():
     
     for scan in scans['scans']:
         # Klasör adını kontrol et
-        folder_name = get_folder_name(scan['folder_id'])
+        folder_name = execute_query("SELECT `name` FROM `folder` WHERE `folder_id` = %s", (scan['folder_id'],))
+        folder_name = folder_name[0]['name'] if folder_name else None
         if folder_name in skip_folders:
-            print(f"Atlanan tarama: {scan['name']} (Klasör: {folder_name})")
             continue
         
         sql = """INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`)
@@ -359,7 +347,8 @@ def update_scans():
 
     for scan in scans['scans']:
         # Klasör adını tekrar kontrol et
-        folder_name = get_folder_name(scan['folder_id'])
+        folder_name = execute_query("SELECT `name` FROM `folder` WHERE `folder_id` = %s", (scan['folder_id'],))
+        folder_name = folder_name[0]['name'] if folder_name else None
         if folder_name in skip_folders:
             continue
         
@@ -388,7 +377,7 @@ def update_scans():
                     
                     result = execute_query("SELECT * FROM `scan_run` WHERE `scan_run_id` = %s", (scan_run['history_id'],))
 
-                    if result is None:
+                    if not result:
                         print(f"      Yeni çalıştırma ekleniyor: {scan_run['history_id']}")
                         insert_scan_run(scan['id'], scan_run['history_id'])
                     else:
