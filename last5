@@ -96,17 +96,18 @@ def update_folders():
     inserted_count = 0
     
     for folder in folders['folders']:
-        sql = "INSERT INTO `folder` (`folder_id`, `type`, `name`)\
-                VALUES (%s, %s, %s)\
-                ON DUPLICATE KEY UPDATE type=%s, name=%s"
-        execute_insert(sql, (folder['id'], folder['type'], folder['name'], folder['type'], folder['name']))
+        sql = """INSERT INTO `folder` (`folder_id`, `type`, `name`)
+                 VALUES (%s, %s, %s)
+                 ON DUPLICATE KEY UPDATE type=%s, name=%s"""
         
-        if cursor.rowcount == 1:
-            inserted_count += 1
-            print(f"Yeni klasör eklendi: ID={folder['id']}, Ad={folder['name']}")
-        elif cursor.rowcount == 2:
+        result = execute_insert(sql, (folder['id'], folder['type'], folder['name'], folder['type'], folder['name']))
+        
+        if result == 0:  # Güncelleme yapıldı
             updated_count += 1
             print(f"Klasör güncellendi: ID={folder['id']}, Ad={folder['name']}")
+        else:  # Yeni kayıt eklendi
+            inserted_count += 1
+            print(f"Yeni klasör eklendi: ID={folder['id']}, Ad={folder['name']}")
     
     connection.commit()
     print(f"\nKlasör güncelleme işlemi tamamlandı. {inserted_count} yeni klasör eklendi, {updated_count} klasör güncellendi.")
