@@ -280,16 +280,17 @@ def update_data(n_clicks, n_intervals, start_date, end_date, severity, scan_name
     
     # Zafiyet dağılımı grafiği
     severity_labels = {0: 'Info', 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Critical'}
+    colors = {'Info': '#3498db', 'Low': '#2ecc71', 'Medium': '#f1c40f', 'High': '#e67e22', 'Critical': '#e74c3c'}
     vulnerability_distribution = go.Figure(data=[go.Pie(
         labels=[severity_labels[row['severity']] for row in vulnerability_data],
         values=[row['count'] for row in vulnerability_data],
         hole=.3,
-        marker=dict(colors=['#FFA07A', '#98FB98', '#87CEFA', '#DDA0DD', '#F08080'])
+        marker=dict(colors=[colors[severity_labels[row['severity']]] for row in vulnerability_data])
     )])
     vulnerability_distribution.update_layout(
         title_text="Zafiyet Dağılımı",
-        paper_bgcolor='#1f2c56',
-        plot_bgcolor='#1f2c56',
+        paper_bgcolor='#2c3e50',
+        plot_bgcolor='#2c3e50',
         font=dict(color='white')
     )
     
@@ -302,24 +303,24 @@ def update_data(n_clicks, n_intervals, start_date, end_date, severity, scan_name
     # Toplam zafiyet sayıları
     total_vulnerabilities = [
         html.Div([
-            html.H4("Critical", style={'color': '#F08080'}),
-            html.H2(f"{total_vulnerabilities_data['total_critical']:,}", style={'color': '#F08080'})
+            html.H4("Critical", style={'color': '#e74c3c'}),
+            html.H2(f"{total_vulnerabilities_data['total_critical']:,}", style={'color': '#e74c3c'})
         ]),
         html.Div([
-            html.H4("High", style={'color': '#DDA0DD'}),
-            html.H2(f"{total_vulnerabilities_data['total_high']:,}", style={'color': '#DDA0DD'})
+            html.H4("High", style={'color': '#e67e22'}),
+            html.H2(f"{total_vulnerabilities_data['total_high']:,}", style={'color': '#e67e22'})
         ]),
         html.Div([
-            html.H4("Medium", style={'color': '#87CEFA'}),
-            html.H2(f"{total_vulnerabilities_data['total_medium']:,}", style={'color': '#87CEFA'})
+            html.H4("Medium", style={'color': '#f1c40f'}),
+            html.H2(f"{total_vulnerabilities_data['total_medium']:,}", style={'color': '#f1c40f'})
         ]),
         html.Div([
-            html.H4("Low", style={'color': '#98FB98'}),
-            html.H2(f"{total_vulnerabilities_data['total_low']:,}", style={'color': '#98FB98'})
+            html.H4("Low", style={'color': '#2ecc71'}),
+            html.H2(f"{total_vulnerabilities_data['total_low']:,}", style={'color': '#2ecc71'})
         ]),
         html.Div([
-            html.H4("Info", style={'color': '#FFA07A'}),
-            html.H2(f"{total_vulnerabilities_data['total_info']:,}", style={'color': '#FFA07A'})
+            html.H4("Info", style={'color': '#3498db'}),
+            html.H2(f"{total_vulnerabilities_data['total_info']:,}", style={'color': '#3498db'})
         ]),
     ]
     
