@@ -15,13 +15,8 @@ db = pymysql.connect(
 )
 
 # Verileri çekme fonksiyonu
-def get_data(start_date=None, end_date=None, severity=None, scan_name=None):
+def get_data(severity=None, scan_name=None):
     with db.cursor(pymysql.cursors.DictCursor) as cursor:
-        # Tarih filtresi için WHERE koşulu
-        date_condition = ""
-        if start_date and end_date:
-            date_condition = f"AND sr.scan_start BETWEEN UNIX_TIMESTAMP('{start_date}') AND UNIX_TIMESTAMP('{end_date}')"
-        
         # Severity filtresi için WHERE koşulu
         severity_condition = ""
         if severity:
@@ -37,20 +32,25 @@ def get_data(start_date=None, end_date=None, severity=None, scan_name=None):
         SELECT 
             s.name AS scan_name,
             MAX(FROM_UNIXTIME(sr.scan_start)) AS last_scan_date,
-            COUNT(DISTINCT sr.scan_run_id) AS scan_count,
-            SUM(sr.host_count) AS total_hosts,
-            SUM(sr.critical_count) AS total_critical,
-            SUM(sr.high_count) AS total_high,
-            SUM(sr.medium_count) AS total_medium,
-            SUM(sr.low_count) AS total_low,
-            SUM(sr.info_count) AS total_info
+            sr.host_count AS total_hosts,
+            sr.critical_count AS total_critical,
+            sr.high_count AS total_high,
+            sr.medium_count AS total_medium,
+            sr.low_count AS total_low,
+            sr.info_count AS total_info
         FROM 
             scan s
         JOIN 
             scan_run sr ON s.scan_id = sr.scan_id
-        WHERE 1=1 {date_condition} {scan_name_condition}
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {scan_name_condition}
         GROUP BY 
-            s.name
+            s.name, sr.host_count, sr.critical_count, sr.high_count, sr.medium_count, sr.low_count, sr.info_count
         ORDER BY 
             last_scan_date DESC
         """
@@ -71,7 +71,13 @@ def get_data(start_date=None, end_date=None, severity=None, scan_name=None):
             scan_run sr ON hv.scan_run_id = sr.scan_run_id
         JOIN
             scan s ON sr.scan_id = s.scan_id
-        WHERE 1=1 {date_condition} {severity_condition} {scan_name_condition}
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition}
         GROUP BY 
             p.severity
         """
@@ -101,7 +107,13 @@ def get_data(start_date=None, end_date=None, severity=None, scan_name=None):
             plugin p ON hv.plugin_id = p.plugin_id
         LEFT JOIN
             vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
-        WHERE 1=1 {date_condition} {severity_condition} {scan_name_condition}
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition}
         ORDER BY 
             sr.scan_start DESC, p.severity DESC
         LIMIT 1000
@@ -124,7 +136,13 @@ def get_data(start_date=None, end_date=None, severity=None, scan_name=None):
             scan_run sr ON hv.scan_run_id = sr.scan_run_id
         JOIN
             scan s ON sr.scan_id = s.scan_id
-        WHERE 1=1 {date_condition} {severity_condition} {scan_name_condition}
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition}
         GROUP BY 
             p.plugin_id, p.name, p.severity
         ORDER BY 
@@ -151,7 +169,13 @@ def get_data(start_date=None, end_date=None, severity=None, scan_name=None):
             scan_run sr ON hv.scan_run_id = sr.scan_run_id
         JOIN
             scan s ON sr.scan_id = s.scan_id
-        WHERE 1=1 {date_condition} {severity_condition} {scan_name_condition}
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition}
         """
         
         cursor.execute(total_vulnerabilities_query)
@@ -166,15 +190,9 @@ app.layout = html.Div([
     html.Div([
         html.H1("Nessus Tarama Sonuçları Gösterge Paneli", style={'textAlign': 'center', 'color': 'white'}),
         html.Img(src="/assets/nessus_logo.png", style={'height': '50px', 'float': 'right'}),
-    ], style={'backgroundColor': '#1f2c56', 'padding': '10px'}),
+    ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
 
     html.Div([
-        html.Div([
-            html.Label("Başlangıç Tarihi:", style={'color': 'white'}),
-            dcc.DatePickerSingle(id='start-date-picker', style={'backgroundColor': '#1f2c56'}),
-            html.Label("Bitiş Tarihi:", style={'color': 'white', 'marginLeft': '20px'}),
-            dcc.DatePickerSingle(id='end-date-picker', style={'backgroundColor': '#1f2c56'}),
-        ], style={'display': 'inline-block'}),
         html.Div([
             html.Label("Severity:", style={'color': 'white'}),
             dcc.Dropdown(
@@ -187,21 +205,21 @@ app.layout = html.Div([
                     {'label': 'Info', 'value': 0}
                 ],
                 multi=True,
-                style={'width': '200px', 'backgroundColor': '#1f2c56'}
+                style={'width': '200px', 'backgroundColor': '#34495e'}
             ),
         ], style={'display': 'inline-block', 'marginLeft': '20px'}),
         html.Div([
             html.Label("Tarama Adı:", style={'color': 'white'}),
-            dcc.Input(id='scan-name-input', type='text', style={'backgroundColor': '#1f2c56', 'color': 'white'}),
+            dcc.Input(id='scan-name-input', type='text', style={'backgroundColor': '#34495e', 'color': 'white'}),
         ], style={'display': 'inline-block', 'marginLeft': '20px'}),
-        html.Button('Filtrele', id='filter-button', style={'marginLeft': '20px', 'backgroundColor': '#e55467', 'color': 'white'}),
-    ], style={'backgroundColor': '#1f2c56', 'padding': '10px'}),
+        html.Button('Filtrele', id='filter-button', style={'marginLeft': '20px', 'backgroundColor': '#e74c3c', 'color': 'white'}),
+    ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
 
     html.Div([
         html.Div([
             html.H3("Toplam Zafiyet Sayıları", style={'textAlign': 'center', 'color': 'white'}),
             html.Div(id='total-vulnerabilities', style={'display': 'flex', 'justifyContent': 'space-around'}),
-        ], style={'backgroundColor': '#1f2c56', 'padding': '10px', 'margin': '10px'}),
+        ], style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
     ]),
 
     html.Div([
@@ -209,10 +227,10 @@ app.layout = html.Div([
             html.H3("Özet Bilgiler", style={'textAlign': 'center', 'color': 'white'}),
             dash_table.DataTable(
                 id='summary-table',
-                columns=[{"name": i, "id": i} for i in ['scan_name', 'last_scan_date', 'scan_count', 'total_hosts', 'total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']],
+                columns=[{"name": i, "id": i} for i in ['scan_name', 'last_scan_date', 'total_hosts', 'total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']],
                 style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#1f2c56', 'color': 'white'},
-                style_header={'backgroundColor': '#e55467', 'fontWeight': 'bold'},
+                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
+                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
             ),
         ], className="six columns"),
 
@@ -220,7 +238,7 @@ app.layout = html.Div([
             html.H3("Zafiyet Dağılımı", style={'textAlign': 'center', 'color': 'white'}),
             dcc.Graph(id='vulnerability-distribution')
         ], className="six columns"),
-    ], className="row", style={'backgroundColor': '#1f2c56', 'padding': '10px', 'margin': '10px'}),
+    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
 
     html.Div([
         html.Div([
@@ -229,8 +247,8 @@ app.layout = html.Div([
                 id='top-vulnerabilities-table',
                 columns=[{"name": i, "id": i} for i in ['vulnerability_name', 'severity', 'count']],
                 style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#1f2c56', 'color': 'white'},
-                style_header={'backgroundColor': '#e55467', 'fontWeight': 'bold'},
+                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
+                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
             ),
         ], className="six columns"),
 
@@ -240,8 +258,8 @@ app.layout = html.Div([
                 id='vulnerability-table',
                 columns=[{"name": i, "id": i} for i in ['scan_name', 'host_ip', 'vulnerability_name', 'severity', 'plugin_family', 'port', 'scan_date']],
                 style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#1f2c56', 'color': 'white'},
-                style_header={'backgroundColor': '#e55467', 'fontWeight': 'bold'},
+                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
+                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
                 filter_action="native",
                 sort_action="native",
                 sort_mode="multi",
@@ -250,14 +268,14 @@ app.layout = html.Div([
                 page_size=10,
             )
         ], className="six columns"),
-    ], className="row", style={'backgroundColor': '#1f2c56', 'padding': '10px', 'margin': '10px'}),
+    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
 
     dcc.Interval(
         id='interval-component',
         interval=60*1000,  # Her 1 dakikada bir güncelle
         n_intervals=0
     )
-], style={'backgroundColor': '#1f2c56'})
+], style={'backgroundColor': '#2c3e50'})
 
 @app.callback(
     [Output('summary-table', 'data'),
@@ -267,13 +285,11 @@ app.layout = html.Div([
      Output('total-vulnerabilities', 'children')],
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals')],
-    [State('start-date-picker', 'date'),
-     State('end-date-picker', 'date'),
-     State('severity-dropdown', 'value'),
+    [State('severity-dropdown', 'value'),
      State('scan-name-input', 'value')]
 )
-def update_data(n_clicks, n_intervals, start_date, end_date, severity, scan_name):
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data = get_data(start_date, end_date, severity, scan_name)
+def update_data(n_clicks, n_intervals, severity, scan_name):
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data = get_data(severity, scan_name)
     
     # Özet tablo verisi
     summary_table_data = summary_data
