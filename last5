@@ -327,6 +327,21 @@ def get_folder_name(folder_id, cursor):
     result = cursor.fetchone()
     return result['name'] if result else None
 
+# Global bir cursor oluşturalım
+cursor = None
+
+def get_cursor():
+    global cursor
+    if cursor is None or not cursor.connection:
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+    return cursor
+
+def close_cursor():
+    global cursor
+    if cursor:
+        cursor.close()
+        cursor = None
+
 def update_scans():
     scans = get_scans()
     print(f"Toplam {len(scans['scans'])} tarama bulundu.")
@@ -334,7 +349,8 @@ def update_scans():
     # Atlanacak klasör isimleri
     skip_folders = ["Eski Taramalar", "Credential 10.222.9."]
     
-    with connection.cursor() as cursor:
+    cursor = get_cursor()
+    try:
         for scan in scans['scans']:
             # Klasör adını kontrol et
             folder_name = get_folder_name(scan['folder_id'], cursor)
@@ -355,55 +371,55 @@ def update_scans():
                 scan['name']
                 ))
     
-    connection.commit()
-    print("Tarama bilgileri veritabanına kaydedildi.")
+        connection.commit()
+        print("Tarama bilgileri veritabanına kaydedildi.")
 
-    for scan in scans['scans']:
-        # Klasör adını tekrar kontrol et
-        folder_name = get_folder_name(scan['folder_id'], cursor)
-        if folder_name in skip_folders:
-            continue
-        
-        print(f"\nİşleniyor: {scan['name']} (ID: {scan['id']})")
-        
-        scan_details = get_scan(scan['id'])
+        for scan in scans['scans']:
+            # Klasör adını tekrar kontrol et
+            folder_name = get_folder_name(scan['folder_id'], cursor)
+            if folder_name in skip_folders:
+                continue
+            
+            print(f"\nİşleniyor: {scan['name']} (ID: {scan['id']})")
+            
+            scan_details = get_scan(scan['id'])
 
-        if scan_details.get('history'):
-            sorted_history = sorted(scan_details['history'], key=itemgetter('creation_date'), reverse=True)
-            
-            print("Tüm tarama geçmişi:")
-            for idx, history_item in enumerate(sorted_history):
-                print(f"  {idx + 1}. Tarih: {format_timestamp(history_item['creation_date'])}, ID: {history_item['history_id']}")
-            
-            scans_to_process = sorted_history[:3]
-            print(f"\nİşlenecek {len(scans_to_process)} en güncel çalıştırma:")
-            
-            for idx, scan_run in enumerate(scans_to_process):
-                print(f"  {idx + 1}. Tarih: {format_timestamp(scan_run['creation_date'])}, ID: {scan_run['history_id']}, Durum: {scan_run['status']}")
+            if scan_details.get('history'):
+                sorted_history = sorted(scan_details['history'], key=itemgetter('creation_date'), reverse=True)
                 
-                if scan_run['status'] == 'completed':
-                    scan_run_details = get_scan_run(scan['id'], scan_run['history_id'])
-                    host_start = format_timestamp(scan_run_details['info'].get('scanner_start'))
-                    host_end = format_timestamp(scan_run_details['info'].get('scanner_end'))
-                    print(f"    Host Başlangıç: {host_start}, Host Bitiş: {host_end}")
+                print("Tüm tarama geçmişi:")
+                for idx, history_item in enumerate(sorted_history):
+                    print(f"  {idx + 1}. Tarih: {format_timestamp(history_item['creation_date'])}, ID: {history_item['history_id']}")
+                
+                scans_to_process = sorted_history[:3]
+                print(f"\nİşlenecek {len(scans_to_process)} en güncel çalıştırma:")
+                
+                for idx, scan_run in enumerate(scans_to_process):
+                    print(f"  {idx + 1}. Tarih: {format_timestamp(scan_run['creation_date'])}, ID: {scan_run['history_id']}, Durum: {scan_run['status']}")
                     
-                    result = None
-                    with connection.cursor() as cursor:    
+                    if scan_run['status'] == 'completed':
+                        scan_run_details = get_scan_run(scan['id'], scan_run['history_id'])
+                        host_start = format_timestamp(scan_run_details['info'].get('scanner_start'))
+                        host_end = format_timestamp(scan_run_details['info'].get('scanner_end'))
+                        print(f"    Host Başlangıç: {host_start}, Host Bitiş: {host_end}")
+                        
                         sql = "SELECT * FROM `scan_run` WHERE `scan_run_id` = %s"
                         cursor.execute(sql, (scan_run['history_id']))
                         result = cursor.fetchone()
 
-                    if result == None:
-                        print(f"      Yeni çalıştırma ekleniyor: {scan_run['history_id']}")
-                        insert_scan_run(scan['id'], scan_run['history_id'])
+                        if result is None:
+                            print(f"      Yeni çalıştırma ekleniyor: {scan_run['history_id']}")
+                            insert_scan_run(scan['id'], scan_run['history_id'])
+                        else:
+                            print(f"      Çalıştırma zaten mevcut: {scan_run['history_id']}")
                     else:
-                        print(f"      Çalıştırma zaten mevcut: {scan_run['history_id']}")
-                else:
-                    print(f"      Tamamlanmamış çalıştırma, atlanıyor: {scan_run['history_id']}")
-        else:
-            print("  Bu tarama için geçmiş çalıştırma bulunamadı.")
+                        print(f"      Tamamlanmamış çalıştırma, atlanıyor: {scan_run['history_id']}")
+            else:
+                print("  Bu tarama için geçmiş çalıştırma bulunamadı.")
 
-    print("\nTüm taramalar işlendi.")
+        print("\nTüm taramalar işlendi.")
+    finally:
+        close_cursor()
     
 update_folders()
 update_scans()
