@@ -36,22 +36,23 @@ def get_data(start_date=None, end_date=None, severity=None, scan_name=None):
         summary_query = f"""
         SELECT 
             s.name AS scan_name,
-            sr.scan_run_id,
-            FROM_UNIXTIME(sr.scan_start) AS scan_start_time,
-            sr.host_count,
-            sr.critical_count,
-            sr.high_count,
-            sr.medium_count,
-            sr.low_count,
-            sr.info_count
+            MAX(FROM_UNIXTIME(sr.scan_start)) AS last_scan_date,
+            COUNT(DISTINCT sr.scan_run_id) AS scan_count,
+            SUM(sr.host_count) AS total_hosts,
+            SUM(sr.critical_count) AS total_critical,
+            SUM(sr.high_count) AS total_high,
+            SUM(sr.medium_count) AS total_medium,
+            SUM(sr.low_count) AS total_low,
+            SUM(sr.info_count) AS total_info
         FROM 
             scan s
         JOIN 
             scan_run sr ON s.scan_id = sr.scan_id
         WHERE 1=1 {date_condition} {scan_name_condition}
+        GROUP BY 
+            s.name
         ORDER BY 
-            sr.scan_start DESC
-        LIMIT 10
+            last_scan_date DESC
         """
         
         cursor.execute(summary_query)
@@ -108,8 +109,8 @@ def get_data(start_date=None, end_date=None, severity=None, scan_name=None):
         
         cursor.execute(detailed_vulnerability_query)
         detailed_vulnerability_data = cursor.fetchall()
-        
-        # En çok görülen 10 zafiyet
+
+        # En çok görülen 10 zafiyet sorgusu
         top_vulnerabilities_query = f"""
         SELECT 
             p.name AS vulnerability_name,
@@ -125,7 +126,7 @@ def get_data(start_date=None, end_date=None, severity=None, scan_name=None):
             scan s ON sr.scan_id = s.scan_id
         WHERE 1=1 {date_condition} {severity_condition} {scan_name_condition}
         GROUP BY 
-            p.plugin_id
+            p.plugin_id, p.name, p.severity
         ORDER BY 
             count DESC
         LIMIT 10
@@ -143,15 +144,9 @@ app.layout = html.Div([
     
     html.Div([
         html.Label("Başlangıç Tarihi:"),
-        dcc.DatePickerSingle(
-            id='start-date-picker',
-            date=datetime.now().date() - timedelta(days=30)
-        ),
+        dcc.DatePickerSingle(id='start-date-picker'),
         html.Label("Bitiş Tarihi:"),
-        dcc.DatePickerSingle(
-            id='end-date-picker',
-            date=datetime.now().date()
-        ),
+        dcc.DatePickerSingle(id='end-date-picker'),
         html.Label("Severity:"),
         dcc.Dropdown(
             id='severity-dropdown',
@@ -173,7 +168,7 @@ app.layout = html.Div([
         html.H2("Özet Bilgiler"),
         dash_table.DataTable(
             id='summary-table',
-            columns=[{"name": i, "id": i} for i in ['scan_name', 'scan_start_time', 'host_count', 'critical_count', 'high_count', 'medium_count', 'low_count', 'info_count']],
+            columns=[{"name": i, "id": i} for i in ['scan_name', 'last_scan_date', 'scan_count', 'total_hosts', 'total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']],
             data=[],
             style_table={'height': '300px', 'overflowY': 'auto'}
         ),
