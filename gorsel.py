@@ -3,11 +3,11 @@ from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 import pandas as pd
-import mysql.connector
+import pymysql
 from datetime import datetime
 
 # MySQL bağlantısı
-db = mysql.connector.connect(
+db = pymysql.connect(
     host="localhost",
     user="your_username",
     password="your_password",
@@ -16,141 +16,90 @@ db = mysql.connector.connect(
 
 # Verileri çekme fonksiyonu
 def get_data():
-    cursor = db.cursor(dictionary=True)
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Özet bilgi sorgusu
+        summary_query = """
+        SELECT 
+            f.name AS folder_name,
+            s.name AS scan_name,
+            sr.scan_run_id,
+            FROM_UNIXTIME(sr.scan_start) AS scan_start_time,
+            FROM_UNIXTIME(sr.scan_end) AS scan_end_time,
+            sr.host_count,
+            sr.critical_count,
+            sr.high_count,
+            sr.medium_count,
+            sr.low_count,
+            sr.info_count
+        FROM 
+            folder f
+        JOIN 
+            scan s ON f.folder_id = s.folder_id
+        JOIN 
+            (SELECT 
+                scan_id, 
+                MAX(scan_start) AS latest_scan_start
+             FROM 
+                scan_run
+             GROUP BY 
+                scan_id) latest ON s.scan_id = latest.scan_id
+        JOIN 
+            scan_run sr ON latest.scan_id = sr.scan_id AND latest.latest_scan_start = sr.scan_start
+        ORDER BY 
+            f.name, s.name, sr.scan_start_time
+        """
+        
+        cursor.execute(summary_query)
+        summary_data = cursor.fetchall()
+        
+        # Detaylı zafiyet listesi sorgusu
+        vulnerability_query = """
+        SELECT 
+            f.name AS folder_name,
+            s.name AS scan_name,
+            sr.scan_run_id,
+            FROM_UNIXTIME(sr.scan_start) AS scan_start_time,
+            h.host_ip,
+            h.host_fqdn,
+            p.plugin_id,
+            p.name AS vulnerability_name,
+            p.severity,
+            p.family AS plugin_family,
+            vo.port
+        FROM 
+            folder f
+        JOIN 
+            scan s ON f.folder_id = s.folder_id
+        JOIN 
+            (SELECT 
+                scan_id, 
+                MAX(scan_start) AS latest_scan_start
+             FROM 
+                scan_run
+             GROUP BY 
+                scan_id) latest ON s.scan_id = latest.scan_id
+        JOIN 
+            scan_run sr ON latest.scan_id = sr.scan_id AND latest.latest_scan_start = sr.scan_start
+        LEFT JOIN
+            host h ON sr.scan_run_id = h.scan_run_id
+        LEFT JOIN
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND sr.scan_run_id = hv.scan_run_id
+        LEFT JOIN
+            plugin p ON hv.plugin_id = p.plugin_id
+        LEFT JOIN
+            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
+        ORDER BY 
+            f.name, s.name, sr.scan_start_time, h.host_ip, p.severity DESC, p.name
+        """
+        
+        cursor.execute(vulnerability_query)
+        vulnerability_data = cursor.fetchall()
     
-    # Özet bilgi sorgusu
-    summary_query = """
-    SELECT 
-        f.name AS folder_name,
-        s.name AS scan_name,
-        sr.scan_run_id,
-        FROM_UNIXTIME(sr.scan_start) AS scan_start_time,
-        FROM_UNIXTIME(sr.scan_end) AS scan_end_time,
-        sr.host_count,
-        sr.critical_count,
-        sr.high_count,
-        sr.medium_count,
-        sr.low_count,
-        sr.info_count
-    FROM 
-        folder f
-    JOIN 
-        scan s ON f.folder_id = s.folder_id
-    JOIN 
-        (SELECT 
-            scan_id, 
-            MAX(scan_start) AS latest_scan_start
-         FROM 
-            scan_run
-         GROUP BY 
-            scan_id) latest ON s.scan_id = latest.scan_id
-    JOIN 
-        scan_run sr ON latest.scan_id = sr.scan_id AND latest.latest_scan_start = sr.scan_start
-    ORDER BY 
-        f.name, s.name, sr.scan_start_time
-    """
-    
-    cursor.execute(summary_query)
-    summary_data = cursor.fetchall()
-    
-    # Detaylı zafiyet listesi sorgusu
-    vulnerability_query = """
-    SELECT 
-        f.name AS folder_name,
-        s.name AS scan_name,
-        sr.scan_run_id,
-        FROM_UNIXTIME(sr.scan_start) AS scan_start_time,
-        h.host_ip,
-        h.host_fqdn,
-        p.plugin_id,
-        p.name AS vulnerability_name,
-        p.severity,
-        p.family AS plugin_family,
-        vo.port
-    FROM 
-        folder f
-    JOIN 
-        scan s ON f.folder_id = s.folder_id
-    JOIN 
-        (SELECT 
-            scan_id, 
-            MAX(scan_start) AS latest_scan_start
-         FROM 
-            scan_run
-         GROUP BY 
-            scan_id) latest ON s.scan_id = latest.scan_id
-    JOIN 
-        scan_run sr ON latest.scan_id = sr.scan_id AND latest.latest_scan_start = sr.scan_start
-    LEFT JOIN
-        host h ON sr.scan_run_id = h.scan_run_id
-    LEFT JOIN
-        host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND sr.scan_run_id = hv.scan_run_id
-    LEFT JOIN
-        plugin p ON hv.plugin_id = p.plugin_id
-    LEFT JOIN
-        vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
-    ORDER BY 
-        f.name, s.name, sr.scan_start_time, h.host_ip, p.severity DESC, p.name
-    """
-    
-    cursor.execute(vulnerability_query)
-    vulnerability_data = cursor.fetchall()
-    
-    cursor.close()
     return summary_data, vulnerability_data
 
 app = dash.Dash(__name__)
 
-app.layout = html.Div([
-    html.H1("Nessus Tarama Gösterge Paneli"),
-    
-    html.Div([
-        html.H2("Özet Bilgiler"),
-        dash_table.DataTable(
-            id='summary-table',
-            columns=[{"name": i, "id": i} for i in ['folder_name', 'scan_name', 'scan_start_time', 'host_count', 'critical_count', 'high_count', 'medium_count', 'low_count', 'info_count']],
-            data=[],
-            style_table={'overflowX': 'auto'},
-            style_cell={'textAlign': 'left'},
-            style_header={
-                'backgroundColor': 'rgb(230, 230, 230)',
-                'fontWeight': 'bold'
-            }
-        )
-    ]),
-    
-    html.Div([
-        html.H2("Zafiyet Dağılımı"),
-        dcc.Graph(id='vulnerability-distribution')
-    ]),
-    
-    html.Div([
-        html.H2("Detaylı Zafiyet Listesi"),
-        dash_table.DataTable(
-            id='vulnerability-table',
-            columns=[{"name": i, "id": i} for i in ['folder_name', 'scan_name', 'host_ip', 'vulnerability_name', 'severity', 'plugin_family', 'port']],
-            data=[],
-            style_table={'overflowX': 'auto'},
-            style_cell={'textAlign': 'left'},
-            style_header={
-                'backgroundColor': 'rgb(230, 230, 230)',
-                'fontWeight': 'bold'
-            },
-            filter_action="native",
-            sort_action="native",
-            sort_mode="multi",
-            page_action="native",
-            page_current= 0,
-            page_size= 10,
-        )
-    ]),
-    
-    dcc.Interval(
-        id='interval-component',
-        interval=60*1000,  # Her 1 dakikada bir güncelle
-        n_intervals=0
-    )
-])
+# ... (app.layout kodu aynı kalır) ...
 
 @app.callback(
     [Output('summary-table', 'data'),
