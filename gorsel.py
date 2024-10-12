@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 # MySQL bağlantısı
 db = pymysql.connect(
     host="localhost",
-    user="your_username",
-    password="your_password",
+    user="root",
+    password="Nessus_Report123*-",
     database="nessusdb"
 )
 
@@ -136,7 +136,7 @@ def get_data(start_date=None, end_date=None, severity=None, scan_name=None):
         top_vulnerabilities_data = cursor.fetchall()
 
         # Toplam zafiyet sayıları sorgusu
-        total_vulnerabilities_query = """
+        total_vulnerabilities_query = f"""
         SELECT 
             SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as total_critical,
             SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) as total_high,
