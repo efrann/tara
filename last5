@@ -120,32 +120,50 @@ def update_plugin(plugin):
         print(f"Uyarı: Plugin ID bulunamadı: {plugin}")
         return
 
-    result = execute_query("SELECT `plugin_id`, `mod_date` FROM `plugin` WHERE `plugin_id` = %s", (plugin_id,))
+    # Tüm plugin verilerini yazdıralım
+    print(f"Plugin ID: {plugin_id}")
+    print(f"Plugin içeriği:")
+    for key, value in plugin.items():
+        print(f"  {key}: {value}")
+
+    # pluginattributes içeriğini kontrol edelim
+    plugin_attributes = plugin.get('pluginattributes', {})
+    print("Plugin attributes:")
+    for key, value in plugin_attributes.items():
+        print(f"  {key}: {value}")
+
+    # plugin_information ve risk_information içeriğini kontrol edelim
+    plugin_info = plugin_attributes.get('plugin_information', {})
+    risk_info = plugin_attributes.get('risk_information', {})
+
+    print("Plugin information:")
+    for key, value in plugin_info.items():
+        print(f"  {key}: {value}")
+
+    print("Risk information:")
+    for key, value in risk_info.items():
+        print(f"  {key}: {value}")
+
+    # Verileri çekerken varsayılan değerler kullanalım
+    name = plugin.get('pluginname') or plugin_info.get('name') or plugin_attributes.get('name') or ''
+    family = plugin.get('pluginfamily') or plugin_info.get('family') or plugin_attributes.get('family') or ''
+    synopsis = plugin.get('synopsis') or plugin_info.get('synopsis') or plugin_attributes.get('synopsis') or ''
+    description = plugin.get('description') or plugin_info.get('description') or plugin_attributes.get('description') or ''
+    solution = plugin.get('solution') or plugin_info.get('solution') or plugin_attributes.get('solution') or ''
+
+    # Çekilen verileri yazdıralım
+    print(f"Çekilen veriler:")
+    print(f"  Name: {name}")
+    print(f"  Family: {family}")
+    print(f"  Synopsis: {synopsis}")
+    print(f"  Description: {description}")
+    print(f"  Solution: {solution}")
 
     reference = None
     if 'see_also' in plugin and plugin['see_also']:
         reference = '\n'.join(plugin['see_also'])
 
-    plugin_info = plugin.get('pluginattributes', {}).get('plugin_information', {})
-    risk_info = plugin.get('pluginattributes', {}).get('risk_information', {})
-
-    # Plugin verilerini yazdırarak kontrol edelim
-    print(f"Plugin ID: {plugin_id}")
-    print(f"Severity: {plugin.get('severity', 0)}")
-    print(f"Name: {plugin.get('pluginname', '')}")
-    print(f"Family: {plugin.get('pluginfamily', '')}")
-    print(f"Synopsis: {plugin.get('synopsis', '')}")
-    print(f"Description: {plugin.get('description', '')}")
-    print(f"Solution: {plugin.get('solution', '')}")
-    print(f"CVSS Base Score: {risk_info.get('cvss_base_score')}")
-    print(f"CVSS3 Base Score: {risk_info.get('cvss3_base_score')}")
-    print(f"CVSS Vector: {risk_info.get('cvss_vector')}")
-    print(f"CVSS3 Vector: {risk_info.get('cvss3_vector')}")
-    print(f"Reference: {reference}")
-    print(f"Publication Date: {plugin_info.get('plugin_publication_date')}")
-    print(f"Modification Date: {plugin_info.get('plugin_modification_date')}")
-
-    if result:
+    if execute_query("SELECT `plugin_id`, `mod_date` FROM `plugin` WHERE `plugin_id` = %s", (plugin_id,)):
         sql = """UPDATE `plugin` 
         SET `severity` = %s, `name` = %s, `family` = %s, `synopsis` = %s, `description` = %s, `solution` = %s,
         `cvss_base_score` = %s, `cvss3_base_score` = %s, `cvss_vector` = %s, `cvss3_vector` = %s, `ref` = %s, `pub_date` = %s, `mod_date` = %s
@@ -153,11 +171,11 @@ def update_plugin(plugin):
 
         execute_insert(sql, (
             plugin.get('severity', 0),
-            plugin.get('pluginname', ''),
-            plugin.get('pluginfamily', ''),
-            plugin.get('synopsis', ''),
-            plugin.get('description', ''),
-            plugin.get('solution', ''),
+            name,
+            family,
+            synopsis,
+            description,
+            solution,
             risk_info.get('cvss_base_score'),
             risk_info.get('cvss3_base_score'),
             risk_info.get('cvss_vector'),
@@ -175,11 +193,11 @@ def update_plugin(plugin):
         execute_insert(sql, (
             plugin_id,
             plugin.get('severity', 0),
-            plugin.get('pluginname', ''),
-            plugin.get('pluginfamily', ''),
-            plugin.get('synopsis', ''),
-            plugin.get('description', ''),
-            plugin.get('solution', ''),
+            name,
+            family,
+            synopsis,
+            description,
+            solution,
             risk_info.get('cvss_base_score'),
             risk_info.get('cvss3_base_score'),
             risk_info.get('cvss_vector'),
