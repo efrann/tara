@@ -311,6 +311,33 @@ app.layout = html.Div([
                 style_table={'height': '300px', 'overflowY': 'auto'},
                 style_cell={'backgroundColor': '#34495e', 'color': 'white'},
                 style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
+                style_data_conditional=[
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Kritik"'},
+                        'color': '#e74c3c',
+                        'fontWeight': 'bold'
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Yüksek"'},
+                        'color': '#e67e22',
+                        'fontWeight': 'bold'
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Orta"'},
+                        'color': '#f1c40f',
+                        'fontWeight': 'bold'
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Düşük"'},
+                        'color': '#2ecc71',
+                        'fontWeight': 'bold'
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Bilgi"'},
+                        'color': '#3498db',
+                        'fontWeight': 'bold'
+                    }
+                ]
             ),
         ], className="six columns"),
 
@@ -408,11 +435,20 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     vulnerability_table_data = detailed_vulnerability_data
     
     # En çok görülen 10 zafiyet
+    severity_map = {
+        4: {'text': 'Kritik', 'color': '#e74c3c'},
+        3: {'text': 'Yüksek', 'color': '#e67e22'},
+        2: {'text': 'Orta', 'color': '#f1c40f'},
+        1: {'text': 'Düşük', 'color': '#2ecc71'},
+        0: {'text': 'Bilgi', 'color': '#3498db'}
+    }
+    
     top_vulnerabilities_table_data = [{
         'folder_name': row['folder_name'],
         'scan_name': row['scan_name'],
         'vulnerability_name': row['vulnerability_name'],
-        'severity': row['severity'],
+        'severity': severity_map[row['severity']]['text'],
+        'severity_color': severity_map[row['severity']]['color'],
         'count': row['count']
     } for row in top_vulnerabilities_data]
     
