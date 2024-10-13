@@ -63,12 +63,26 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
+        {severity_condition}
         {scan_name_condition}
         GROUP BY 
             s.name, f.name
-        ORDER BY 
-            last_scan_date DESC
         """
+        
+        # Severity seçimine göre sıralama ekliyoruz
+        if severity:
+            if 4 in severity:
+                summary_query += " ORDER BY total_critical DESC"
+            elif 3 in severity:
+                summary_query += " ORDER BY total_high DESC"
+            elif 2 in severity:
+                summary_query += " ORDER BY total_medium DESC"
+            elif 1 in severity:
+                summary_query += " ORDER BY total_low DESC"
+            elif 0 in severity:
+                summary_query += " ORDER BY total_info DESC"
+        else:
+            summary_query += " ORDER BY last_scan_date DESC"
         
         cursor.execute(summary_query)
         summary_data = cursor.fetchall()
@@ -609,6 +623,19 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
         'total_low': row['total_low'],
         'total_info': row['total_info']
     } for row in summary_data]
+    
+    # Severity seçimine göre sıralama
+    if severity:
+        if 4 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_critical'], reverse=True)
+        elif 3 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_high'], reverse=True)
+        elif 2 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_medium'], reverse=True)
+        elif 1 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_low'], reverse=True)
+        elif 0 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
     
     # Zafiyet dağılımı grafiği
     labels = ['Toplam', 'Kritik', 'Yüksek', 'Orta', 'Düşük']
