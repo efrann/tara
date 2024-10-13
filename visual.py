@@ -67,6 +67,14 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         cursor.execute(summary_query)
         summary_data = cursor.fetchall()
         
+        # Tarih formatını değiştir
+        for row in summary_data:
+            if row['last_scan_date']:
+                date = row['last_scan_date']
+                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
+                                  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+                row['last_scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y %H:%M")
+        
         # Zafiyet dağılımı sorgusu
         vulnerability_query = f"""
         SELECT 
@@ -260,7 +268,7 @@ app.layout = html.Div([
 
     html.Div([
         html.Div([
-            html.H3("Özet Bilgiler", style={'textAlign': 'center', 'color': 'white'}),
+            html.H3("Özet Bilgiler", style={'textAlign': 'center', 'color': '#ecf0f1'}),
             dash_table.DataTable(
                 id='summary-table',
                 columns=[
@@ -277,8 +285,8 @@ app.layout = html.Div([
                 style_table={'height': '300px', 'overflowY': 'auto'},
                 style_cell={
                     'backgroundColor': '#34495e',
-                    'color': 'white',
-                    'border': '1px solid #3498db',
+                    'color': '#ecf0f1',
+                    'border': '1px solid #2c3e50',
                     'textAlign': 'left',
                     'padding': '10px',
                     'whiteSpace': 'normal',
@@ -287,15 +295,15 @@ app.layout = html.Div([
                 style_header={
                     'backgroundColor': '#2c3e50',
                     'fontWeight': 'bold',
-                    'border': '1px solid #3498db',
+                    'border': '1px solid #34495e',
                     'color': '#3498db',
                 },
                 style_data_conditional=[
                     {
                         'if': {'column_id': col},
                         'backgroundColor': '#2c3e50',
-                        'color': 'white',
-                        'border': '1px solid #3498db'
+                        'color': '#ecf0f1',
+                        'border': '1px solid #34495e'
                     } for col in ['total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']
                 ] + [
                     {
@@ -332,8 +340,8 @@ app.layout = html.Div([
                 page_size=10,
                 style_filter={
                     'backgroundColor': '#2c3e50',
-                    'color': 'white',
-                    'border': '1px solid #3498db',
+                    'color': '#ecf0f1',
+                    'border': '1px solid #34495e',
                 },
                 style_filter_conditional=[
                     {
@@ -342,10 +350,6 @@ app.layout = html.Div([
                     } for c in ['folder_name', 'scan_name', 'last_scan_date']
                 ],
             ),
-            html.Div([
-                html.Button("Tüm Filtreleri Temizle", id="clear-filters-button", 
-                            style={'marginTop': '10px', 'backgroundColor': '#3498db', 'color': 'white', 'border': 'none', 'padding': '10px', 'borderRadius': '5px'}),
-            ], style={'textAlign': 'right'}),
         ], className="six columns"),
 
         html.Div([
