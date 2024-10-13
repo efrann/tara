@@ -46,10 +46,10 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
             sr.info_count AS total_info
         FROM 
             scan s
+        LEFT JOIN 
+            folder f ON s.folder_id = f.folder_id
         JOIN 
             scan_run sr ON s.scan_id = sr.scan_id
-        JOIN
-            folder f ON s.folder_id = f.folder_id
         WHERE 
             sr.scan_run_id = (
                 SELECT MAX(scan_run_id) 
@@ -316,25 +316,44 @@ app.layout = html.Div([
 def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data = get_data(severity, scan_name, vulnerability_name)
     
+    print("Summary Data:", summary_data)  # Debug için eklendi
+    
     # Özet tablo verisi
-    summary_table_data = summary_data
+    summary_table_data = [{
+        'scan_name': row['scan_name'],
+        'folder_name': row['folder_name'],
+        'last_scan_date': row['last_scan_date'],
+        'total_hosts': row['total_hosts'],
+        'total_critical': row['total_critical'],
+        'total_high': row['total_high'],
+        'total_medium': row['total_medium'],
+        'total_low': row['total_low'],
+        'total_info': row['total_info']
+    } for row in summary_data]
     
     # Zafiyet dağılımı grafiği
-    severity_labels = {0: 'Info', 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Critical'}
-    colors = {'Info': '#3498db', 'Low': '#2ecc71', 'Medium': '#f1c40f', 'High': '#e67e22', 'Critical': '#e74c3c'}
-    vulnerability_distribution = go.Figure(data=[go.Pie(
-        labels=[severity_labels[row['severity']] for row in vulnerability_data],
-        values=[row['count'] for row in vulnerability_data],
-        hole=.3,
-        marker=dict(colors=[colors[severity_labels[row['severity']]] for row in vulnerability_data])
-    )])
-    vulnerability_distribution.update_layout(
-        title_text="Zafiyet Dağılımı",
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#2c3e50',
-        font=dict(color='white')
-    )
-    
+    vulnerability_distribution = {
+        'data': [
+            go.Pie(
+                labels=['Critical', 'High', 'Medium', 'Low', 'Info'],
+                values=[
+                    sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
+                    sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
+                    sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
+                    sum(item['count'] for item in vulnerability_data if item['severity'] == 1),
+                    sum(item['count'] for item in vulnerability_data if item['severity'] == 0)
+                ],
+                marker=dict(colors=['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db'])
+            )
+        ],
+        'layout': go.Layout(
+            title='Zafiyet Dağılımı',
+            paper_bgcolor='#2c3e50',
+            plot_bgcolor='#2c3e50',
+            font=dict(color='white')
+        )
+    }
+
     # Detaylı zafiyet listesi
     vulnerability_table_data = detailed_vulnerability_data
     
@@ -344,25 +363,25 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     # Toplam zafiyet sayıları
     total_vulnerabilities = [
         html.Div([
-            html.H4("Critical", style={'color': '#e74c3c'}),
-            html.H2(f"{total_vulnerabilities_data['total_critical']:,}", style={'color': '#e74c3c'})
+            html.H4("Kritik", style={'color': '#e74c3c'}),
+            html.P(total_vulnerabilities_data['total_critical'])
         ]),
         html.Div([
-            html.H4("High", style={'color': '#e67e22'}),
-            html.H2(f"{total_vulnerabilities_data['total_high']:,}", style={'color': '#e67e22'})
+            html.H4("Yüksek", style={'color': '#e67e22'}),
+            html.P(total_vulnerabilities_data['total_high'])
         ]),
         html.Div([
-            html.H4("Medium", style={'color': '#f1c40f'}),
-            html.H2(f"{total_vulnerabilities_data['total_medium']:,}", style={'color': '#f1c40f'})
+            html.H4("Orta", style={'color': '#f1c40f'}),
+            html.P(total_vulnerabilities_data['total_medium'])
         ]),
         html.Div([
-            html.H4("Low", style={'color': '#2ecc71'}),
-            html.H2(f"{total_vulnerabilities_data['total_low']:,}", style={'color': '#2ecc71'})
+            html.H4("Düşük", style={'color': '#2ecc71'}),
+            html.P(total_vulnerabilities_data['total_low'])
         ]),
         html.Div([
-            html.H4("Info", style={'color': '#3498db'}),
-            html.H2(f"{total_vulnerabilities_data['total_info']:,}", style={'color': '#3498db'})
-        ]),
+            html.H4("Bilgi", style={'color': '#3498db'}),
+            html.P(total_vulnerabilities_data['total_info'])
+        ])
     ]
     
     return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities
