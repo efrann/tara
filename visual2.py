@@ -206,6 +206,11 @@ app.layout = html.Div([
     ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
 
     html.Div([
+        html.P(id='last-updated', style={'color': 'white', 'textAlign': 'right'}),
+        html.P("Bu sayfa her 1 dakikada bir otomatik olarak yenilenir.", style={'color': 'white', 'textAlign': 'right', 'fontStyle': 'italic'}),
+    ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
+
+    html.Div([
         html.Div([
             html.Label("Severity:", style={'color': 'white'}),
             dcc.Dropdown(
@@ -325,7 +330,8 @@ app.layout = html.Div([
      Output('vulnerability-distribution', 'figure'),
      Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
-     Output('total-vulnerabilities', 'children')],
+     Output('total-vulnerabilities', 'children'),
+     Output('last-updated', 'children')],
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals')],
     [State('severity-dropdown', 'value'),
@@ -424,7 +430,10 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
         }) for info in severity_info
     ]
     
-    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities
+    # Son güncelleme zamanını oluştur
+    last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities, last_updated
 
 if __name__ == '__main__':
     app.run_server(debug=True)
