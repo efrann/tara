@@ -373,29 +373,36 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             )
         ],
         'layout': go.Layout(
-            title='Zafiyet Dağılımı',
+            title={
+                'text': 'Zafiyet Dağılımı',
+                'font': {'size': 24, 'color': 'white'}
+            },
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#2c3e50',
             font=dict(color='white'),
             annotations=[
                 {
-                    'text': f'{label}<br>{value}',
-                    'x': 1.2 * math.cos(math.pi / 2 - (i * 2 * math.pi / len(labels))),
-                    'y': 1.2 * math.sin(math.pi / 2 - (i * 2 * math.pi / len(labels))),
-                    'font': {'size': 12, 'color': color},
+                    'text': f'<b>{label}</b><br>{value}',
+                    'x': 1.3 * math.cos(math.pi / 2 - (i * 2 * math.pi / len(labels))),
+                    'y': 1.3 * math.sin(math.pi / 2 - (i * 2 * math.pi / len(labels))),
+                    'font': {'size': 14, 'color': 'white'},
                     'showarrow': True,
                     'arrowhead': 2,
                     'arrowsize': 1,
                     'arrowwidth': 2,
                     'arrowcolor': color,
-                    'ax': 30 * math.cos(math.pi / 2 - (i * 2 * math.pi / len(labels))),
-                    'ay': 30 * math.sin(math.pi / 2 - (i * 2 * math.pi / len(labels))),
+                    'bgcolor': color,
+                    'bordercolor': color,
+                    'borderwidth': 2,
+                    'borderpad': 4,
+                    'ax': 60 * math.cos(math.pi / 2 - (i * 2 * math.pi / len(labels))),
+                    'ay': 60 * math.sin(math.pi / 2 - (i * 2 * math.pi / len(labels))),
                 }
                 for i, (label, value, color) in enumerate(zip(labels, values, colors))
             ],
             showlegend=False,
-            height=500,
-            margin=dict(l=50, r=50, t=50, b=50)
+            height=600,
+            margin=dict(l=50, r=50, t=80, b=50)
         )
     }
 
