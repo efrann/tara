@@ -5,7 +5,6 @@ import plotly.graph_objs as go
 import pandas as pd
 import pymysql
 from datetime import datetime, timedelta
-import dash_bootstrap_components as dbc
 
 # MySQL bağlantısı
 db = pymysql.connect(
@@ -33,7 +32,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         if vulnerability_name:
             vulnerability_name_condition = f"AND p.name LIKE '%{vulnerability_name}%'"
 
-        # Özet bilgi sorgusu
+        # ��zet bilgi sorgusu
         summary_query = f"""
         SELECT 
             s.name AS scan_name,
@@ -193,216 +192,121 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
     return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data
 
 # Dash uygulaması
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
+app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
 
-app.layout = dbc.Container([
-    dbc.Row([
-        dbc.Col([
-            html.Img(src="/assets/nessus_logo.png", style={'height': '50px'}),
-            html.H1("Nessus Tarama Sonuçları", className="text-center mb-4"),
-            html.P(f"Son Güncelleme: {datetime.now().strftime('%B %d, %Y %H:%M')} (UTC)", className="text-right text-muted"),
-        ], width=12)
-    ], className="mb-4"),
+app.layout = html.Div([
+    html.Div([
+        html.H1("Nessus Tarama Sonuçları Gösterge Paneli", style={'textAlign': 'center', 'color': '#ecf0f1', 'fontFamily': 'Arial, sans-serif'}),
+        html.Img(src="/assets/nessus_logo.png", style={'height': '50px', 'float': 'right'}),
+    ], style={'backgroundColor': '#34495e', 'padding': '20px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
-    dbc.Row([
-        dbc.Col([
-            dbc.Card([
-                dbc.CardBody([
-                    html.H4("Toplam Zafiyetler", className="card-title text-center"),
-                    html.H2(id="total-vulnerabilities", className="card-text text-center text-warning")
-                ])
-            ], color="primary", outline=True)
-        ], width=3),
-        dbc.Col([
-            dbc.Card([
-                dbc.CardBody([
-                    html.H4("Kritik Zafiyetler", className="card-title text-center"),
-                    html.H2(id="critical-vulnerabilities", className="card-text text-center text-danger")
-                ])
-            ], color="danger", outline=True)
-        ], width=3),
-        dbc.Col([
-            dbc.Card([
-                dbc.CardBody([
-                    html.H4("Yüksek Zafiyetler", className="card-title text-center"),
-                    html.H2(id="high-vulnerabilities", className="card-text text-center text-warning")
-                ])
-            ], color="warning", outline=True)
-        ], width=3),
-        dbc.Col([
-            dbc.Card([
-                dbc.CardBody([
-                    html.H4("Orta Zafiyetler", className="card-title text-center"),
-                    html.H2(id="medium-vulnerabilities", className="card-text text-center text-info")
-                ])
-            ], color="info", outline=True)
-        ], width=3),
-    ], className="mb-4"),
+    html.Div([
+        html.Div([
+            html.Label("Severity:", style={'color': '#ecf0f1', 'marginBottom': '5px'}),
+            dcc.Dropdown(
+                id='severity-dropdown',
+                options=[
+                    {'label': 'Critical', 'value': 4},
+                    {'label': 'High', 'value': 3},
+                    {'label': 'Medium', 'value': 2},
+                    {'label': 'Low', 'value': 1},
+                    {'label': 'Info', 'value': 0}
+                ],
+                multi=True,
+                style={'width': '200px', 'backgroundColor': '#ecf0f1', 'color': '#2c3e50'}
+            ),
+        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
+        html.Div([
+            html.Label("Tarama Adı:", style={'color': '#ecf0f1', 'marginBottom': '5px'}),
+            dcc.Input(id='scan-name-input', type='text', style={'width': '200px', 'backgroundColor': '#ecf0f1', 'color': '#2c3e50', 'border': 'none', 'borderRadius': '3px', 'padding': '5px'}),
+        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
+        html.Div([
+            html.Label("Zafiyet Adı:", style={'color': '#ecf0f1', 'marginBottom': '5px'}),
+            dcc.Input(id='vulnerability-name-input', type='text', style={'width': '200px', 'backgroundColor': '#ecf0f1', 'color': '#2c3e50', 'border': 'none', 'borderRadius': '3px', 'padding': '5px'}),
+        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
+        html.Button('Filtrele', id='filter-button', style={'marginTop': '20px', 'backgroundColor': '#e74c3c', 'color': 'white', 'border': 'none', 'padding': '10px 20px', 'borderRadius': '3px', 'cursor': 'pointer', 'transition': 'background-color 0.3s'}),
+    ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'marginBottom': '20px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
-    dbc.Row([
-        dbc.Col([
-            dbc.Card([
-                dbc.CardHeader("Filtreler"),
-                dbc.CardBody([
-                    dbc.Row([
-                        dbc.Col([
-                            html.Label("Severity:"),
-                            dcc.Dropdown(
-                                id='severity-dropdown',
-                                options=[
-                                    {'label': 'Critical', 'value': 4},
-                                    {'label': 'High', 'value': 3},
-                                    {'label': 'Medium', 'value': 2},
-                                    {'label': 'Low', 'value': 1},
-                                    {'label': 'Info', 'value': 0}
-                                ],
-                                multi=True,
-                            ),
-                        ], width=4),
-                        dbc.Col([
-                            html.Label("Tarama Adı:"),
-                            dcc.Input(id='scan-name-input', type='text', className="form-control"),
-                        ], width=4),
-                        dbc.Col([
-                            html.Label("Zafiyet Adı:"),
-                            dcc.Input(id='vulnerability-name-input', type='text', className="form-control"),
-                        ], width=4),
-                    ]),
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Button('Filtrele', id='filter-button', color="primary", className="mt-3"),
-                        ], width=12, className="text-center"),
-                    ]),
-                ])
-            ], className="mb-4"),
-        ], width=12),
+    html.Div([
+        html.Div([
+            html.H3("Toplam Zafiyet Sayıları", style={'textAlign': 'center', 'color': '#ecf0f1', 'fontFamily': 'Arial, sans-serif'}),
+            html.Div(id='total-vulnerabilities', style={'display': 'flex', 'justifyContent': 'space-around', 'backgroundColor': '#34495e', 'padding': '20px', 'borderRadius': '5px'}),
+        ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
     ]),
 
-    dbc.Row([
-        dbc.Col([
-            dbc.Card([
-                dbc.CardHeader("Özet Bilgiler"),
-                dbc.CardBody([
-                    dbc.Row([
-                        dbc.Col([
-                            dcc.Dropdown(
-                                id='summary-filter-dropdown',
-                                options=[
-                                    {'label': 'Tüm Taramalar', 'value': 'all'},
-                                    {'label': 'Son 7 Gün', 'value': '7days'},
-                                    {'label': 'Son 30 Gün', 'value': '30days'},
-                                ],
-                                value='all',
-                                clearable=False,
-                            ),
-                        ], width=4),
-                        dbc.Col([
-                            dbc.Input(id="summary-search", placeholder="Ara...", type="text"),
-                        ], width=4),
-                    ], className="mb-3"),
-                    html.Div([
-                        dash_table.DataTable(
-                            id='summary-table',
-                            columns=[
-                                {"name": "Tarama Adı", "id": "scan_name"},
-                                {"name": "Klasör Adı", "id": "folder_name"},
-                                {"name": "Son Tarama Tarihi", "id": "last_scan_date"},
-                                {"name": "Toplam Host", "id": "total_hosts"},
-                                {"name": "Kritik", "id": "total_critical"},
-                                {"name": "Yüksek", "id": "total_high"},
-                                {"name": "Orta", "id": "total_medium"},
-                            ],
-                            style_table={'overflowX': 'auto', 'maxHeight': '400px'},
-                            style_cell={
-                                'textAlign': 'left',
-                                'padding': '5px',
-                                'whiteSpace': 'normal',
-                                'height': 'auto',
-                            },
-                            style_header={
-                                'backgroundColor': 'rgb(30, 30, 30)',
-                                'fontWeight': 'bold'
-                            },
-                            style_data={
-                                'backgroundColor': 'rgb(50, 50, 50)',
-                                'color': 'white'
-                            },
-                            filter_action="native",
-                            sort_action="native",
-                            sort_mode="multi",
-                            page_action="native",
-                            page_current=0,
-                            page_size=10,
-                        ),
-                    ], style={'maxHeight': '400px', 'overflowY': 'scroll'}),
-                ]),
-            ], className="mb-4"),
-        ], width=12),
-    ]),
+    html.Div([
+        html.Div([
+            html.H3("Özet Bilgiler", style={'textAlign': 'center', 'color': 'white'}),
+            dash_table.DataTable(
+                id='summary-table',
+                columns=[
+                    {"name": "Tarama Adı", "id": "scan_name"},
+                    {"name": "Klasör Adı", "id": "folder_name"},
+                    {"name": "Son Tarama Tarihi", "id": "last_scan_date"},
+                    {"name": "Toplam Host", "id": "total_hosts"},
+                    {"name": "Kritik", "id": "total_critical"},
+                    {"name": "Yüksek", "id": "total_high"},
+                    {"name": "Orta", "id": "total_medium"},
+                    {"name": "Düşük", "id": "total_low"},
+                    {"name": "Bilgi", "id": "total_info"}
+                ],
+                style_table={'height': '300px', 'overflowY': 'auto'},
+                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
+                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
+                sort_action="native",
+                sort_mode="multi",
+            ),
+        ], className="six columns"),
 
-    dbc.Row([
-        dbc.Col([
-            dbc.Card([
-                dbc.CardHeader("Zafiyet Dağılımı"),
-                dbc.CardBody([
-                    dcc.Graph(id='vulnerability-distribution')
-                ])
-            ], className="mb-4"),
-        ], width=6),
-        dbc.Col([
-            dbc.Card([
-                dbc.CardHeader("Son 30 Gün Zafiyet Trendi"),
-                dbc.CardBody([
-                    dcc.Graph(id='vulnerability-trend')
-                ])
-            ], className="mb-4"),
-        ], width=6),
-    ]),
+        html.Div([
+            html.H3("Zafiyet Dağılımı", style={'textAlign': 'center', 'color': 'white'}),
+            dcc.Graph(id='vulnerability-distribution')
+        ], className="six columns"),
+    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
 
-    dbc.Row([
-        dbc.Col([
-            dbc.Card([
-                dbc.CardHeader("En Çok Görülen 10 Zafiyet"),
-                dbc.CardBody([
-                    dash_table.DataTable(
-                        id='top-vulnerabilities-table',
-                        columns=[{"name": i, "id": i} for i in ['vulnerability_name', 'severity', 'count']],
-                        style_table={'overflowX': 'auto'},
-                        style_cell={
-                            'textAlign': 'left',
-                            'padding': '5px',
-                            'whiteSpace': 'normal',
-                            'height': 'auto',
-                        },
-                        style_header={
-                            'backgroundColor': 'rgb(30, 30, 30)',
-                            'fontWeight': 'bold'
-                        },
-                        style_data={
-                            'backgroundColor': 'rgb(50, 50, 50)',
-                            'color': 'white'
-                        },
-                    ),
-                ]),
-            ], className="mb-4"),
-        ], width=12),
-    ]),
+    html.Div([
+        html.Div([
+            html.H3("En Çok Görülen 10 Zafiyet", style={'textAlign': 'center', 'color': 'white'}),
+            dash_table.DataTable(
+                id='top-vulnerabilities-table',
+                columns=[{"name": i, "id": i} for i in ['vulnerability_name', 'severity', 'count']],
+                style_table={'height': '300px', 'overflowY': 'auto'},
+                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
+                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
+            ),
+        ], className="six columns"),
+
+        html.Div([
+            html.H3("Detaylı Zafiyet Listesi", style={'textAlign': 'center', 'color': 'white'}),
+            dash_table.DataTable(
+                id='vulnerability-table',
+                columns=[{"name": i, "id": i} for i in ['scan_name', 'host_ip', 'vulnerability_name', 'severity', 'plugin_family', 'port', 'scan_date']],
+                style_table={'height': '300px', 'overflowY': 'auto'},
+                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
+                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
+                filter_action="native",
+                sort_action="native",
+                sort_mode="multi",
+                page_action="native",
+                page_current=0,
+                page_size=10,
+            )
+        ], className="six columns"),
+    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
 
     dcc.Interval(
         id='interval-component',
         interval=60*1000,  # Her 1 dakikada bir güncelle
         n_intervals=0
     )
-], fluid=True, style={'backgroundColor': '#1e1e2f', 'color': 'white'})
+], style={'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
 
 @app.callback(
-    [Output('total-vulnerabilities', 'children'),
-     Output('critical-vulnerabilities', 'children'),
-     Output('high-vulnerabilities', 'children'),
-     Output('medium-vulnerabilities', 'children'),
+    [Output('summary-table', 'data'),
      Output('vulnerability-distribution', 'figure'),
-     Output('vulnerability-trend', 'figure'),
-     Output('top-vulnerabilities-table', 'data')],
+     Output('vulnerability-table', 'data'),
+     Output('top-vulnerabilities-table', 'data'),
+     Output('total-vulnerabilities', 'children')],
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals')],
     [State('severity-dropdown', 'value'),
@@ -410,14 +314,22 @@ app.layout = dbc.Container([
      State('vulnerability-name-input', 'value')]
 )
 def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
-    # Veri çekme işlemleri
     summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data = get_data(severity, scan_name, vulnerability_name)
     
-    # Toplam zafiyet sayıları
-    total_vulnerabilities = sum(total_vulnerabilities_data.values())
-    critical_vulnerabilities = total_vulnerabilities_data['total_critical']
-    high_vulnerabilities = total_vulnerabilities_data['total_high']
-    medium_vulnerabilities = total_vulnerabilities_data['total_medium']
+    print("Summary Data:", summary_data)  # Debug için eklendi
+    
+    # Özet tablo verisi
+    summary_table_data = [{
+        'scan_name': row['scan_name'],
+        'folder_name': row['folder_name'],
+        'last_scan_date': row['last_scan_date'],
+        'total_hosts': row['total_hosts'],
+        'total_critical': row['total_critical'],
+        'total_high': row['total_high'],
+        'total_medium': row['total_medium'],
+        'total_low': row['total_low'],
+        'total_info': row['total_info']
+    } for row in summary_data]
     
     # Zafiyet dağılımı grafiği
     vulnerability_distribution = {
@@ -425,82 +337,54 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             go.Pie(
                 labels=['Critical', 'High', 'Medium', 'Low', 'Info'],
                 values=[
-                    total_vulnerabilities_data['total_critical'],
-                    total_vulnerabilities_data['total_high'],
-                    total_vulnerabilities_data['total_medium'],
-                    total_vulnerabilities_data['total_low'],
-                    total_vulnerabilities_data['total_info']
+                    sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
+                    sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
+                    sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
+                    sum(item['count'] for item in vulnerability_data if item['severity'] == 1),
+                    sum(item['count'] for item in vulnerability_data if item['severity'] == 0)
                 ],
                 marker=dict(colors=['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db'])
             )
         ],
         'layout': go.Layout(
             title='Zafiyet Dağılımı',
-            paper_bgcolor='#1e1e2f',
-            plot_bgcolor='#1e1e2f',
+            paper_bgcolor='#2c3e50',
+            plot_bgcolor='#2c3e50',
             font=dict(color='white')
         )
     }
-    
-    # Zafiyet trendi grafiği (örnek veri, gerçek veriyle değiştirilmeli)
-    vulnerability_trend = {
-        'data': [
-            go.Bar(
-                x=[datetime.now() - timedelta(days=i) for i in range(30, 0, -1)],
-                y=[100 - i*2 for i in range(30)],  # Örnek veri
-                name='Günlük Zafiyet Sayısı'
-            ),
-            go.Scatter(
-                x=[datetime.now() - timedelta(days=i) for i in range(30, 0, -1)],
-                y=[90 - i for i in range(30)],  # Örnek veri
-                name='7 Günlük Ortalama',
-                line=dict(color='magenta')
-            )
-        ],
-        'layout': go.Layout(
-            title='Son 30 Gün Zafiyet Trendi',
-            xaxis=dict(title='Tarih'),
-            yaxis=dict(title='Zafiyet Sayısı'),
-            paper_bgcolor='#1e1e2f',
-            plot_bgcolor='#1e1e2f',
-            font=dict(color='white')
-        )
-    }
-    
-    return (
-        f"{total_vulnerabilities:,}",
-        f"{critical_vulnerabilities:,}",
-        f"{high_vulnerabilities:,}",
-        f"{medium_vulnerabilities:,}",
-        vulnerability_distribution,
-        vulnerability_trend,
-        top_vulnerabilities_data
-    )
 
-# Yeni callback fonksiyonu ekleyelim
-@app.callback(
-    Output('summary-table', 'data'),
-    [Input('summary-filter-dropdown', 'value'),
-     Input('summary-search', 'value'),
-     Input('interval-component', 'n_intervals')]
-)
-def update_summary_table(filter_value, search_value, n_intervals):
-    # Verileri çek (bu fonksiyonu kendi veri çekme mantığınıza göre uyarlayın)
-    summary_data, _, _, _, _ = get_data()
+    # Detaylı zafiyet listesi
+    vulnerability_table_data = detailed_vulnerability_data
     
-    # Filtreleme işlemi
-    if filter_value == '7days':
-        seven_days_ago = datetime.now() - timedelta(days=7)
-        summary_data = [row for row in summary_data if datetime.strptime(row['last_scan_date'], '%Y-%m-%d %H:%M:%S') >= seven_days_ago]
-    elif filter_value == '30days':
-        thirty_days_ago = datetime.now() - timedelta(days=30)
-        summary_data = [row for row in summary_data if datetime.strptime(row['last_scan_date'], '%Y-%m-%d %H:%M:%S') >= thirty_days_ago]
+    # En çok görülen 10 zafiyet
+    top_vulnerabilities_table_data = top_vulnerabilities_data
     
-    # Arama işlemi
-    if search_value:
-        summary_data = [row for row in summary_data if search_value.lower() in row['scan_name'].lower() or search_value.lower() in row['folder_name'].lower()]
+    # Toplam zafiyet sayıları
+    total_vulnerabilities = [
+        html.Div([
+            html.H4("Kritik", style={'color': '#e74c3c', 'margin': '0'}),
+            html.P(total_vulnerabilities_data['total_critical'], style={'fontSize': '24px', 'fontWeight': 'bold', 'margin': '5px 0'})
+        ], style={'backgroundColor': '#34495e', 'padding': '10px', 'borderRadius': '5px', 'textAlign': 'center'}),
+        html.Div([
+            html.H4("Yüksek", style={'color': '#e67e22', 'margin': '0'}),
+            html.P(total_vulnerabilities_data['total_high'], style={'fontSize': '24px', 'fontWeight': 'bold', 'margin': '5px 0'})
+        ], style={'backgroundColor': '#34495e', 'padding': '10px', 'borderRadius': '5px', 'textAlign': 'center'}),
+        html.Div([
+            html.H4("Orta", style={'color': '#f1c40f', 'margin': '0'}),
+            html.P(total_vulnerabilities_data['total_medium'], style={'fontSize': '24px', 'fontWeight': 'bold', 'margin': '5px 0'})
+        ], style={'backgroundColor': '#34495e', 'padding': '10px', 'borderRadius': '5px', 'textAlign': 'center'}),
+        html.Div([
+            html.H4("Düşük", style={'color': '#2ecc71', 'margin': '0'}),
+            html.P(total_vulnerabilities_data['total_low'], style={'fontSize': '24px', 'fontWeight': 'bold', 'margin': '5px 0'})
+        ], style={'backgroundColor': '#34495e', 'padding': '10px', 'borderRadius': '5px', 'textAlign': 'center'}),
+        html.Div([
+            html.H4("Bilgi", style={'color': '#3498db', 'margin': '0'}),
+            html.P(total_vulnerabilities_data['total_info'], style={'fontSize': '24px', 'fontWeight': 'bold', 'margin': '5px 0'})
+        ], style={'backgroundColor': '#34495e', 'padding': '10px', 'borderRadius': '5px', 'textAlign': 'center'})
+    ]
     
-    return summary_data
+    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities
 
 if __name__ == '__main__':
     app.run_server(debug=True)
