@@ -376,7 +376,13 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     vulnerability_table_data = detailed_vulnerability_data
     
     # En çok görülen 10 zafiyet
-    top_vulnerabilities_table_data = top_vulnerabilities_data
+    top_vulnerabilities_table_data = [{
+        'folder_name': row['folder_name'],
+        'scan_name': row['scan_name'],
+        'vulnerability_name': row['vulnerability_name'],
+        'severity': row['severity'],
+        'count': row['count']
+    } for row in top_vulnerabilities_data]
     
     # Toplam zafiyet sayıları
     severity_info = [
