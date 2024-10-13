@@ -444,31 +444,31 @@ app.layout = html.Div([
                 },
                 style_data_conditional=[
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 4'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Kritik"'},
                         'backgroundColor': 'rgba(231, 76, 60, 0.1)',
                         'color': '#e74c3c',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 3'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Yüksek"'},
                         'backgroundColor': 'rgba(230, 126, 34, 0.1)',
                         'color': '#e67e22',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 2'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Orta"'},
                         'backgroundColor': 'rgba(241, 196, 15, 0.1)',
                         'color': '#f1c40f',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 1'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Düşük"'},
                         'backgroundColor': 'rgba(46, 204, 113, 0.1)',
                         'color': '#2ecc71',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 0'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Bilgi"'},
                         'backgroundColor': 'rgba(52, 152, 219, 0.1)',
                         'color': '#3498db',
                         'fontWeight': 'bold',
@@ -649,19 +649,18 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     
     # En çok görülen 10 zafiyet
     severity_map = {
-        4: {'text': 'Kritik', 'color': '#e74c3c'},
-        3: {'text': 'Yüksek', 'color': '#e67e22'},
-        2: {'text': 'Orta', 'color': '#f1c40f'},
-        1: {'text': 'Düşük', 'color': '#2ecc71'},
-        0: {'text': 'Bilgi', 'color': '#3498db'}
+        4: 'Kritik',
+        3: 'Yüksek',
+        2: 'Orta',
+        1: 'Düşük',
+        0: 'Bilgi'
     }
     
     top_vulnerabilities_table_data = [{
         'folder_name': row['folder_name'],
         'scan_name': row['scan_name'],
         'vulnerability_name': row['vulnerability_name'],
-        'severity': severity_map[row['severity']]['text'],
-        'severity_color': severity_map[row['severity']]['color'],
+        'severity': severity_map[row['severity']],
         'count': row['count']
     } for row in top_vulnerabilities_data]
     
