@@ -112,7 +112,7 @@ def update_folders():
 def update_plugin(plugin, cursor):
     #Check existing plugin_id in plugin DB
     sql = "SELECT `plugin_id`, `mod_date` FROM `plugin` WHERE `plugin_id` = %s"
-    cursor.execute(sql, (plugin['pluginid']))
+    cursor.execute(sql, (plugin['plugin_id']))
     result = cursor.fetchone()
 
     #Split reference into array into string delimited by new line
@@ -142,7 +142,7 @@ def update_plugin(plugin, cursor):
             reference,
             plugin['pluginattributes']['plugin_information'].get('plugin_publication_date', None),
             plugin['pluginattributes']['plugin_information'].get('plugin_modification_date', None),
-            plugin['pluginid']
+            plugin['plugin_id']
             ))
 
         else:
@@ -155,7 +155,7 @@ def update_plugin(plugin, cursor):
                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         
         cursor.execute(sql, (
-            plugin['pluginid'],
+            plugin['plugin_id'],
             plugin['severity'],
             plugin['pluginname'],
             plugin['pluginfamily'],
