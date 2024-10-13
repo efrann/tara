@@ -33,176 +33,181 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         if vulnerability_name:
             vulnerability_name_condition = f"AND p.name LIKE '%{vulnerability_name}%'"
 
-        # Özet bilgi sorgusu
-        summary_query = f"""
+        # Birleştirilmiş sorgu
+        combined_query = f"""
+        WITH latest_scans AS (
+            SELECT scan_id, MAX(scan_run_id) as latest_scan_run_id
+            FROM scan_run
+            GROUP BY scan_id
+        ),
+        summary_data AS (
+            SELECT 
+                s.name AS scan_name,
+                f.name AS folder_name,
+                FROM_UNIXTIME(sr.scan_start) AS last_scan_date,
+                sr.host_count AS total_hosts,
+                sr.critical_count AS total_critical,
+                sr.high_count AS total_high,
+                sr.medium_count AS total_medium,
+                sr.low_count AS total_low,
+                sr.info_count AS total_info
+            FROM 
+                scan s
+            LEFT JOIN 
+                folder f ON s.folder_id = f.folder_id
+            JOIN 
+                latest_scans ls ON s.scan_id = ls.scan_id
+            JOIN 
+                scan_run sr ON ls.latest_scan_run_id = sr.scan_run_id
+            {scan_name_condition}
+        ),
+        detailed_counts AS (
+            SELECT 
+                SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as total_critical,
+                SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) as total_high,
+                SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) as total_medium,
+                SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) as total_low,
+                SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) as total_info
+            FROM 
+                host_vuln hv
+            JOIN 
+                plugin p ON hv.plugin_id = p.plugin_id
+            JOIN
+                latest_scans ls ON hv.scan_run_id = ls.latest_scan_run_id
+            JOIN
+                scan s ON ls.scan_id = s.scan_id
+            {severity_condition} {scan_name_condition}
+        ),
+        vulnerability_distribution AS (
+            SELECT 
+                p.severity,
+                COUNT(*) as count
+            FROM 
+                host_vuln hv
+            JOIN 
+                plugin p ON hv.plugin_id = p.plugin_id
+            JOIN
+                latest_scans ls ON hv.scan_run_id = ls.latest_scan_run_id
+            JOIN
+                scan s ON ls.scan_id = s.scan_id
+            {severity_condition} {scan_name_condition}
+            GROUP BY 
+                p.severity
+        ),
+        detailed_vulnerability_list AS (
+            SELECT 
+                s.name AS scan_name,
+                h.host_ip,
+                COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
+                p.severity,
+                p.family AS plugin_family,
+                vo.port,
+                FROM_UNIXTIME(sr.scan_start) AS scan_date
+            FROM 
+                scan s
+            JOIN 
+                latest_scans ls ON s.scan_id = ls.scan_id
+            JOIN 
+                scan_run sr ON ls.latest_scan_run_id = sr.scan_run_id
+            JOIN 
+                host h ON sr.scan_run_id = h.scan_run_id
+            JOIN 
+                host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND sr.scan_run_id = hv.scan_run_id
+            JOIN 
+                plugin p ON hv.plugin_id = p.plugin_id
+            LEFT JOIN
+                vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
+            {severity_condition} {scan_name_condition} {vulnerability_name_condition}
+        ),
+        top_vulnerabilities AS (
+            SELECT 
+                f.name AS folder_name,
+                s.name AS scan_name,
+                COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
+                p.severity,
+                COUNT(*) as count
+            FROM 
+                host_vuln hv
+            JOIN 
+                plugin p ON hv.plugin_id = p.plugin_id
+            JOIN
+                latest_scans ls ON hv.scan_run_id = ls.latest_scan_run_id
+            JOIN
+                scan s ON ls.scan_id = s.scan_id
+            JOIN
+                folder f ON s.folder_id = f.folder_id
+            {severity_condition} {scan_name_condition} {vulnerability_name_condition}
+            GROUP BY 
+                f.name, s.name, p.plugin_id, p.name, p.severity
+            ORDER BY 
+                count DESC
+            LIMIT 10
+        )
         SELECT 
-            s.name AS scan_name,
-            f.name AS folder_name,
-            MAX(FROM_UNIXTIME(sr.scan_start)) AS last_scan_date,
-            sr.host_count AS total_hosts,
-            sr.critical_count AS total_critical,
-            sr.high_count AS total_high,
-            sr.medium_count AS total_medium,
-            sr.low_count AS total_low,
-            sr.info_count AS total_info
+            'summary' as data_type,
+            sd.*,
+            dc.total_critical as detailed_critical,
+            dc.total_high as detailed_high,
+            dc.total_medium as detailed_medium,
+            dc.total_low as detailed_low,
+            dc.total_info as detailed_info
         FROM 
-            scan s
-        LEFT JOIN 
-            folder f ON s.folder_id = f.folder_id
-        JOIN 
-            scan_run sr ON s.scan_id = sr.scan_id
-        WHERE 
-            sr.scan_run_id = (
-                SELECT MAX(scan_run_id) 
-                FROM scan_run 
-                WHERE scan_id = s.scan_id
-            )
-        {scan_name_condition}
-        GROUP BY 
-            s.name, f.name, sr.host_count, sr.critical_count, sr.high_count, sr.medium_count, sr.low_count, sr.info_count
-        ORDER BY 
-            last_scan_date DESC
+            summary_data sd
+        CROSS JOIN 
+            detailed_counts dc
+        UNION ALL
+        SELECT 
+            'vulnerability_distribution' as data_type,
+            severity,
+            count,
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+        FROM 
+            vulnerability_distribution
+        UNION ALL
+        SELECT 
+            'detailed_vulnerability_list' as data_type,
+            scan_name,
+            host_ip,
+            vulnerability_name,
+            severity,
+            plugin_family,
+            port,
+            scan_date,
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+        FROM 
+            detailed_vulnerability_list
+        UNION ALL
+        SELECT 
+            'top_vulnerabilities' as data_type,
+            folder_name,
+            scan_name,
+            vulnerability_name,
+            severity,
+            count,
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+        FROM 
+            top_vulnerabilities
         """
         
-        cursor.execute(summary_query)
-        summary_data = cursor.fetchall()
-        
-        # Tarih formatını değiştir
-        for row in summary_data:
-            if row['last_scan_date']:
-                date = row['last_scan_date']
-                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
-                                  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
-                row['last_scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y %H:%M")
-        
-        # Zafiyet dağılımı sorgusu
-        vulnerability_query = f"""
-        SELECT 
-            p.severity,
-            COUNT(*) as count
-        FROM 
-            host_vuln hv
-        JOIN 
-            plugin p ON hv.plugin_id = p.plugin_id
-        JOIN
-            scan_run sr ON hv.scan_run_id = sr.scan_run_id
-        JOIN
-            scan s ON sr.scan_id = s.scan_id
-        WHERE 
-            sr.scan_run_id = (
-                SELECT MAX(scan_run_id) 
-                FROM scan_run 
-                WHERE scan_id = s.scan_id
-            )
-        {severity_condition} {scan_name_condition}
-        GROUP BY 
-            p.severity
-        """
-        
-        cursor.execute(vulnerability_query)
-        vulnerability_data = cursor.fetchall()
-        
-        # Detaylı zafiyet listesi sorgusu
-        detailed_vulnerability_query = f"""
-        SELECT 
-            s.name AS scan_name,
-            h.host_ip,
-            COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
-            p.severity,
-            p.family AS plugin_family,
-            vo.port,
-            FROM_UNIXTIME(sr.scan_start) AS scan_date
-        FROM 
-            scan s
-        JOIN 
-            scan_run sr ON s.scan_id = sr.scan_id
-        JOIN 
-            host h ON sr.scan_run_id = h.scan_run_id
-        JOIN 
-            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND sr.scan_run_id = hv.scan_run_id
-        JOIN 
-            plugin p ON hv.plugin_id = p.plugin_id
-        LEFT JOIN
-            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
-        WHERE 
-            sr.scan_run_id = (
-                SELECT MAX(scan_run_id) 
-                FROM scan_run 
-                WHERE scan_id = s.scan_id
-            )
-        {severity_condition} {scan_name_condition} {vulnerability_name_condition}
-        ORDER BY 
-            sr.scan_start DESC, p.severity DESC
-        LIMIT 1000
-        """
-        
-        cursor.execute(detailed_vulnerability_query)
-        detailed_vulnerability_data = cursor.fetchall()
+        cursor.execute(combined_query)
+        result = cursor.fetchall()
 
-        # En çok görülen 10 zafiyet sorgusu
-        top_vulnerabilities_query = f"""
-        SELECT 
-            f.name AS folder_name,
-            s.name AS scan_name,
-            COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
-            p.severity,
-            COUNT(*) as count
-        FROM 
-            host_vuln hv
-        JOIN 
-            plugin p ON hv.plugin_id = p.plugin_id
-        JOIN
-            scan_run sr ON hv.scan_run_id = sr.scan_run_id
-        JOIN
-            scan s ON sr.scan_id = s.scan_id
-        JOIN
-            folder f ON s.folder_id = f.folder_id
-        WHERE 
-            sr.scan_run_id = (
-                SELECT MAX(scan_run_id) 
-                FROM scan_run 
-                WHERE scan_id = s.scan_id
-            )
-        {severity_condition} {scan_name_condition} {vulnerability_name_condition}
-        GROUP BY 
-            f.name, s.name, p.plugin_id, p.name, p.severity
-        ORDER BY 
-            count DESC
-        LIMIT 10
-        """
-        
-        cursor.execute(top_vulnerabilities_query)
-        top_vulnerabilities_data = cursor.fetchall()
+        # Sonuçları ayır
+        summary_data = [r for r in result if r['data_type'] == 'summary']
+        vulnerability_data = [r for r in result if r['data_type'] == 'vulnerability_distribution']
+        detailed_vulnerability_data = [r for r in result if r['data_type'] == 'detailed_vulnerability_list']
+        top_vulnerabilities_data = [r for r in result if r['data_type'] == 'top_vulnerabilities']
 
-        # Toplam zafiyet sayıları sorgusu
-        total_vulnerabilities_query = f"""
-        SELECT 
-            SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as total_critical,
-            SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) as total_high,
-            SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) as total_medium,
-            SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) as total_low,
-            SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) as total_info
-        FROM 
-            host_vuln hv
-        JOIN 
-            plugin p ON hv.plugin_id = p.plugin_id
-        JOIN
-            scan_run sr ON hv.scan_run_id = sr.scan_run_id
-        JOIN
-            scan s ON sr.scan_id = s.scan_id
-        WHERE 
-            sr.scan_run_id = (
-                SELECT MAX(scan_run_id) 
-                FROM scan_run 
-                WHERE scan_id = s.scan_id
-            )
-        {severity_condition} {scan_name_condition}
-        """
-        
-        cursor.execute(total_vulnerabilities_query)
-        total_vulnerabilities_data = cursor.fetchone()
+        # Toplam zafiyet sayıları
+        total_vulnerabilities_data = {
+            'total_critical': summary_data[0]['detailed_critical'],
+            'total_high': summary_data[0]['detailed_high'],
+            'total_medium': summary_data[0]['detailed_medium'],
+            'total_low': summary_data[0]['detailed_low'],
+            'total_info': summary_data[0]['detailed_info']
+        }
 
-        # Mevcut taramaları çekmek için yeni bir sorgu ekleyelim
+        # Mevcut taramaları çekmek için yeni bir sorgu
         scan_list_query = """
         SELECT DISTINCT s.name
         FROM scan s
