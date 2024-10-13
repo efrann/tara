@@ -160,7 +160,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
                 date = row['scan_date']
                 turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
                                   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
-                row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y")
+                row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y %H:%M")
 
         # En çok görülen 10 zafiyet sorgusu
         top_vulnerabilities_query = f"""
@@ -168,7 +168,14 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
             f.name AS folder_name,
             s.name AS scan_name,
             COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
-            p.severity,
+            CASE 
+                WHEN p.severity = 4 THEN 'Kritik'
+                WHEN p.severity = 3 THEN 'Yüksek'
+                WHEN p.severity = 2 THEN 'Orta'
+                WHEN p.severity = 1 THEN 'Düşük'
+                WHEN p.severity = 0 THEN 'Bilgi'
+                ELSE 'Bilinmeyen'
+            END AS severity,
             COUNT(DISTINCT hv.host_vuln_id) as count
         FROM 
             scan s
@@ -444,31 +451,31 @@ app.layout = html.Div([
                 },
                 style_data_conditional=[
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 4'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Kritik"'},
                         'backgroundColor': 'rgba(231, 76, 60, 0.1)',
                         'color': '#e74c3c',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 3'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Yüksek"'},
                         'backgroundColor': 'rgba(230, 126, 34, 0.1)',
                         'color': '#e67e22',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 2'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Orta"'},
                         'backgroundColor': 'rgba(241, 196, 15, 0.1)',
                         'color': '#f1c40f',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 1'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Düşük"'},
                         'backgroundColor': 'rgba(46, 204, 113, 0.1)',
                         'color': '#2ecc71',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 0'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Bilgi"'},
                         'backgroundColor': 'rgba(52, 152, 219, 0.1)',
                         'color': '#3498db',
                         'fontWeight': 'bold',
