@@ -74,6 +74,10 @@ def get_plugin_output(scan_id, host_id, plugin_id, history_id):
     return request(PLUGIN_OUTPUT.format(scan_id=scan_id, host_id=host_id, plugin_id=plugin_id, history_id=history_id))
 
 # --- Functions for database operations ---
+#
+#
+#
+#
 def update_folders():
     print("Klasör güncelleme işlemi başlıyor...")
     folders = get_folders()
@@ -88,6 +92,7 @@ def update_folders():
     inserted_count = 0
 
     with connection.cursor() as cursor:
+        #Update folders
         for folder in folders['folders']:
             sql = """INSERT INTO `folder` (`folder_id`, `type`, `name`)
                      VALUES (%s, %s, %s)
@@ -102,7 +107,6 @@ def update_folders():
                 print(f"Klasör güncellendi: ID={folder['id']}, Ad={folder['name']}")  
 
     connection.commit()
-    
     print(f"\nKlasör güncelleme işlemi tamamlandı. {inserted_count} yeni klasör eklendi, {updated_count} klasör güncellendi.")
 
 def update_plugin(plugin, cursor):
@@ -113,8 +117,8 @@ def update_plugin(plugin, cursor):
 
     #Split reference into array into string delimited by new line
     reference = None
-    if plugin['pluginattributes'].get('see_also', None) != None:
-        reference = '\n'.join(plugin['pluginattributes'].get('see_also'), None))
+    if plugin['pluginattributes'].get('see_also') is not None:
+        reference = '\n'.join(plugin['pluginattributes'].get('see_also'))
 
     if result != None:
         if result['mod_date'] != plugin['pluginattributes']['plugin_information'].get('plugin_modification_date', None):
@@ -168,7 +172,7 @@ def update_plugin(plugin, cursor):
             ))
     
 def insert_vuln_output(vuln_output, host_vuln_id, cursor):
-     for output in vuln_output:
+    for output in vuln_output:
         for port in output['ports'].keys():
             sql = "INSERT INTO `vuln_output` (`host_vuln_id`, `port`, `output`) VALUES (%s, %s, %s)"
             cursor.execute(sql, (host_vuln_id, port, output['plugin_output']))
@@ -236,7 +240,7 @@ def insert_scan_run(scan_id, history_id):
               `host_count`, `critical_count`, `high_count`, `medium_count`, `low_count`, `info_count`)\
                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         
-        execute_insert(sql, (
+        cursor.execute(sql, (
             history_id, 
             scan_id, 
             scan_run['info']['scanner_start'],
@@ -291,7 +295,7 @@ def update_scans():
         #Retrieve scan details about the current scan
         scan_details = get_scan(scan['id'])
 
-        if scan_details['history'] != None:
+        if scan_details['history'] is not None:
             sorted_history = sorted(scan_details['history'], key=itemgetter('creation_date'), reverse=True)[:1]
             print(f" Bu tarama için {len(sorted_history)} en güncel çalıştırma işlenecek.")
 
