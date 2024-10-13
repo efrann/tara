@@ -201,131 +201,87 @@ app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen
 
 app.layout = html.Div([
     html.Div([
-        html.H1("Nessus Tarama Sonuçları Gösterge Paneli", style={'textAlign': 'center', 'color': 'white'}),
-        html.Img(src="/assets/nessus_logo.png", style={'height': '50px', 'float': 'right'}),
-    ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
+        html.Img(src="/assets/nessus_logo.png", style={'height': '50px', 'float': 'left', 'margin-right': '20px'}),
+        html.H1("Nessus Zafiyet Tarama Sonuçları", style={'color': 'white', 'margin': 0}),
+        html.P(id='last-updated', style={'color': '#FFD700', 'float': 'right', 'margin-top': '10px'}),
+    ], style={'backgroundColor': '#1e2130', 'padding': '20px', 'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center'}),
 
     html.Div([
         html.Div([
-            html.Label("Severity:", style={'color': 'white'}),
-            dcc.Dropdown(
-                id='severity-dropdown',
-                options=[
-                    {'label': 'Critical', 'value': 4},
-                    {'label': 'High', 'value': 3},
-                    {'label': 'Medium', 'value': 2},
-                    {'label': 'Low', 'value': 1},
-                    {'label': 'Info', 'value': 0}
-                ],
-                multi=True,
-                style={'width': '200px', 'backgroundColor': '#34495e', 'color': 'black'}
-            ),
-        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
+            html.H3("Toplam Zafiyetler", style={'color': '#FFD700'}),
+            html.H2(id='total-vulnerabilities', style={'color': 'white', 'fontSize': '48px'}),
+            html.P(id='new-vulnerabilities', style={'color': '#00FF00'}),
+        ], className="three columns", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'textAlign': 'center', 'borderRadius': '10px'}),
+
         html.Div([
-            html.Label("Tarama Adı:", style={'color': 'white'}),
-            dcc.Input(id='scan-name-input', type='text', style={'width': '200px', 'backgroundColor': '#34495e', 'color': 'white'}),
-        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
+            html.H3("Kritik Zafiyetler", style={'color': '#FF4136'}),
+            html.H2(id='critical-vulnerabilities', style={'color': 'white', 'fontSize': '48px'}),
+            html.P(id='new-critical-vulnerabilities', style={'color': '#00FF00'}),
+        ], className="three columns", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'textAlign': 'center', 'borderRadius': '10px'}),
+
         html.Div([
-            html.Label("Zafiyet Adı:", style={'color': 'white'}),
-            dcc.Input(id='vulnerability-name-input', type='text', style={'width': '200px', 'backgroundColor': '#34495e', 'color': 'white'}),
-        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
-        html.Button('Filtrele', id='filter-button', style={'marginTop': '20px', 'backgroundColor': '#e74c3c', 'color': 'white'}),
-    ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
+            html.H3("Yüksek Zafiyetler", style={'color': '#FF851B'}),
+            html.H2(id='high-vulnerabilities', style={'color': 'white', 'fontSize': '48px'}),
+            html.P(id='new-high-vulnerabilities', style={'color': '#00FF00'}),
+        ], className="three columns", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'textAlign': 'center', 'borderRadius': '10px'}),
+
+        html.Div([
+            html.H3("Orta Zafiyetler", style={'color': '#FFDC00'}),
+            html.H2(id='medium-vulnerabilities', style={'color': 'white', 'fontSize': '48px'}),
+            html.P(id='new-medium-vulnerabilities', style={'color': '#00FF00'}),
+        ], className="three columns", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'textAlign': 'center', 'borderRadius': '10px'}),
+    ], className="row", style={'margin': '20px 0'}),
 
     html.Div([
         html.Div([
-            html.H3("Toplam Zafiyet Sayıları", style={'textAlign': 'center', 'color': 'white'}),
-            html.Div(id='total-vulnerabilities', style={'display': 'flex', 'justifyContent': 'space-around', 'flexWrap': 'wrap'}),
-        ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '10px', 'borderRadius': '10px'}),
-    ]),
+            html.Label("Tarama Seç:", style={'color': 'white'}),
+            dcc.Dropdown(id='scan-dropdown', style={'backgroundColor': '#2c3e50', 'color': 'black'}),
+        ], className="three columns"),
 
-    html.Div([
         html.Div([
-            html.H3("Özet Bilgiler", style={'textAlign': 'center', 'color': 'white'}),
-            dash_table.DataTable(
-                id='summary-table',
-                columns=[
-                    {"name": "Klasör Adı", "id": "folder_name"},
-                    {"name": "Tarama Adı", "id": "scan_name"},
-                    {"name": "Son Tarama Tarihi", "id": "last_scan_date"},
-                    {"name": "Toplam Host", "id": "total_hosts"},
-                    {"name": "Kritik", "id": "total_critical"},
-                    {"name": "Yüksek", "id": "total_high"},
-                    {"name": "Orta", "id": "total_medium"},
-                    {"name": "Düşük", "id": "total_low"},
-                    {"name": "Bilgi", "id": "total_info"}
-                ],
-                style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid white'},
-                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
-                style_data_conditional=[
-                    {
-                        'if': {'column_id': col},
-                        'backgroundColor': '#2c3e50',
-                        'color': 'white',
-                        'border': '1px solid #e74c3c'
-                    } for col in ['total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']
-                ],
-                sort_action="native",
-                sort_mode="multi",
-            ),
+            html.Label("Tarih Aralığı:", style={'color': 'white'}),
+            dcc.DatePickerRange(id='date-range', style={'backgroundColor': '#2c3e50'}),
         ], className="six columns"),
 
         html.Div([
-            html.H3("Zafiyet Dağılımı", style={'textAlign': 'center', 'color': 'white'}),
+            html.Button('Filtrele', id='filter-button', style={'backgroundColor': '#e74c3c', 'color': 'white', 'marginTop': '20px'}),
+        ], className="three columns"),
+    ], className="row", style={'backgroundColor': '#1e2130', 'padding': '20px', 'borderRadius': '10px', 'margin': '20px 0'}),
+
+    html.Div([
+        html.Div([
             dcc.Graph(id='vulnerability-distribution')
-        ], className="six columns"),
-    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
+        ], className="six columns", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'borderRadius': '10px'}),
+
+        html.Div([
+            dcc.Graph(id='vulnerability-trend')
+        ], className="six columns", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'borderRadius': '10px'}),
+    ], className="row"),
 
     html.Div([
-        html.Div([
-            html.H3("En Çok Görülen 10 Zafiyet", style={'textAlign': 'center', 'color': 'white'}),
-            dash_table.DataTable(
-                id='top-vulnerabilities-table',
-                columns=[
-                    {"name": "Klasör Adı", "id": "folder_name"},
-                    {"name": "Tarama Adı", "id": "scan_name"},
-                    {"name": "Zafiyet Adı", "id": "vulnerability_name"},
-                    {"name": "Önem Derecesi", "id": "severity"},
-                    {"name": "Sayı", "id": "count"}
-                ],
-                style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
-                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
-            ),
-        ], className="six columns"),
-
-        html.Div([
-            html.H3("Detaylı Zafiyet Listesi", style={'textAlign': 'center', 'color': 'white'}),
-            dash_table.DataTable(
-                id='vulnerability-table',
-                columns=[{"name": i, "id": i} for i in ['scan_name', 'host_ip', 'vulnerability_name', 'severity', 'plugin_family', 'port', 'scan_date']],
-                style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
-                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
-                filter_action="native",
-                sort_action="native",
-                sort_mode="multi",
-                page_action="native",
-                page_current=0,
-                page_size=10,
-            )
-        ], className="six columns"),
-    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
+        html.H3("En Çok Görülen 10 Zafiyet", style={'color': 'white', 'textAlign': 'center'}),
+        dash_table.DataTable(
+            id='top-vulnerabilities-table',
+            style_table={'height': '300px', 'overflowY': 'auto'},
+            style_cell={'backgroundColor': '#2c3e50', 'color': 'white'},
+            style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
+        )
+    ], style={'backgroundColor': '#1e2130', 'padding': '20px', 'borderRadius': '10px', 'margin': '20px 0'}),
 
     dcc.Interval(
         id='interval-component',
         interval=60*1000,  # Her 1 dakikada bir güncelle
         n_intervals=0
     )
-], style={'backgroundColor': '#2c3e50'})
+], style={'backgroundColor': '#1e2130', 'padding': '20px'})
 
 @app.callback(
     [Output('summary-table', 'data'),
      Output('vulnerability-distribution', 'figure'),
      Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
-     Output('total-vulnerabilities', 'children')],
+     Output('total-vulnerabilities', 'children'),
+     Output('last-updated', 'children')],
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals')],
     [State('severity-dropdown', 'value'),
@@ -351,59 +307,35 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     } for row in summary_data]
     
     # Zafiyet dağılımı grafiği
-    labels = ['Kritik', 'Yüksek', 'Orta', 'Düşük']
+    labels = ['Toplam', 'Kritik', 'Yüksek', 'Orta', 'Düşük']
+    parents = ['', 'Toplam', 'Toplam', 'Toplam', 'Toplam']
     values = [
+        sum(item['count'] for item in vulnerability_data if item['severity'] in [1, 2, 3, 4]),
         sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
         sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
         sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
         sum(item['count'] for item in vulnerability_data if item['severity'] == 1)
     ]
-    colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
+    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
 
     vulnerability_distribution = {
-        'data': [
-            go.Pie(
-                labels=labels,
-                values=values,
-                marker=dict(colors=colors),
-                textinfo='value+percent',
-                textposition='inside',
-                insidetextfont=dict(color='white', size=14),
-                hoverinfo='label+value+percent',
-                hole=0.3,
-                pull=[0.05, 0.05, 0.05, 0.05],
-                direction='clockwise',
-                sort=False
-            )
-        ],
+        'data': [go.Sunburst(
+            labels=labels,
+            parents=parents,
+            values=values,
+            branchvalues="total",
+            marker=dict(colors=colors),
+            textinfo='label+value',
+            insidetextorientation='radial',
+            hoverinfo='label+value+percent parent'
+        )],
         'layout': go.Layout(
-            title={
-                'text': 'Zafiyet Dağılımı (Bilgi seviyesi hariç)',
-                'font': {'size': 24, 'color': 'white'},
-                'y': 0.95
-            },
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#2c3e50',
-            font=dict(color='white'),
-            annotations=[
-                dict(
-                    text=f'Toplam:<br>{sum(values)}',
-                    showarrow=False,
-                    font=dict(size=20, color='white'),
-                    x=0.5,
-                    y=0.5
-                )
-            ],
-            legend=dict(
-                orientation='h',
-                yanchor='bottom',
-                y=1.02,
-                xanchor='right',
-                x=1,
-                font=dict(size=12)
-            ),
+            font=dict(color='white', size=14),
+            margin=dict(t=80, l=0, r=0, b=0),
             height=600,
-            margin=dict(l=50, r=50, t=100, b=50),
+            showlegend=False
         )
     }
 
@@ -448,7 +380,10 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
         }) for info in severity_info
     ]
     
-    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities
+    # Son güncelleme zamanını oluştur
+    last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities, last_updated
 
 if __name__ == '__main__':
     app.run_server(debug=True)
