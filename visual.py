@@ -372,10 +372,9 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 textfont=dict(size=14, color='white'),
                 hoverinfo='label+percent+value',
                 hole=0.3,
-                pull=[0.1, 0.1, 0.1, 0.1, 0.1],
+                pull=[0.05, 0.05, 0.05, 0.05, 0.05],
                 direction='clockwise',
-                sort=False,
-                insidetextorientation='radial'
+                sort=False
             )
         ],
         'layout': go.Layout(
