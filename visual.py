@@ -367,43 +367,76 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 labels=labels,
                 values=values,
                 marker=dict(colors=colors),
-                textinfo='none',
-                hoverinfo='label+percent+value',
-                hole=0.3
+                textinfo='label+percent',
+                hoverinfo='label+value',
+                hole=0.5,
+                textfont=dict(size=14, color='white'),
+                insidetextorientation='radial'
             )
         ],
         'layout': go.Layout(
             title={
                 'text': 'Zafiyet Dağılımı',
-                'font': {'size': 24, 'color': 'white'}
+                'font': {'size': 24, 'color': 'white'},
+                'y': 0.95
             },
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#2c3e50',
             font=dict(color='white'),
+            legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                y=1.02,
+                xanchor='right',
+                x=1
+            ),
             annotations=[
-                {
-                    'text': f'<b>{label}</b><br>{value}',
-                    'x': 1.3 * math.cos(math.pi / 2 - (i * 2 * math.pi / len(labels))),
-                    'y': 1.3 * math.sin(math.pi / 2 - (i * 2 * math.pi / len(labels))),
-                    'font': {'size': 14, 'color': 'white'},
-                    'showarrow': True,
-                    'arrowhead': 2,
-                    'arrowsize': 1,
-                    'arrowwidth': 2,
-                    'arrowcolor': color,
-                    'bgcolor': color,
-                    'bordercolor': color,
-                    'borderwidth': 2,
-                    'borderpad': 4,
-                    'ax': 60 * math.cos(math.pi / 2 - (i * 2 * math.pi / len(labels))),
-                    'ay': 60 * math.sin(math.pi / 2 - (i * 2 * math.pi / len(labels))),
-                }
-                for i, (label, value, color) in enumerate(zip(labels, values, colors))
+                dict(
+                    text=f'Toplam:<br>{sum(values)}',
+                    showarrow=False,
+                    font=dict(size=20, color='white'),
+                    x=0.5,
+                    y=0.5
+                )
             ],
-            showlegend=False,
             height=600,
-            margin=dict(l=50, r=50, t=80, b=50)
-        )
+            margin=dict(l=50, r=50, t=80, b=50),
+            updatemenus=[
+                dict(
+                    type='buttons',
+                    showactive=False,
+                    buttons=[
+                        dict(
+                            label='Rotate',
+                            method='animate',
+                            args=[None, {'frame': {'duration': 500, 'redraw': True}, 'fromcurrent': True}]
+                        )
+                    ],
+                    pad={"r": 10, "t": 10},
+                    x=0.1,
+                    xanchor='left',
+                    y=1.1,
+                    yanchor='top'
+                )
+            ]
+        ),
+        'frames': [
+            go.Frame(
+                data=[
+                    go.Pie(
+                        labels=labels,
+                        values=values,
+                        marker=dict(colors=colors),
+                        textinfo='label+percent',
+                        hoverinfo='label+value',
+                        hole=0.5,
+                        textfont=dict(size=14, color='white'),
+                        insidetextorientation='radial',
+                        rotation=i*36
+                    )
+                ]
+            ) for i in range(10)
+        ]
     }
 
     # Detaylı zafiyet listesi
