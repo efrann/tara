@@ -367,9 +367,10 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 labels=labels,
                 values=values,
                 marker=dict(colors=colors),
-                textinfo='none',
+                textinfo='label',
+                textfont=dict(size=14, color='white'),
                 hoverinfo='label+percent+value',
-                hole=0.4,
+                hole=0.3,
                 direction='clockwise',
                 sort=False
             )
@@ -383,14 +384,6 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#2c3e50',
             font=dict(color='white'),
-            legend=dict(
-                orientation='h',
-                yanchor='bottom',
-                y=1.02,
-                xanchor='right',
-                x=1,
-                font=dict(size=14)
-            ),
             annotations=[
                 dict(
                     text=f'Toplam:<br>{sum(values)}',
@@ -401,17 +394,17 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 )
             ] + [
                 dict(
-                    x=0.5 + 0.6 * math.cos(math.pi * (2 * i / len(values) - 0.5)),
-                    y=0.5 + 0.6 * math.sin(math.pi * (2 * i / len(values) - 0.5)),
-                    text=f"{labels[i]}<br>{values[i]}",
+                    x=0.5 + 0.4 * math.cos(math.pi * (2 * i / len(values) - 0.5)),
+                    y=0.5 + 0.4 * math.sin(math.pi * (2 * i / len(values) - 0.5)),
+                    text=str(values[i]),
                     showarrow=True,
                     arrowhead=2,
                     arrowsize=1,
                     arrowwidth=2,
                     arrowcolor=colors[i],
-                    font=dict(size=14, color=colors[i]),
-                    ax=60 * math.cos(math.pi * (2 * i / len(values) - 0.5)),
-                    ay=60 * math.sin(math.pi * (2 * i / len(values) - 0.5)),
+                    font=dict(size=16, color=colors[i]),
+                    ax=40 * math.cos(math.pi * (2 * i / len(values) - 0.5)),
+                    ay=40 * math.sin(math.pi * (2 * i / len(values) - 0.5)),
                     bgcolor='rgba(255, 255, 255, 0.8)',
                     bordercolor=colors[i],
                     borderwidth=2,
