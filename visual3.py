@@ -116,7 +116,14 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
             s.name AS scan_name,
             h.host_ip,
             COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
-            p.severity,
+            CASE 
+                WHEN p.severity = 4 THEN 'Kritik'
+                WHEN p.severity = 3 THEN 'Yüksek'
+                WHEN p.severity = 2 THEN 'Orta'
+                WHEN p.severity = 1 THEN 'Düşük'
+                WHEN p.severity = 0 THEN 'Bilgi'
+                ELSE 'Bilinmeyen'
+            END AS severity,
             p.family AS plugin_family,
             vo.port,
             FROM_UNIXTIME(sr.scan_start) AS scan_date
@@ -146,6 +153,14 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         
         cursor.execute(detailed_vulnerability_query)
         detailed_vulnerability_data = cursor.fetchall()
+
+        # Detaylı zafiyet listesindeki tarih formatını değiştir
+        for row in detailed_vulnerability_data:
+            if row['scan_date']:
+                date = row['scan_date']
+                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
+                                  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+                row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y")
 
         # En çok görülen 10 zafiyet sorgusu
         top_vulnerabilities_query = f"""
@@ -512,31 +527,31 @@ app.layout = html.Div([
                 },
                 style_data_conditional=[
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 4'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Kritik"'},
                         'backgroundColor': 'rgba(231, 76, 60, 0.1)',
                         'color': '#e74c3c',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 3'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Yüksek"'},
                         'backgroundColor': 'rgba(230, 126, 34, 0.1)',
                         'color': '#e67e22',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 2'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Orta"'},
                         'backgroundColor': 'rgba(241, 196, 15, 0.1)',
                         'color': '#f1c40f',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 1'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Düşük"'},
                         'backgroundColor': 'rgba(46, 204, 113, 0.1)',
                         'color': '#2ecc71',
                         'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 0'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Bilgi"'},
                         'backgroundColor': 'rgba(52, 152, 219, 0.1)',
                         'color': '#3498db',
                         'fontWeight': 'bold',
@@ -623,8 +638,8 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#2c3e50',
             font=dict(color='white', size=14),
-            margin=dict(t=80, l=0, r=0, b=0),
-            height=600,
+            margin=dict(t=0, l=0, r=0, b=0),
+            height=400,  # Yüksekliği azalttık
             showlegend=False
         )
     }
