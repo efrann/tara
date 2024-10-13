@@ -361,15 +361,16 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     ]
     colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db']
 
+    # Etiketleri ve değerleri birleştir
+    labels_with_values = [f"{label}: {value}" for label, value in zip(labels, values)]
+
     vulnerability_distribution = {
         'data': [
             go.Pie(
-                labels=labels,
+                labels=labels_with_values,
                 values=values,
                 marker=dict(colors=colors),
-                textinfo='value',
-                textposition='inside',
-                textfont=dict(size=14, color='white'),
+                textinfo='none',
                 hoverinfo='label+percent+value',
                 hole=0.3,
                 pull=[0.05, 0.05, 0.05, 0.05, 0.05],
@@ -396,14 +397,15 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 )
             ],
             legend=dict(
-                orientation='h',
-                yanchor='bottom',
-                y=1.02,
-                xanchor='right',
-                x=1
+                orientation='v',
+                yanchor='middle',
+                y=0.5,
+                xanchor='left',
+                x=1.05,
+                font=dict(size=12)
             ),
             height=600,
-            margin=dict(l=50, r=50, t=80, b=50),
+            margin=dict(l=50, r=150, t=80, b=50),
         )
     }
 
