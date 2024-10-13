@@ -367,11 +367,13 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 labels=labels,
                 values=values,
                 marker=dict(colors=colors),
-                textinfo='label+percent',
-                hoverinfo='label+value',
-                hole=0.5,
-                textfont=dict(size=14, color='white'),
-                insidetextorientation='radial'
+                textinfo='value',
+                hoverinfo='label+percent+value',
+                hole=0.4,
+                textfont=dict(size=16, color='white'),
+                insidetextorientation='radial',
+                direction='clockwise',
+                sort=False
             )
         ],
         'layout': go.Layout(
@@ -388,7 +390,8 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 yanchor='bottom',
                 y=1.02,
                 xanchor='right',
-                x=1
+                x=1,
+                font=dict(size=14)
             ),
             annotations=[
                 dict(
@@ -401,42 +404,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             ],
             height=600,
             margin=dict(l=50, r=50, t=80, b=50),
-            updatemenus=[
-                dict(
-                    type='buttons',
-                    showactive=False,
-                    buttons=[
-                        dict(
-                            label='Rotate',
-                            method='animate',
-                            args=[None, {'frame': {'duration': 500, 'redraw': True}, 'fromcurrent': True}]
-                        )
-                    ],
-                    pad={"r": 10, "t": 10},
-                    x=0.1,
-                    xanchor='left',
-                    y=1.1,
-                    yanchor='top'
-                )
-            ]
-        ),
-        'frames': [
-            go.Frame(
-                data=[
-                    go.Pie(
-                        labels=labels,
-                        values=values,
-                        marker=dict(colors=colors),
-                        textinfo='label+percent',
-                        hoverinfo='label+value',
-                        hole=0.5,
-                        textfont=dict(size=14, color='white'),
-                        insidetextorientation='radial',
-                        rotation=i*36
-                    )
-                ]
-            ) for i in range(10)
-        ]
+        )
     }
 
     # Detaylı zafiyet listesi
