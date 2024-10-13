@@ -374,11 +374,6 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             hoverinfo='label+value+percent parent'
         )],
         'layout': go.Layout(
-            title={
-                'text': 'Toplam Zafiyetler: Birleşik Krallık',
-                'font': {'size': 24, 'color': 'white'},
-                'y': 0.95
-            },
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#2c3e50',
             font=dict(color='white', size=14),
