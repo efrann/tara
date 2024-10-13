@@ -240,8 +240,8 @@ app.layout = html.Div([
             dash_table.DataTable(
                 id='summary-table',
                 columns=[
-                    {"name": "Tarama Adı", "id": "scan_name"},
                     {"name": "Klasör Adı", "id": "folder_name"},
+                    {"name": "Tarama Adı", "id": "scan_name"},
                     {"name": "Son Tarama Tarihi", "id": "last_scan_date"},
                     {"name": "Toplam Host", "id": "total_hosts"},
                     {"name": "Kritik", "id": "total_critical"},
@@ -251,8 +251,16 @@ app.layout = html.Div([
                     {"name": "Bilgi", "id": "total_info"}
                 ],
                 style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
+                style_cell={'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid white'},
                 style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
+                style_data_conditional=[
+                    {
+                        'if': {'column_id': col},
+                        'backgroundColor': '#2c3e50',
+                        'color': 'white',
+                        'border': '1px solid #e74c3c'
+                    } for col in ['total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']
+                ],
                 sort_action="native",
                 sort_mode="multi",
             ),
@@ -320,8 +328,8 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     
     # Özet tablo verisi
     summary_table_data = [{
-        'scan_name': row['scan_name'],
         'folder_name': row['folder_name'],
+        'scan_name': row['scan_name'],
         'last_scan_date': row['last_scan_date'],
         'total_hosts': row['total_hosts'],
         'total_critical': row['total_critical'],
