@@ -274,53 +274,60 @@ app.layout = html.Div([
                     {"name": "Düşük", "id": "total_low"},
                     {"name": "Bilgi", "id": "total_info"}
                 ],
-                style_table={'height': '300px', 'overflowY': 'auto'},
+                style_table={
+                    'height': '400px',
+                    'overflowY': 'auto',
+                    'borderRadius': '10px',
+                    'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)',
+                },
                 style_cell={
                     'backgroundColor': '#34495e',
                     'color': 'white',
-                    'border': '1px solid white',
                     'textAlign': 'left',
-                    'padding': '10px',
-                    'whiteSpace': 'normal',
-                    'height': 'auto',
+                    'padding': '12px',
+                    'fontFamily': 'Arial, sans-serif',
+                    'fontSize': '14px',
+                    'border': '1px solid #2c3e50',
                 },
                 style_header={
                     'backgroundColor': '#2c3e50',
                     'fontWeight': 'bold',
-                    'border': '1px solid #e74c3c',
+                    'textTransform': 'uppercase',
+                    'letterSpacing': '1px',
+                    'borderBottom': '2px solid #e74c3c',
                 },
                 style_data_conditional=[
                     {
-                        'if': {'column_id': col},
+                        'if': {'row_index': 'odd'},
                         'backgroundColor': '#2c3e50',
+                    },
+                    {
+                        'if': {'column_id': col, 'filter_query': f'{{{col}}} > 0'},
+                        'backgroundColor': '#3498db',
                         'color': 'white',
-                        'border': '1px solid #e74c3c'
+                        'fontWeight': 'bold',
+                        'animation': 'pulse 2s infinite',
                     } for col in ['total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']
                 ] + [
                     {
                         'if': {'column_id': 'total_critical', 'filter_query': '{total_critical} > 0'},
-                        'color': '#e74c3c',
-                        'fontWeight': 'bold'
+                        'backgroundColor': '#e74c3c',
                     },
                     {
                         'if': {'column_id': 'total_high', 'filter_query': '{total_high} > 0'},
-                        'color': '#e67e22',
-                        'fontWeight': 'bold'
+                        'backgroundColor': '#e67e22',
                     },
                     {
                         'if': {'column_id': 'total_medium', 'filter_query': '{total_medium} > 0'},
-                        'color': '#f1c40f',
-                        'fontWeight': 'bold'
+                        'backgroundColor': '#f1c40f',
                     },
                     {
                         'if': {'column_id': 'total_low', 'filter_query': '{total_low} > 0'},
-                        'color': '#2ecc71',
-                        'fontWeight': 'bold'
+                        'backgroundColor': '#2ecc71',
                     },
                     {
                         'if': {'column_id': 'total_info', 'filter_query': '{total_info} > 0'},
-                        'color': '#3498db',
-                        'fontWeight': 'bold'
+                        'backgroundColor': '#3498db',
                     }
                 ],
                 sort_action="native",
@@ -329,6 +336,7 @@ app.layout = html.Div([
                 page_action="native",
                 page_current=0,
                 page_size=10,
+                style_as_list_view=True,
             ),
         ], className="six columns"),
 
@@ -336,7 +344,7 @@ app.layout = html.Div([
             html.H3("Zafiyet Dağılımı", style={'textAlign': 'center', 'color': 'white'}),
             dcc.Graph(id='vulnerability-distribution')
         ], className="six columns"),
-    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
+    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '10px', 'borderRadius': '10px'}),
 
     html.Div([
         html.Div([
@@ -407,6 +415,40 @@ app.layout = html.Div([
         n_intervals=0
     )
 ], style={'backgroundColor': '#2c3e50'})
+
+# Add this to your CSS file or include it in a <style> tag in your HTML
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+        <style>
+            @keyframes pulse {
+                0% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.7;
+                }
+                100% {
+                    opacity: 1;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
 
 @app.callback(
     [Output('summary-table', 'data'),
