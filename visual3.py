@@ -246,6 +246,26 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         cursor.execute(scan_list_query)
         scan_list = [row['name'] for row in cursor.fetchall()]
 
+    # top_vulnerabilities_data ve detailed_vulnerability_data'yı işleyin:
+    severity_map = {
+        4: 'Kritik',
+        3: 'Yüksek',
+        2: 'Orta',
+        1: 'Düşük',
+        0: 'Bilgi'
+    }
+
+    for row in top_vulnerabilities_data:
+        row['severity'] = severity_map.get(row['severity'], 'Bilinmeyen')
+
+    for row in detailed_vulnerability_data:
+        row['severity'] = severity_map.get(row['severity'], 'Bilinmeyen')
+        if row['scan_date']:
+            date = row['scan_date']
+            turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
+                              "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+            row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y %H:%M")
+
     return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list
 
 # Dash uygulaması
@@ -655,20 +675,11 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     vulnerability_table_data = detailed_vulnerability_data
     
     # En çok görülen 10 zafiyet
-    severity_map = {
-        4: {'text': 'Kritik', 'color': '#e74c3c'},
-        3: {'text': 'Yüksek', 'color': '#e67e22'},
-        2: {'text': 'Orta', 'color': '#f1c40f'},
-        1: {'text': 'Düşük', 'color': '#2ecc71'},
-        0: {'text': 'Bilgi', 'color': '#3498db'}
-    }
-    
     top_vulnerabilities_table_data = [{
         'folder_name': row['folder_name'],
         'scan_name': row['scan_name'],
         'vulnerability_name': row['vulnerability_name'],
-        'severity': severity_map[row['severity']]['text'],
-        'severity_color': severity_map[row['severity']]['color'],
+        'severity': row['severity'],
         'count': row['count']
     } for row in top_vulnerabilities_data]
     
