@@ -5,6 +5,7 @@ import plotly.graph_objs as go
 import pandas as pd
 import pymysql
 from datetime import datetime, timedelta
+import math
 
 # MySQL bağlantısı
 db = pymysql.connect(
@@ -350,25 +351,40 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     } for row in summary_data]
     
     # Zafiyet dağılımı grafiği
+    labels = ['Toplam', 'Kritik', 'Yüksek', 'Orta', 'Düşük']
+    parents = ['', 'Toplam', 'Toplam', 'Toplam', 'Toplam']
+    values = [
+        sum(item['count'] for item in vulnerability_data if item['severity'] in [1, 2, 3, 4]),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 1)
+    ]
+    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
+
     vulnerability_distribution = {
-        'data': [
-            go.Pie(
-                labels=['Critical', 'High', 'Medium', 'Low', 'Info'],
-                values=[
-                    sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
-                    sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
-                    sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
-                    sum(item['count'] for item in vulnerability_data if item['severity'] == 1),
-                    sum(item['count'] for item in vulnerability_data if item['severity'] == 0)
-                ],
-                marker=dict(colors=['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db'])
-            )
-        ],
+        'data': [go.Sunburst(
+            labels=labels,
+            parents=parents,
+            values=values,
+            branchvalues="total",
+            marker=dict(colors=colors),
+            textinfo='label+value',
+            insidetextorientation='radial',
+            hoverinfo='label+value+percent parent'
+        )],
         'layout': go.Layout(
-            title='Zafiyet Dağılımı',
+            title={
+                'text': 'Toplam Zafiyetler: Birleşik Krallık',
+                'font': {'size': 24, 'color': 'white'},
+                'y': 0.95
+            },
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#2c3e50',
-            font=dict(color='white')
+            font=dict(color='white', size=14),
+            margin=dict(t=80, l=0, r=0, b=0),
+            height=600,
+            showlegend=False
         )
     }
 
