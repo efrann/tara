@@ -133,6 +133,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         # En çok görülen 10 zafiyet sorgusu
         top_vulnerabilities_query = f"""
         SELECT 
+            f.name AS folder_name,
+            s.name AS scan_name,
             COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
             p.severity,
             COUNT(*) as count
@@ -144,6 +146,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
             scan_run sr ON hv.scan_run_id = sr.scan_run_id
         JOIN
             scan s ON sr.scan_id = s.scan_id
+        JOIN
+            folder f ON s.folder_id = f.folder_id
         WHERE 
             sr.scan_run_id = (
                 SELECT MAX(scan_run_id) 
@@ -152,7 +156,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
             )
         {severity_condition} {scan_name_condition} {vulnerability_name_condition}
         GROUP BY 
-            p.plugin_id, p.name, p.severity
+            f.name, s.name, p.plugin_id, p.name, p.severity
         ORDER BY 
             count DESC
         LIMIT 10
@@ -277,7 +281,13 @@ app.layout = html.Div([
             html.H3("En Çok Görülen 10 Zafiyet", style={'textAlign': 'center', 'color': 'white'}),
             dash_table.DataTable(
                 id='top-vulnerabilities-table',
-                columns=[{"name": i, "id": i} for i in ['vulnerability_name', 'severity', 'count']],
+                columns=[
+                    {"name": "Klasör Adı", "id": "folder_name"},
+                    {"name": "Tarama Adı", "id": "scan_name"},
+                    {"name": "Zafiyet Adı", "id": "vulnerability_name"},
+                    {"name": "Önem Derecesi", "id": "severity"},
+                    {"name": "Sayı", "id": "count"}
+                ],
                 style_table={'height': '300px', 'overflowY': 'auto'},
                 style_cell={'backgroundColor': '#34495e', 'color': 'white'},
                 style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
