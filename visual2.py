@@ -206,42 +206,10 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
 
     return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list
 
-# Define your styles
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+# Dash uygulaması
+app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
 
-# Custom CSS
-custom_styles = r'''
-@keyframes pulse {
-    0% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.7;
-    }
-    100% {
-        opacity: 1;
-    }
-}
-
-body {
-    background-color: #2c3e50;
-    color: white;
-    font-family: Arial, sans-serif;
-}
-
-.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td, 
-.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
-    border: 1px solid #34495e !important;
-}
-
-/* Add more custom styles here */
-'''
-
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-
-# Add the custom styles to the app's layout
 app.layout = html.Div([
-    html.Style(custom_styles),
     html.Div([
         html.H1("Nessus Tarama Sonuçları Gösterge Paneli", style={'textAlign': 'center', 'color': 'white'}),
         html.Img(src="/assets/nessus_logo.png", style={'height': '50px', 'float': 'right'}),
@@ -306,60 +274,53 @@ app.layout = html.Div([
                     {"name": "Düşük", "id": "total_low"},
                     {"name": "Bilgi", "id": "total_info"}
                 ],
-                style_table={
-                    'height': '400px',
-                    'overflowY': 'auto',
-                    'borderRadius': '10px',
-                    'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)',
-                },
+                style_table={'height': '300px', 'overflowY': 'auto'},
                 style_cell={
                     'backgroundColor': '#34495e',
                     'color': 'white',
+                    'border': '1px solid white',
                     'textAlign': 'left',
-                    'padding': '12px',
-                    'fontFamily': 'Arial, sans-serif',
-                    'fontSize': '14px',
-                    'border': '1px solid #2c3e50',
+                    'padding': '10px',
+                    'whiteSpace': 'normal',
+                    'height': 'auto',
                 },
                 style_header={
                     'backgroundColor': '#2c3e50',
                     'fontWeight': 'bold',
-                    'textTransform': 'uppercase',
-                    'letterSpacing': '1px',
-                    'borderBottom': '2px solid #e74c3c',
+                    'border': '1px solid #e74c3c',
                 },
                 style_data_conditional=[
                     {
-                        'if': {'row_index': 'odd'},
+                        'if': {'column_id': col},
                         'backgroundColor': '#2c3e50',
-                    },
-                    {
-                        'if': {'column_id': col, 'filter_query': f'{{{col}}} > 0'},
-                        'backgroundColor': '#3498db',
                         'color': 'white',
-                        'fontWeight': 'bold',
-                        'animation': 'pulse 2s infinite',
+                        'border': '1px solid #e74c3c'
                     } for col in ['total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']
                 ] + [
                     {
                         'if': {'column_id': 'total_critical', 'filter_query': '{total_critical} > 0'},
-                        'backgroundColor': '#e74c3c',
+                        'color': '#e74c3c',
+                        'fontWeight': 'bold'
                     },
                     {
                         'if': {'column_id': 'total_high', 'filter_query': '{total_high} > 0'},
-                        'backgroundColor': '#e67e22',
+                        'color': '#e67e22',
+                        'fontWeight': 'bold'
                     },
                     {
                         'if': {'column_id': 'total_medium', 'filter_query': '{total_medium} > 0'},
-                        'backgroundColor': '#f1c40f',
+                        'color': '#f1c40f',
+                        'fontWeight': 'bold'
                     },
                     {
                         'if': {'column_id': 'total_low', 'filter_query': '{total_low} > 0'},
-                        'backgroundColor': '#2ecc71',
+                        'color': '#2ecc71',
+                        'fontWeight': 'bold'
                     },
                     {
                         'if': {'column_id': 'total_info', 'filter_query': '{total_info} > 0'},
-                        'backgroundColor': '#3498db',
+                        'color': '#3498db',
+                        'fontWeight': 'bold'
                     }
                 ],
                 sort_action="native",
@@ -368,7 +329,6 @@ app.layout = html.Div([
                 page_action="native",
                 page_current=0,
                 page_size=10,
-                style_as_list_view=True,
             ),
         ], className="six columns"),
 
@@ -376,7 +336,7 @@ app.layout = html.Div([
             html.H3("Zafiyet Dağılımı", style={'textAlign': 'center', 'color': 'white'}),
             dcc.Graph(id='vulnerability-distribution')
         ], className="six columns"),
-    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '10px', 'borderRadius': '10px'}),
+    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
 
     html.Div([
         html.Div([
