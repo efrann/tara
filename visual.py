@@ -300,36 +300,39 @@ app.layout = html.Div([
                 },
                 style_data_conditional=[
                     {
-                        'if': {'column_id': col},
-                        'backgroundColor': '#2c3e50',
-                        'color': '#ecf0f1',
-                        'border': '1px solid #34495e'
-                    } for col in ['total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']
-                ] + [
-                    {
-                        'if': {'column_id': 'total_critical', 'filter_query': '{total_critical} > 0'},
+                        'if': {'column_id': 'total_critical'},
+                        'backgroundColor': 'rgba(231, 76, 60, 0.1)',
                         'color': '#e74c3c',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
+                        'textShadow': '0px 0px 1px #000000'
                     },
                     {
-                        'if': {'column_id': 'total_high', 'filter_query': '{total_high} > 0'},
+                        'if': {'column_id': 'total_high'},
+                        'backgroundColor': 'rgba(230, 126, 34, 0.1)',
                         'color': '#e67e22',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
+                        'textShadow': '0px 0px 1px #000000'
                     },
                     {
-                        'if': {'column_id': 'total_medium', 'filter_query': '{total_medium} > 0'},
+                        'if': {'column_id': 'total_medium'},
+                        'backgroundColor': 'rgba(241, 196, 15, 0.1)',
                         'color': '#f1c40f',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
+                        'textShadow': '0px 0px 1px #000000'
                     },
                     {
-                        'if': {'column_id': 'total_low', 'filter_query': '{total_low} > 0'},
+                        'if': {'column_id': 'total_low'},
+                        'backgroundColor': 'rgba(46, 204, 113, 0.1)',
                         'color': '#2ecc71',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
+                        'textShadow': '0px 0px 1px #000000'
                     },
                     {
-                        'if': {'column_id': 'total_info', 'filter_query': '{total_info} > 0'},
+                        'if': {'column_id': 'total_info'},
+                        'backgroundColor': 'rgba(52, 152, 219, 0.1)',
                         'color': '#3498db',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
+                        'textShadow': '0px 0px 1px #000000'
                     }
                 ],
                 sort_action="native",
@@ -343,12 +346,6 @@ app.layout = html.Div([
                     'color': '#ecf0f1',
                     'border': '1px solid #34495e',
                 },
-                style_filter_conditional=[
-                    {
-                        'if': {'column_id': c},
-                        'textAlign': 'left'
-                    } for c in ['folder_name', 'scan_name', 'last_scan_date']
-                ],
             ),
         ], className="six columns"),
 
@@ -550,14 +547,6 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
 
     return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities, last_updated, scan_options
-
-@app.callback(
-    Output('summary-table', 'filter_query'),
-    Input('clear-filters-button', 'n_clicks'),
-    prevent_initial_call=True
-)
-def clear_filters(n_clicks):
-    return ''
 
 if __name__ == '__main__':
     app.run_server(debug=True)
