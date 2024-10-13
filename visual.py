@@ -367,11 +367,9 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 labels=labels,
                 values=values,
                 marker=dict(colors=colors),
-                textinfo='label',
+                textinfo='none',
                 hoverinfo='label+percent+value',
                 hole=0.4,
-                textfont=dict(size=14, color='white'),
-                insidetextorientation='radial',
                 direction='clockwise',
                 sort=False
             )
@@ -403,21 +401,27 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 )
             ] + [
                 dict(
-                    x=0.5 + 0.45 * math.cos(math.pi * (2 * i / len(values) - 0.5)),
-                    y=0.5 + 0.45 * math.sin(math.pi * (2 * i / len(values) - 0.5)),
-                    text=str(value),
+                    x=0.5 + 0.6 * math.cos(math.pi * (2 * i / len(values) - 0.5)),
+                    y=0.5 + 0.6 * math.sin(math.pi * (2 * i / len(values) - 0.5)),
+                    text=f"{labels[i]}<br>{values[i]}",
                     showarrow=True,
                     arrowhead=2,
                     arrowsize=1,
                     arrowwidth=2,
                     arrowcolor=colors[i],
                     font=dict(size=14, color=colors[i]),
-                    ax=30 * math.cos(math.pi * (2 * i / len(values) - 0.5)),
-                    ay=30 * math.sin(math.pi * (2 * i / len(values) - 0.5))
-                ) for i, value in enumerate(values)
+                    ax=60 * math.cos(math.pi * (2 * i / len(values) - 0.5)),
+                    ay=60 * math.sin(math.pi * (2 * i / len(values) - 0.5)),
+                    bgcolor='rgba(255, 255, 255, 0.8)',
+                    bordercolor=colors[i],
+                    borderwidth=2,
+                    borderpad=4,
+                    align='center'
+                ) for i in range(len(values))
             ],
             height=600,
             margin=dict(l=50, r=50, t=80, b=50),
+            showlegend=False
         )
     }
 
