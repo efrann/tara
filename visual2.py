@@ -206,10 +206,42 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
 
     return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list
 
-# Dash uygulaması
-app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
+# Define your styles
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
+# Custom CSS
+custom_styles = '''
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+body {
+    background-color: #2c3e50;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td, 
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+    border: 1px solid #34495e !important;
+}
+
+/* Add more custom styles here */
+'''
+
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+
+# Add the custom styles to the app's layout
 app.layout = html.Div([
+    html.Style(custom_styles),
     html.Div([
         html.H1("Nessus Tarama Sonuçları Gösterge Paneli", style={'textAlign': 'center', 'color': 'white'}),
         html.Img(src="/assets/nessus_logo.png", style={'height': '50px', 'float': 'right'}),
@@ -415,40 +447,6 @@ app.layout = html.Div([
         n_intervals=0
     )
 ], style={'backgroundColor': '#2c3e50'})
-
-# Add this to your CSS file or include it in a <style> tag in your HTML
-app.index_string = '''
-<!DOCTYPE html>
-<html>
-    <head>
-        {%metas%}
-        <title>{%title%}</title>
-        {%favicon%}
-        {%css%}
-        <style>
-            @keyframes pulse {
-                0% {
-                    opacity: 1;
-                }
-                50% {
-                    opacity: 0.7;
-                }
-                100% {
-                    opacity: 1;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        {%app_entry%}
-        <footer>
-            {%config%}
-            {%scripts%}
-            {%renderer%}
-        </footer>
-    </body>
-</html>
-'''
 
 @app.callback(
     [Output('summary-table', 'data'),
