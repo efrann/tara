@@ -5,8 +5,6 @@ import plotly.graph_objs as go
 import pandas as pd
 import pymysql
 from datetime import datetime, timedelta
-import math
-import random
 
 # MySQL bağlantısı
 db = pymysql.connect(
@@ -95,49 +93,12 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         cursor.execute(vulnerability_query)
         vulnerability_data = cursor.fetchall()
         
-        # Detaylı zafiyet listesi sorgusu
-        detailed_vulnerability_query = f"""
-        SELECT 
-            s.name AS scan_name,
-            h.host_ip,
-            COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
-            p.severity,
-            p.family AS plugin_family,
-            vo.port,
-            FROM_UNIXTIME(sr.scan_start) AS scan_date
-        FROM 
-            scan s
-        JOIN 
-            scan_run sr ON s.scan_id = sr.scan_id
-        JOIN 
-            host h ON sr.scan_run_id = h.scan_run_id
-        JOIN 
-            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND sr.scan_run_id = hv.scan_run_id
-        JOIN 
-            plugin p ON hv.plugin_id = p.plugin_id
-        LEFT JOIN
-            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
-        WHERE 
-            sr.scan_run_id = (
-                SELECT MAX(scan_run_id) 
-                FROM scan_run 
-                WHERE scan_id = s.scan_id
-            )
-        {severity_condition} {scan_name_condition} {vulnerability_name_condition}
-        ORDER BY 
-            sr.scan_start DESC, p.severity DESC
-        LIMIT 1000
-        """
-        
-        cursor.execute(detailed_vulnerability_query)
-        detailed_vulnerability_data = cursor.fetchall()
-
         # En çok görülen 10 zafiyet sorgusu
         top_vulnerabilities_query = f"""
         SELECT 
             f.name AS folder_name,
             s.name AS scan_name,
-            COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
+            p.name AS vulnerability_name,
             p.severity,
             COUNT(*) as count
         FROM 
@@ -167,14 +128,14 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         cursor.execute(top_vulnerabilities_query)
         top_vulnerabilities_data = cursor.fetchall()
 
-        # Toplam zafiyet sayıları sorgusu
-        total_vulnerabilities_query = f"""
+        # Zafiyet trendi sorgusu
+        trend_query = f"""
         SELECT 
-            SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as total_critical,
-            SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) as total_high,
-            SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) as total_medium,
-            SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) as total_low,
-            SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) as total_info
+            DATE(FROM_UNIXTIME(sr.scan_start)) as scan_date,
+            SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as critical,
+            SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) as high,
+            SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) as medium,
+            SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) as low
         FROM 
             host_vuln hv
         JOIN 
@@ -184,20 +145,19 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         JOIN
             scan s ON sr.scan_id = s.scan_id
         WHERE 
-            sr.scan_run_id = (
-                SELECT MAX(scan_run_id) 
-                FROM scan_run 
-                WHERE scan_id = s.scan_id
-            )
+            sr.scan_start >= UNIX_TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 30 DAY))
         {severity_condition} {scan_name_condition}
+        GROUP BY 
+            scan_date
+        ORDER BY 
+            scan_date
         """
         
-        cursor.execute(total_vulnerabilities_query)
-        total_vulnerabilities_data = cursor.fetchone()
+        cursor.execute(trend_query)
+        trend_data = cursor.fetchall()
 
-    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data
+    return summary_data, vulnerability_data, top_vulnerabilities_data, trend_data
 
-# Dash uygulaması
 app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
 
 app.layout = html.Div([
@@ -296,22 +256,25 @@ app.layout = html.Div([
      State('date-range', 'end_date')]
 )
 def update_data(n_clicks, n_intervals, selected_scan, start_date, end_date):
-    # Burada veritabanından veri çekme ve işleme kodlarınız olacak
-    # Örnek olarak bazı dummy veriler oluşturalım
-    total_vulnerabilities = 1000
-    critical_vulnerabilities = 200
-    high_vulnerabilities = 300
-    medium_vulnerabilities = 500
-    new_vulnerabilities = "+50"
-    new_critical_vulnerabilities = "+10"
-    new_high_vulnerabilities = "+20"
-    new_medium_vulnerabilities = "+20"
+    summary_data, vulnerability_data, top_vulnerabilities_data, trend_data = get_data(scan_name=selected_scan)
+    
+    total_vulnerabilities = sum(item['count'] for item in vulnerability_data)
+    critical_vulnerabilities = sum(item['count'] for item in vulnerability_data if item['severity'] == 4)
+    high_vulnerabilities = sum(item['count'] for item in vulnerability_data if item['severity'] == 3)
+    medium_vulnerabilities = sum(item['count'] for item in vulnerability_data if item['severity'] == 2)
+    
+    # Yeni zafiyetleri hesaplamak için ek bir sorgu gerekebilir
+    new_vulnerabilities = "+50"  # Örnek değer
+    new_critical_vulnerabilities = "+10"  # Örnek değer
+    new_high_vulnerabilities = "+20"  # Örnek değer
+    new_medium_vulnerabilities = "+20"  # Örnek değer
 
     # Zafiyet dağılımı grafiği
     vulnerability_distribution = {
         'data': [go.Pie(
-            labels=['Kritik', 'Yüksek', 'Orta'],
-            values=[critical_vulnerabilities, high_vulnerabilities, medium_vulnerabilities],
+            labels=['Kritik', 'Yüksek', 'Orta', 'Düşük'],
+            values=[critical_vulnerabilities, high_vulnerabilities, medium_vulnerabilities, 
+                    sum(item['count'] for item in vulnerability_data if item['severity'] == 1)],
             hole=0.3
         )],
         'layout': go.Layout(title='Zafiyet Dağılımı')
@@ -319,18 +282,28 @@ def update_data(n_clicks, n_intervals, selected_scan, start_date, end_date):
 
     # Zafiyet trendi grafiği
     vulnerability_trend = {
-        'data': [go.Scatter(x=[1, 2, 3, 4, 5], y=[100, 150, 200, 180, 210], mode='lines+markers')],
-        'layout': go.Layout(title='Zafiyet Trendi')
+        'data': [
+            go.Scatter(x=[item['scan_date'] for item in trend_data], 
+                       y=[item['critical'] for item in trend_data], 
+                       mode='lines+markers', name='Kritik'),
+            go.Scatter(x=[item['scan_date'] for item in trend_data], 
+                       y=[item['high'] for item in trend_data], 
+                       mode='lines+markers', name='Yüksek'),
+            go.Scatter(x=[item['scan_date'] for item in trend_data], 
+                       y=[item['medium'] for item in trend_data], 
+                       mode='lines+markers', name='Orta'),
+            go.Scatter(x=[item['scan_date'] for item in trend_data], 
+                       y=[item['low'] for item in trend_data], 
+                       mode='lines+markers', name='Düşük')
+        ],
+        'layout': go.Layout(title='Zafiyet Trendi', xaxis_title='Tarih', yaxis_title='Zafiyet Sayısı')
     }
-
-    # En çok görülen 10 zafiyet
-    top_vulnerabilities = [{'Zafiyet': f'Zafiyet {i}', 'Sayı': random.randint(50, 200)} for i in range(1, 11)]
 
     last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
     return (total_vulnerabilities, critical_vulnerabilities, high_vulnerabilities, medium_vulnerabilities,
             new_vulnerabilities, new_critical_vulnerabilities, new_high_vulnerabilities, new_medium_vulnerabilities,
-            vulnerability_distribution, vulnerability_trend, top_vulnerabilities, last_updated)
+            vulnerability_distribution, vulnerability_trend, top_vulnerabilities_data, last_updated)
 
 if __name__ == '__main__':
     app.run_server(debug=True)
