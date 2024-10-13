@@ -371,9 +371,8 @@ app.layout = html.Div([
                     }
                 ],
                 style_filter={
-                    'backgroundColor': '#2c3e50',
-                    'color': '#3498db',
-                    'fontWeight': 'bold',
+                    'backgroundColor': '#34495e',
+                    'color': '#ecf0f1',
                 },
                 style_filter_conditional=[{
                     'if': {'column_id': c},
@@ -384,6 +383,7 @@ app.layout = html.Div([
                     'marginTop': '5px',
                     'marginBottom': '5px',
                 } for c in ['folder_name', 'scan_name', 'last_scan_date', 'total_hosts', 'total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']],
+                filter_options={'placeholder': 'Ara...'},
                 sort_action="native",
                 sort_mode="multi",
                 filter_action="native",
@@ -479,9 +479,8 @@ app.layout = html.Div([
                     }
                 ],
                 style_filter={
-                    'backgroundColor': '#2c3e50',
-                    'color': '#3498db',
-                    'fontWeight': 'bold',
+                    'backgroundColor': '#34495e',
+                    'color': '#ecf0f1',
                 },
                 style_filter_conditional=[{
                     'if': {'column_id': c},
@@ -492,6 +491,7 @@ app.layout = html.Div([
                     'marginTop': '5px',
                     'marginBottom': '5px',
                 } for c in ['folder_name', 'scan_name', 'vulnerability_name', 'severity', 'count']],
+                filter_options={'placeholder': 'Ara...'},
                 filter_action="native",
                 sort_action="native",
                 sort_mode="multi",
@@ -571,9 +571,8 @@ app.layout = html.Div([
                     }
                 ],
                 style_filter={
-                    'backgroundColor': '#2c3e50',
-                    'color': '#3498db',
-                    'fontWeight': 'bold',
+                    'backgroundColor': '#34495e',
+                    'color': '#ecf0f1',
                 },
                 style_filter_conditional=[{
                     'if': {'column_id': c},
@@ -584,6 +583,7 @@ app.layout = html.Div([
                     'marginTop': '5px',
                     'marginBottom': '5px',
                 } for c in ['scan_name', 'host_ip', 'vulnerability_name', 'severity', 'plugin_family', 'port', 'scan_date']],
+                filter_options={'placeholder': 'Ara...'},
                 filter_action="native",
                 sort_action="native",
                 sort_mode="multi",
