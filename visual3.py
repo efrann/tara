@@ -371,14 +371,14 @@ app.layout = html.Div([
                     }
                 ],
                 style_filter={
-                    'backgroundColor': '#2c3e50',
+                    'backgroundColor': '#34495e',
                     'color': '#ecf0f1',
-                    'border': '1px solid #34495e',
                 },
                 style_filter_conditional=[{
                     'if': {'column_id': c},
-                    'backgroundColor': '#34495e',
-                    'color': '#ecf0f1',
+                    'textAlign': 'left',
+                    'padding': '8px',
+                    'border': '1px solid #3498db',
                 } for c in ['folder_name', 'scan_name', 'last_scan_date', 'total_hosts', 'total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']],
                 sort_action="native",
                 sort_mode="multi",
@@ -475,10 +475,15 @@ app.layout = html.Div([
                     }
                 ],
                 style_filter={
-                    'backgroundColor': '#2c3e50',
+                    'backgroundColor': '#34495e',
                     'color': '#ecf0f1',
-                    'border': '1px solid #34495e',
                 },
+                style_filter_conditional=[{
+                    'if': {'column_id': c},
+                    'textAlign': 'left',
+                    'padding': '8px',
+                    'border': '1px solid #3498db',
+                } for c in ['folder_name', 'scan_name', 'vulnerability_name', 'severity', 'count']],
                 filter_action="native",
                 sort_action="native",
                 sort_mode="multi",
@@ -558,10 +563,15 @@ app.layout = html.Div([
                     }
                 ],
                 style_filter={
-                    'backgroundColor': '#2c3e50',
+                    'backgroundColor': '#34495e',
                     'color': '#ecf0f1',
-                    'border': '1px solid #34495e',
                 },
+                style_filter_conditional=[{
+                    'if': {'column_id': c},
+                    'textAlign': 'left',
+                    'padding': '8px',
+                    'border': '1px solid #3498db',
+                } for c in ['scan_name', 'host_ip', 'vulnerability_name', 'severity', 'plugin_family', 'port', 'scan_date']],
                 filter_action="native",
                 sort_action="native",
                 sort_mode="multi",
