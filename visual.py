@@ -6,6 +6,7 @@ import pandas as pd
 import pymysql
 from datetime import datetime, timedelta
 import math
+import random
 
 # MySQL bağlantısı
 db = pymysql.connect(
@@ -276,114 +277,60 @@ app.layout = html.Div([
 ], style={'backgroundColor': '#1e2130', 'padding': '20px'})
 
 @app.callback(
-    [Output('summary-table', 'data'),
+    [Output('total-vulnerabilities', 'children'),
+     Output('critical-vulnerabilities', 'children'),
+     Output('high-vulnerabilities', 'children'),
+     Output('medium-vulnerabilities', 'children'),
+     Output('new-vulnerabilities', 'children'),
+     Output('new-critical-vulnerabilities', 'children'),
+     Output('new-high-vulnerabilities', 'children'),
+     Output('new-medium-vulnerabilities', 'children'),
      Output('vulnerability-distribution', 'figure'),
-     Output('vulnerability-table', 'data'),
+     Output('vulnerability-trend', 'figure'),
      Output('top-vulnerabilities-table', 'data'),
-     Output('total-vulnerabilities', 'children'),
      Output('last-updated', 'children')],
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals')],
-    [State('severity-dropdown', 'value'),
-     State('scan-name-input', 'value'),
-     State('vulnerability-name-input', 'value')]
+    [State('scan-dropdown', 'value'),
+     State('date-range', 'start_date'),
+     State('date-range', 'end_date')]
 )
-def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data = get_data(severity, scan_name, vulnerability_name)
-    
-    print("Summary Data:", summary_data)  # Debug için eklendi
-    
-    # Özet tablo verisi
-    summary_table_data = [{
-        'folder_name': row['folder_name'],
-        'scan_name': row['scan_name'],
-        'last_scan_date': row['last_scan_date'],
-        'total_hosts': row['total_hosts'],
-        'total_critical': row['total_critical'],
-        'total_high': row['total_high'],
-        'total_medium': row['total_medium'],
-        'total_low': row['total_low'],
-        'total_info': row['total_info']
-    } for row in summary_data]
-    
-    # Zafiyet dağılımı grafiği
-    labels = ['Toplam', 'Kritik', 'Yüksek', 'Orta', 'Düşük']
-    parents = ['', 'Toplam', 'Toplam', 'Toplam', 'Toplam']
-    values = [
-        sum(item['count'] for item in vulnerability_data if item['severity'] in [1, 2, 3, 4]),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 1)
-    ]
-    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
+def update_data(n_clicks, n_intervals, selected_scan, start_date, end_date):
+    # Burada veritabanından veri çekme ve işleme kodlarınız olacak
+    # Örnek olarak bazı dummy veriler oluşturalım
+    total_vulnerabilities = 1000
+    critical_vulnerabilities = 200
+    high_vulnerabilities = 300
+    medium_vulnerabilities = 500
+    new_vulnerabilities = "+50"
+    new_critical_vulnerabilities = "+10"
+    new_high_vulnerabilities = "+20"
+    new_medium_vulnerabilities = "+20"
 
+    # Zafiyet dağılımı grafiği
     vulnerability_distribution = {
-        'data': [go.Sunburst(
-            labels=labels,
-            parents=parents,
-            values=values,
-            branchvalues="total",
-            marker=dict(colors=colors),
-            textinfo='label+value',
-            insidetextorientation='radial',
-            hoverinfo='label+value+percent parent'
+        'data': [go.Pie(
+            labels=['Kritik', 'Yüksek', 'Orta'],
+            values=[critical_vulnerabilities, high_vulnerabilities, medium_vulnerabilities],
+            hole=0.3
         )],
-        'layout': go.Layout(
-            paper_bgcolor='#2c3e50',
-            plot_bgcolor='#2c3e50',
-            font=dict(color='white', size=14),
-            margin=dict(t=80, l=0, r=0, b=0),
-            height=600,
-            showlegend=False
-        )
+        'layout': go.Layout(title='Zafiyet Dağılımı')
     }
 
-    # Detaylı zafiyet listesi
-    vulnerability_table_data = detailed_vulnerability_data
-    
+    # Zafiyet trendi grafiği
+    vulnerability_trend = {
+        'data': [go.Scatter(x=[1, 2, 3, 4, 5], y=[100, 150, 200, 180, 210], mode='lines+markers')],
+        'layout': go.Layout(title='Zafiyet Trendi')
+    }
+
     # En çok görülen 10 zafiyet
-    top_vulnerabilities_table_data = [{
-        'folder_name': row['folder_name'],
-        'scan_name': row['scan_name'],
-        'vulnerability_name': row['vulnerability_name'],
-        'severity': row['severity'],
-        'count': row['count']
-    } for row in top_vulnerabilities_data]
-    
-    # Toplam zafiyet sayıları
-    severity_info = [
-        {"name": "Kritik", "color": "#e74c3c", "key": "total_critical"},
-        {"name": "Yüksek", "color": "#e67e22", "key": "total_high"},
-        {"name": "Orta", "color": "#f1c40f", "key": "total_medium"},
-        {"name": "Düşük", "color": "#2ecc71", "key": "total_low"},
-        {"name": "Bilgi", "color": "#3498db", "key": "total_info"}
-    ]
-    
-    total_vulnerabilities = [
-        html.Div([
-            html.H4(info["name"], style={'color': info["color"], 'margin': '0', 'fontSize': '18px'}),
-            html.P(total_vulnerabilities_data[info["key"]], style={
-                'fontSize': '36px', 
-                'fontWeight': 'bold', 
-                'margin': '10px 0',
-                'color': info["color"]
-            })
-        ], style={
-            'textAlign': 'center', 
-            'backgroundColor': '#34495e', 
-            'padding': '15px', 
-            'borderRadius': '10px', 
-            'margin': '10px',
-            'minWidth': '120px',
-            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
-        }) for info in severity_info
-    ]
-    
-    # Son güncelleme zamanını oluştur
+    top_vulnerabilities = [{'Zafiyet': f'Zafiyet {i}', 'Sayı': random.randint(50, 200)} for i in range(1, 11)]
+
     last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
-    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities, last_updated
+    return (total_vulnerabilities, critical_vulnerabilities, high_vulnerabilities, medium_vulnerabilities,
+            new_vulnerabilities, new_critical_vulnerabilities, new_high_vulnerabilities, new_medium_vulnerabilities,
+            vulnerability_distribution, vulnerability_trend, top_vulnerabilities, last_updated)
 
 if __name__ == '__main__':
     app.run_server(debug=True)
