@@ -210,7 +210,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 # Custom CSS
-custom_styles = '''
+custom_styles = r'''
 @keyframes pulse {
     0% {
         opacity: 1;
