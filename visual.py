@@ -239,10 +239,22 @@ app.layout = html.Div([
             html.H3("Özet Bilgiler", style={'textAlign': 'center', 'color': 'white'}),
             dash_table.DataTable(
                 id='summary-table',
-                columns=[{"name": i, "id": i} for i in ['scan_name', 'last_scan_date', 'total_hosts', 'total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']],
+                columns=[
+                    {"name": "Tarama Adı", "id": "scan_name"},
+                    {"name": "Klasör Adı", "id": "folder_name"},
+                    {"name": "Son Tarama Tarihi", "id": "last_scan_date"},
+                    {"name": "Toplam Host", "id": "total_hosts"},
+                    {"name": "Kritik", "id": "total_critical"},
+                    {"name": "Yüksek", "id": "total_high"},
+                    {"name": "Orta", "id": "total_medium"},
+                    {"name": "Düşük", "id": "total_low"},
+                    {"name": "Bilgi", "id": "total_info"}
+                ],
                 style_table={'height': '300px', 'overflowY': 'auto'},
                 style_cell={'backgroundColor': '#34495e', 'color': 'white'},
                 style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
+                sort_action="native",
+                sort_mode="multi",
             ),
         ], className="six columns"),
 
