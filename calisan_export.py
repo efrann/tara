@@ -74,10 +74,10 @@ def get_plugin_output(scan_id, host_id, plugin_id, history_id):
     return request(PLUGIN_OUTPUT.format(scan_id=scan_id, host_id=host_id, plugin_id=plugin_id, history_id=history_id))
 
 # --- Functions for database operations ---
-#
-#
-#
-#
+#Nessustaki tüm klasörleri alır
+#Her klaösr için döngü başlatır
+#Klasör ID'si ve türü ve adını içere SQL sorgusunu çalıştırır
+#UPSERT işlemi yapar, yani klasör zaten varsa günceller, yoksa ekler
 def update_folders():
     print("Klasör güncelleme işlemi başlıyor...")
     folders = get_folders()
@@ -112,13 +112,13 @@ def update_folders():
 def update_plugin(plugin, cursor):
     #Check existing plugin_id in plugin DB
     sql = "SELECT `plugin_id`, `mod_date` FROM `plugin` WHERE `plugin_id` = %s"
-    cursor.execute(sql, (plugin['plugin_id']))
+    cursor.execute(sql, (plugin['pluginid']))
     result = cursor.fetchone()
 
     #Split reference into array into string delimited by new line
     reference = None
-    if plugin['pluginattributes'].get('see_also') is not None:
-        reference = '\n'.join(plugin['pluginattributes'].get('see_also'))
+    if plugin['pluginattributes'].get('see_also', None) != None:
+        reference = '\n'.join(plugin['pluginattributes'].get('see_also', None))
 
     if result != None:
         if result['mod_date'] != plugin['pluginattributes']['plugin_information'].get('plugin_modification_date', None):
@@ -142,12 +142,13 @@ def update_plugin(plugin, cursor):
             reference,
             plugin['pluginattributes']['plugin_information'].get('plugin_publication_date', None),
             plugin['pluginattributes']['plugin_information'].get('plugin_modification_date', None),
-            plugin['plugin_id']
+            plugin['pluginid']
             ))
 
         else:
             #Looks like the plugin version is the same, skip update
             return None
+        
     else:
         #Doesn't exist, build insert query
         sql = "INSERT INTO `plugin` (`plugin_id`, `severity`, `name`, `family`, `synopsis`, `description`, `solution`,\
@@ -155,7 +156,7 @@ def update_plugin(plugin, cursor):
                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         
         cursor.execute(sql, (
-            plugin['plugin_id'],
+            plugin['pluginid'],
             plugin['severity'],
             plugin['pluginname'],
             plugin['pluginfamily'],
@@ -174,9 +175,9 @@ def update_plugin(plugin, cursor):
 def insert_vuln_output(vuln_output, host_vuln_id, cursor):
     for output in vuln_output:
         for port in output['ports'].keys():
-            sql = "INSERT INTO `vuln_output` (`host_vuln_id`, `port`, `output`) VALUES (%s, %s, %s)"
+            sql = "INSERT INTO `vuln_output` (`host_vuln_id`, `port`, `output`)\
+                VALUES (%s, %s, %s)"
             cursor.execute(sql, (host_vuln_id, port, output['plugin_output']))
-
 
 def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
     #Need to insert plugin first to have FK relationship
@@ -185,13 +186,12 @@ def insert_host_vuln(scan_id, host_id, plugin_id, history_id, cursor):
     update_plugin(vuln_output['info']['plugindescription'], cursor)
 
     #Insert host vuln
-    sql = "INSERT INTO `host_vuln` (`nessus_host_id`, `scan_run_id`, `plugin_id`) VALUES (%s, %s, %s)"
+    sql = "INSERT INTO `host_vuln` (`nessus_host_id`, `scan_run_id`, `plugin_id`)\
+          VALUES (%s, %s, %s)"
     cursor.execute(sql, (host_id, history_id, plugin_id))
 
     #Finally insert vuln output
     insert_vuln_output(vuln_output['outputs'], cursor.lastrowid, cursor)
-
-
 
 def insert_host(scan_id, host_id, history_id, cursor):
     #Get the host vulnerabilities for a scan run
@@ -218,12 +218,12 @@ def insert_host(scan_id, host_id, history_id, cursor):
         host['info'].get('host_end', None),
         host['info'].get('operating-system', None), 
         sev_count[4], sev_count[3], sev_count[2], sev_count[1], sev_count[0]
-    ))
+        ))
+    
     #Insert host vulns
     for vuln in host['vulnerabilities']:
         insert_host_vuln(scan_id, host_id, vuln['plugin_id'], history_id, cursor)
 
-        
 def insert_scan_run(scan_id, history_id):
     # Get scan runs for a scan
     scan_run = get_scan_run(scan_id, history_id)
@@ -236,7 +236,7 @@ def insert_scan_run(scan_id, history_id):
 
     with connection.cursor() as cursor: 
         #Insert scan run details
-        sql = "INSERT INTO `scan_run` (`scan_run_id`, `scan_id`, `scanner_start`, `scanner_end`, `targets`,\
+        sql = "INSERT INTO `scan_run` (`scan_run_id`, `scan_id`, `scan_start`, `scan_end`, `targets`,\
               `host_count`, `critical_count`, `high_count`, `medium_count`, `low_count`, `info_count`)\
                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         
@@ -272,9 +272,9 @@ def update_scans():
     with connection.cursor() as cursor:
         #upsert scans
         for scan in scans['scans']:
-            sql = """INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`)\
-                    VALUES (%s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE folder_id=%s, type=%s, name=%s"""
+            sql = "INSERT INTO `scan` (`scan_id`, `folder_id`, `type`, `name`)\
+                    VALUES (%s, %s, %s, %s)\
+                    ON DUPLICATE KEY UPDATE folder_id=%s, type=%s, name=%s"
             
             cursor.execute(sql, (
                 scan['id'], 
@@ -284,7 +284,7 @@ def update_scans():
                 scan['folder_id'], 
                 scan['type'], 
                 scan['name']
-        ))
+                ))
 
     connection.commit()
     print("Tarama bilgileri veritabanına kaydedildi.")
@@ -295,35 +295,35 @@ def update_scans():
         #Retrieve scan details about the current scan
         scan_details = get_scan(scan['id'])
 
-        if scan_details['history'] is not None:
+        if scan_details['history'] != None:
             sorted_history = sorted(scan_details['history'], key=itemgetter('creation_date'), reverse=True)[:1]
             print(f" Bu tarama için {len(sorted_history)} en güncel çalıştırma işlenecek.")
 
         #Check each of the latest runs of each scan
-        for scan_run in sorted_history:
-            print(f" Çalıştırma ID: {scan_run['history_id']}, Durum : {scan_run['status']}")
+            for scan_run in sorted_history:
+                print(f" Çalıştırma ID: {scan_run['history_id']}, Durum : {scan_run['status']}")
 
-            #Only import if scan finished completely
-            if scan_run['status'] == 'completed':
-                scan_run_details = get_scan_run(scan['id'], scan_run['history_id'])
-                host_start = format_timestamp(scan_run_details['info'].get('scanner_start'))
-                host_end = format_timestamp(scan_run_details['info'].get('scanner_end'))
-                print(f"    Host Başlangıç: {host_start}, Host Bitiş: {host_end}")
+                #Only import if scan finished completely
+                if scan_run['status'] == 'completed':
+                    scan_run_details = get_scan_run(scan['id'], scan_run['history_id'])
+                    host_start = format_timestamp(scan_run_details['info'].get('scanner_start'))
+                    host_end = format_timestamp(scan_run_details['info'].get('scanner_end'))
+                    print(f"    Host Başlangıç: {host_start}, Host Bitiş: {host_end}")
 
-                result = None
-                with connection.cursor() as cursor:
-                    sql = "SELECT * FROM `scan_run` WHERE `scan_run_id` = %s"
-                    cursor.execute(sql, (scan_run['history_id'],))
-                    result = cursor.fetchone()
+                    result = None
+                    with connection.cursor() as cursor:
+                        sql = "SELECT * FROM `scan_run` WHERE `scan_run_id` = %s"
+                        cursor.execute(sql, (scan_run['history_id']))
+                        result = cursor.fetchone()
 
-                #If scan run hasn't been inserted
-                if result == None:
-                    print(f"      Yeni çalıştırma ekleniyor: {scan_run['history_id']}")
-                    insert_scan_run(scan['id'], scan_run['history_id'])
+                    #If scan run hasn't been inserted
+                    if result == None:
+                        print(f"      Yeni çalıştırma ekleniyor: {scan_run['history_id']}")
+                        insert_scan_run(scan['id'], scan_run['history_id'])
+                    else:
+                        print(f"      Çalıştırma zaten mevcut: {scan_run['history_id']}")
                 else:
-                    print(f"      Çalıştırma zaten mevcut: {scan_run['history_id']}")
-            else:
-                print(f"      Tamamlanmamış çalıştırma, atlanıyor: {scan_run['history_id']}")
+                    print(f"      Tamamlanmamış çalıştırma, atlanıyor: {scan_run['history_id']}")
         else:
             print(f"  Bu tarama için geçmiş çalıştırma bulunamadı.")
     print("\nTüm taramalar işlendi.")    
