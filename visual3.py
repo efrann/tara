@@ -372,33 +372,17 @@ app.layout = html.Div([
                 ],
                 style_filter={
                     'backgroundColor': '#34495e',
-                    'color': '#ecf0f1',
                 },
-                style_filter_conditional=[{
-                    'if': {'column_id': c},
-                    'textAlign': 'left',
-                    'padding': '12px',
-                    'border': '2px solid #3498db',
-                    'borderRadius': '5px',
-                    'marginTop': '5px',
-                    'marginBottom': '5px',
-                } for c in ['folder_name', 'scan_name', 'last_scan_date', 'total_hosts', 'total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']],
                 filter_options={'placeholder': 'Ara...'},
-                sort_action="native",
-                sort_mode="multi",
-                filter_action="native",
-                page_action="native",
-                page_current=0,
-                page_size=10,
                 css=[{
-                    'selector': '.dash-spreadsheet td div',
+                    'selector': '.dash-filter input',
                     'rule': '''
-                        line-height: 15px;
-                        max-height: 30px;
-                        min-height: 30px;
-                        height: 30px;
-                        display: block;
-                        overflow-y: hidden;
+                        color: #ecf0f1 !important;
+                        background-color: #34495e !important;
+                        border: 2px solid #3498db !important;
+                        border-radius: 5px;
+                        padding: 8px;
+                        font-weight: bold;
                     '''
                 }],
             ),
@@ -480,24 +464,19 @@ app.layout = html.Div([
                 ],
                 style_filter={
                     'backgroundColor': '#34495e',
-                    'color': '#ecf0f1',
                 },
-                style_filter_conditional=[{
-                    'if': {'column_id': c},
-                    'textAlign': 'left',
-                    'padding': '12px',
-                    'border': '2px solid #3498db',
-                    'borderRadius': '5px',
-                    'marginTop': '5px',
-                    'marginBottom': '5px',
-                } for c in ['folder_name', 'scan_name', 'vulnerability_name', 'severity', 'count']],
                 filter_options={'placeholder': 'Ara...'},
-                filter_action="native",
-                sort_action="native",
-                sort_mode="multi",
-                page_action="native",
-                page_current=0,
-                page_size=10,
+                css=[{
+                    'selector': '.dash-filter input',
+                    'rule': '''
+                        color: #ecf0f1 !important;
+                        background-color: #34495e !important;
+                        border: 2px solid #3498db !important;
+                        border-radius: 5px;
+                        padding: 8px;
+                        font-weight: bold;
+                    '''
+                }],
             ),
         ], className="six columns"),
 
@@ -572,24 +551,19 @@ app.layout = html.Div([
                 ],
                 style_filter={
                     'backgroundColor': '#34495e',
-                    'color': '#ecf0f1',
                 },
-                style_filter_conditional=[{
-                    'if': {'column_id': c},
-                    'textAlign': 'left',
-                    'padding': '12px',
-                    'border': '2px solid #3498db',
-                    'borderRadius': '5px',
-                    'marginTop': '5px',
-                    'marginBottom': '5px',
-                } for c in ['scan_name', 'host_ip', 'vulnerability_name', 'severity', 'plugin_family', 'port', 'scan_date']],
                 filter_options={'placeholder': 'Ara...'},
-                filter_action="native",
-                sort_action="native",
-                sort_mode="multi",
-                page_action="native",
-                page_current=0,
-                page_size=10,
+                css=[{
+                    'selector': '.dash-filter input',
+                    'rule': '''
+                        color: #ecf0f1 !important;
+                        background-color: #34495e !important;
+                        border: 2px solid #3498db !important;
+                        border-radius: 5px;
+                        padding: 8px;
+                        font-weight: bold;
+                    '''
+                }],
             )
         ], className="six columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
