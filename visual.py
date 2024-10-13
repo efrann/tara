@@ -268,7 +268,15 @@ app.layout = html.Div([
 
     html.Div([
         html.Div([
-            html.H3("Özet Bilgiler", style={'textAlign': 'center', 'color': '#ecf0f1'}),
+            html.H3("Özet Bilgiler", style={
+                'textAlign': 'center', 
+                'color': '#ecf0f1', 
+                'backgroundColor': '#2c3e50', 
+                'padding': '10px', 
+                'marginBottom': '20px',
+                'borderRadius': '5px',
+                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
+            }),
             dash_table.DataTable(
                 id='summary-table',
                 columns=[
@@ -335,17 +343,33 @@ app.layout = html.Div([
                         'textShadow': '0px 0px 1px #000000'
                     }
                 ],
+                style_filter={
+                    'backgroundColor': '#2c3e50',
+                    'color': '#ecf0f1',
+                    'border': '1px solid #34495e',
+                },
+                style_filter_conditional=[{
+                    'if': {'column_id': c},
+                    'backgroundColor': '#34495e',
+                    'color': '#ecf0f1',
+                } for c in ['folder_name', 'scan_name', 'last_scan_date', 'total_hosts', 'total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']],
                 sort_action="native",
                 sort_mode="multi",
                 filter_action="native",
                 page_action="native",
                 page_current=0,
                 page_size=10,
-                style_filter={
-                    'backgroundColor': '#2c3e50',
-                    'color': '#ecf0f1',
-                    'border': '1px solid #34495e',
-                },
+                css=[{
+                    'selector': '.dash-spreadsheet td div',
+                    'rule': '''
+                        line-height: 15px;
+                        max-height: 30px;
+                        min-height: 30px;
+                        height: 30px;
+                        display: block;
+                        overflow-y: hidden;
+                    '''
+                }],
             ),
         ], className="six columns"),
 
