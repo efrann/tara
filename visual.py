@@ -351,7 +351,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     } for row in summary_data]
     
     # Zafiyet dağılımı grafiği
-    labels = ['Critical', 'High', 'Medium', 'Low', 'Info']
+    labels = ['Kritik', 'Yüksek', 'Orta', 'Düşük', 'Bilgi']
     values = [
         sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
         sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
@@ -367,8 +367,8 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 labels=labels,
                 values=values,
                 marker=dict(colors=colors),
-                textinfo='label+value',
-                textposition='outside',
+                textinfo='value',
+                textposition='inside',
                 textfont=dict(size=14, color='white'),
                 hoverinfo='label+percent+value',
                 hole=0.3,
@@ -395,9 +395,15 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                     y=0.5
                 )
             ],
+            legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                y=1.02,
+                xanchor='right',
+                x=1
+            ),
             height=600,
             margin=dict(l=50, r=50, t=80, b=50),
-            showlegend=False
         )
     }
 
