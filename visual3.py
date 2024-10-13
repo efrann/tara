@@ -127,7 +127,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         JOIN 
             host h ON sr.scan_run_id = h.scan_run_id
         JOIN 
-            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND sr.scan_run_id = hv.scan_run_id
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
         JOIN 
             plugin p ON hv.plugin_id = p.plugin_id
         LEFT JOIN
@@ -246,10 +246,10 @@ app.layout = html.Div([
             dcc.Dropdown(
                 id='severity-dropdown',
                 options=[
-                    {'label': 'Critical', 'value': 4},
-                    {'label': 'High', 'value': 3},
-                    {'label': 'Medium', 'value': 2},
-                    {'label': 'Low', 'value': 1},
+                    {'label': 'Kritik', 'value': 4},
+                    {'label': 'Yüksek', 'value': 3},
+                    {'label': 'Orta', 'value': 2},
+                    {'label': 'Düşük', 'value': 1},
                     {'label': 'Info', 'value': 0}
                 ],
                 multi=True,
@@ -393,7 +393,15 @@ app.layout = html.Div([
 
     html.Div([
         html.Div([
-            html.H3("En Çok Görülen 10 Zafiyet", style={'textAlign': 'center', 'color': 'white'}),
+            html.H3("En Çok Görülen 10 Zafiyet", style={
+                'textAlign': 'center', 
+                'color': '#ecf0f1', 
+                'backgroundColor': '#2c3e50', 
+                'padding': '10px', 
+                'marginBottom': '20px',
+                'borderRadius': '5px',
+                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
+            }),
             dash_table.DataTable(
                 id='top-vulnerabilities-table',
                 columns=[
@@ -404,46 +412,141 @@ app.layout = html.Div([
                     {"name": "Sayı", "id": "count"}
                 ],
                 style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
-                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
+                style_cell={
+                    'backgroundColor': '#34495e',
+                    'color': '#ecf0f1',
+                    'border': '1px solid #2c3e50',
+                    'textAlign': 'left',
+                    'padding': '10px',
+                    'whiteSpace': 'normal',
+                    'height': 'auto',
+                },
+                style_header={
+                    'backgroundColor': '#2c3e50',
+                    'fontWeight': 'bold',
+                    'border': '1px solid #34495e',
+                    'color': '#3498db',
+                },
                 style_data_conditional=[
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Kritik"'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 4'},
+                        'backgroundColor': 'rgba(231, 76, 60, 0.1)',
                         'color': '#e74c3c',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Yüksek"'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 3'},
+                        'backgroundColor': 'rgba(230, 126, 34, 0.1)',
                         'color': '#e67e22',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Orta"'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 2'},
+                        'backgroundColor': 'rgba(241, 196, 15, 0.1)',
                         'color': '#f1c40f',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Düşük"'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 1'},
+                        'backgroundColor': 'rgba(46, 204, 113, 0.1)',
                         'color': '#2ecc71',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
                     },
                     {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Bilgi"'},
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 0'},
+                        'backgroundColor': 'rgba(52, 152, 219, 0.1)',
                         'color': '#3498db',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
                     }
-                ]
+                ],
+                style_filter={
+                    'backgroundColor': '#2c3e50',
+                    'color': '#ecf0f1',
+                    'border': '1px solid #34495e',
+                },
+                filter_action="native",
+                sort_action="native",
+                sort_mode="multi",
+                page_action="native",
+                page_current=0,
+                page_size=10,
             ),
         ], className="six columns"),
 
         html.Div([
-            html.H3("Detaylı Zafiyet Listesi", style={'textAlign': 'center', 'color': 'white'}),
+            html.H3("Detaylı Zafiyet Listesi", style={
+                'textAlign': 'center', 
+                'color': '#ecf0f1', 
+                'backgroundColor': '#2c3e50', 
+                'padding': '10px', 
+                'marginBottom': '20px',
+                'borderRadius': '5px',
+                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
+            }),
             dash_table.DataTable(
                 id='vulnerability-table',
-                columns=[{"name": i, "id": i} for i in ['scan_name', 'host_ip', 'vulnerability_name', 'severity', 'plugin_family', 'port', 'scan_date']],
+                columns=[
+                    {"name": "Tarama Adı", "id": "scan_name"},
+                    {"name": "Host IP", "id": "host_ip"},
+                    {"name": "Zafiyet Adı", "id": "vulnerability_name"},
+                    {"name": "Önem Derecesi", "id": "severity"},
+                    {"name": "Plugin Ailesi", "id": "plugin_family"},
+                    {"name": "Port", "id": "port"},
+                    {"name": "Tarama Tarihi", "id": "scan_date"}
+                ],
                 style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
-                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
+                style_cell={
+                    'backgroundColor': '#34495e',
+                    'color': '#ecf0f1',
+                    'border': '1px solid #2c3e50',
+                    'textAlign': 'left',
+                    'padding': '10px',
+                    'whiteSpace': 'normal',
+                    'height': 'auto',
+                },
+                style_header={
+                    'backgroundColor': '#2c3e50',
+                    'fontWeight': 'bold',
+                    'border': '1px solid #34495e',
+                    'color': '#3498db',
+                },
+                style_data_conditional=[
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 4'},
+                        'backgroundColor': 'rgba(231, 76, 60, 0.1)',
+                        'color': '#e74c3c',
+                        'fontWeight': 'bold',
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 3'},
+                        'backgroundColor': 'rgba(230, 126, 34, 0.1)',
+                        'color': '#e67e22',
+                        'fontWeight': 'bold',
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 2'},
+                        'backgroundColor': 'rgba(241, 196, 15, 0.1)',
+                        'color': '#f1c40f',
+                        'fontWeight': 'bold',
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 1'},
+                        'backgroundColor': 'rgba(46, 204, 113, 0.1)',
+                        'color': '#2ecc71',
+                        'fontWeight': 'bold',
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = 0'},
+                        'backgroundColor': 'rgba(52, 152, 219, 0.1)',
+                        'color': '#3498db',
+                        'fontWeight': 'bold',
+                    }
+                ],
+                style_filter={
+                    'backgroundColor': '#2c3e50',
+                    'color': '#ecf0f1',
+                    'border': '1px solid #34495e',
+                },
                 filter_action="native",
                 sort_action="native",
                 sort_mode="multi",
