@@ -373,6 +373,7 @@ app.layout = html.Div([
                 style_filter={
                     'backgroundColor': '#34495e',
                 },
+                filter_action="native",  # Arama özelliğini etkinleştir
                 filter_options={'placeholder': 'Ara...'},
                 css=[{
                     'selector': '.dash-filter input',
@@ -465,6 +466,7 @@ app.layout = html.Div([
                 style_filter={
                     'backgroundColor': '#34495e',
                 },
+                filter_action="native",  # Arama özelliğini etkinleştir
                 filter_options={'placeholder': 'Ara...'},
                 css=[{
                     'selector': '.dash-filter input',
@@ -552,6 +554,7 @@ app.layout = html.Div([
                 style_filter={
                     'backgroundColor': '#34495e',
                 },
+                filter_action="native",  # Arama özelliğini etkinleştir
                 filter_options={'placeholder': 'Ara...'},
                 css=[{
                     'selector': '.dash-filter input',
