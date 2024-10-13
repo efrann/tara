@@ -363,15 +363,19 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
 
     vulnerability_distribution = {
         'data': [
-            go.Bar(
-                x=labels,
-                y=values,
-                marker_color=colors,
-                text=values,
+            go.Pie(
+                labels=labels,
+                values=values,
+                marker=dict(colors=colors),
+                textinfo='label+value',
                 textposition='outside',
-                textfont=dict(size=16, color='white'),
-                hoverinfo='x+y',
-                hoverlabel=dict(bgcolor=colors, font_size=16),
+                textfont=dict(size=14, color='white'),
+                hoverinfo='label+percent+value',
+                hole=0.3,
+                pull=[0.1, 0.1, 0.1, 0.1, 0.1],
+                direction='clockwise',
+                sort=False,
+                insidetextorientation='radial'
             )
         ],
         'layout': go.Layout(
@@ -383,22 +387,18 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#2c3e50',
             font=dict(color='white'),
-            xaxis=dict(
-                title='Zafiyet Seviyesi',
-                titlefont_size=16,
-                tickfont_size=14,
-                showgrid=False,
-            ),
-            yaxis=dict(
-                title='Bulgu Sayısı',
-                titlefont_size=16,
-                tickfont_size=14,
-                showgrid=True,
-                gridcolor='rgba(255,255,255,0.1)',
-            ),
-            bargap=0.3,
+            annotations=[
+                dict(
+                    text=f'Toplam:<br>{sum(values)}',
+                    showarrow=False,
+                    font=dict(size=20, color='white'),
+                    x=0.5,
+                    y=0.5
+                )
+            ],
             height=600,
             margin=dict(l=50, r=50, t=80, b=50),
+            showlegend=False
         )
     }
 
