@@ -351,36 +351,34 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     } for row in summary_data]
     
     # Zafiyet dağılımı grafiği
-    labels = ['Kritik', 'Yüksek', 'Orta', 'Düşük', 'Bilgi']
+    labels = ['Kritik', 'Yüksek', 'Orta', 'Düşük']
     values = [
         sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
         sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
         sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 1),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 0)
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 1)
     ]
-    colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db']
-
-    # Etiketleri ve değerleri birleştir
-    labels_with_values = [f"{label}: {value}" for label, value in zip(labels, values)]
+    colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
 
     vulnerability_distribution = {
         'data': [
             go.Pie(
-                labels=labels_with_values,
+                labels=labels,
                 values=values,
                 marker=dict(colors=colors),
-                textinfo='none',
-                hoverinfo='label+percent+value',
+                textinfo='value+percent',
+                textposition='inside',
+                insidetextfont=dict(color='white', size=14),
+                hoverinfo='label+value+percent',
                 hole=0.3,
-                pull=[0.05, 0.05, 0.05, 0.05, 0.05],
+                pull=[0.05, 0.05, 0.05, 0.05],
                 direction='clockwise',
                 sort=False
             )
         ],
         'layout': go.Layout(
             title={
-                'text': 'Zafiyet Dağılımı',
+                'text': 'Zafiyet Dağılımı (Bilgi seviyesi hariç)',
                 'font': {'size': 24, 'color': 'white'},
                 'y': 0.95
             },
@@ -397,15 +395,15 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 )
             ],
             legend=dict(
-                orientation='v',
-                yanchor='middle',
-                y=0.5,
-                xanchor='left',
-                x=1.05,
+                orientation='h',
+                yanchor='bottom',
+                y=1.02,
+                xanchor='right',
+                x=1,
                 font=dict(size=12)
             ),
             height=600,
-            margin=dict(l=50, r=150, t=80, b=50),
+            margin=dict(l=50, r=50, t=100, b=50),
         )
     }
 
