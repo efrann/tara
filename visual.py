@@ -367,10 +367,10 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 labels=labels,
                 values=values,
                 marker=dict(colors=colors),
-                textinfo='value',
+                textinfo='label',
                 hoverinfo='label+percent+value',
                 hole=0.4,
-                textfont=dict(size=16, color='white'),
+                textfont=dict(size=14, color='white'),
                 insidetextorientation='radial',
                 direction='clockwise',
                 sort=False
@@ -401,6 +401,20 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                     x=0.5,
                     y=0.5
                 )
+            ] + [
+                dict(
+                    x=0.5 + 0.45 * math.cos(math.pi * (2 * i / len(values) - 0.5)),
+                    y=0.5 + 0.45 * math.sin(math.pi * (2 * i / len(values) - 0.5)),
+                    text=str(value),
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowsize=1,
+                    arrowwidth=2,
+                    arrowcolor=colors[i],
+                    font=dict(size=14, color=colors[i]),
+                    ax=30 * math.cos(math.pi * (2 * i / len(values) - 0.5)),
+                    ay=30 * math.sin(math.pi * (2 * i / len(values) - 0.5))
+                ) for i, value in enumerate(values)
             ],
             height=600,
             margin=dict(l=50, r=50, t=80, b=50),
