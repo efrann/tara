@@ -281,6 +281,68 @@ app.layout = dbc.Container([
     dbc.Row([
         dbc.Col([
             dbc.Card([
+                dbc.CardHeader("Özet Bilgiler"),
+                dbc.CardBody([
+                    dbc.Row([
+                        dbc.Col([
+                            dcc.Dropdown(
+                                id='summary-filter-dropdown',
+                                options=[
+                                    {'label': 'Tüm Taramalar', 'value': 'all'},
+                                    {'label': 'Son 7 Gün', 'value': '7days'},
+                                    {'label': 'Son 30 Gün', 'value': '30days'},
+                                ],
+                                value='all',
+                                clearable=False,
+                            ),
+                        ], width=4),
+                        dbc.Col([
+                            dbc.Input(id="summary-search", placeholder="Ara...", type="text"),
+                        ], width=4),
+                    ], className="mb-3"),
+                    html.Div([
+                        dash_table.DataTable(
+                            id='summary-table',
+                            columns=[
+                                {"name": "Tarama Adı", "id": "scan_name"},
+                                {"name": "Klasör Adı", "id": "folder_name"},
+                                {"name": "Son Tarama Tarihi", "id": "last_scan_date"},
+                                {"name": "Toplam Host", "id": "total_hosts"},
+                                {"name": "Kritik", "id": "total_critical"},
+                                {"name": "Yüksek", "id": "total_high"},
+                                {"name": "Orta", "id": "total_medium"},
+                            ],
+                            style_table={'overflowX': 'auto', 'maxHeight': '400px'},
+                            style_cell={
+                                'textAlign': 'left',
+                                'padding': '5px',
+                                'whiteSpace': 'normal',
+                                'height': 'auto',
+                            },
+                            style_header={
+                                'backgroundColor': 'rgb(30, 30, 30)',
+                                'fontWeight': 'bold'
+                            },
+                            style_data={
+                                'backgroundColor': 'rgb(50, 50, 50)',
+                                'color': 'white'
+                            },
+                            filter_action="native",
+                            sort_action="native",
+                            sort_mode="multi",
+                            page_action="native",
+                            page_current=0,
+                            page_size=10,
+                        ),
+                    ], style={'maxHeight': '400px', 'overflowY': 'scroll'}),
+                ]),
+            ], className="mb-4"),
+        ], width=12),
+    ]),
+
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
                 dbc.CardHeader("Zafiyet Dağılımı"),
                 dbc.CardBody([
                     dcc.Graph(id='vulnerability-distribution')
@@ -414,6 +476,31 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
         vulnerability_trend,
         top_vulnerabilities_data
     )
+
+# Yeni callback fonksiyonu ekleyelim
+@app.callback(
+    Output('summary-table', 'data'),
+    [Input('summary-filter-dropdown', 'value'),
+     Input('summary-search', 'value'),
+     Input('interval-component', 'n_intervals')]
+)
+def update_summary_table(filter_value, search_value, n_intervals):
+    # Verileri çek (bu fonksiyonu kendi veri çekme mantığınıza göre uyarlayın)
+    summary_data, _, _, _, _ = get_data()
+    
+    # Filtreleme işlemi
+    if filter_value == '7days':
+        seven_days_ago = datetime.now() - timedelta(days=7)
+        summary_data = [row for row in summary_data if datetime.strptime(row['last_scan_date'], '%Y-%m-%d %H:%M:%S') >= seven_days_ago]
+    elif filter_value == '30days':
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        summary_data = [row for row in summary_data if datetime.strptime(row['last_scan_date'], '%Y-%m-%d %H:%M:%S') >= thirty_days_ago]
+    
+    # Arama işlemi
+    if search_value:
+        summary_data = [row for row in summary_data if search_value.lower() in row['scan_name'].lower() or search_value.lower() in row['folder_name'].lower()]
+    
+    return summary_data
 
 if __name__ == '__main__':
     app.run_server(debug=True)
