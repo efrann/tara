@@ -194,7 +194,17 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         cursor.execute(total_vulnerabilities_query)
         total_vulnerabilities_data = cursor.fetchone()
 
-    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data
+        # Mevcut taramaları çekmek için yeni bir sorgu ekleyelim
+        scan_list_query = """
+        SELECT DISTINCT s.name
+        FROM scan s
+        JOIN scan_run sr ON s.scan_id = sr.scan_id
+        ORDER BY s.name
+        """
+        cursor.execute(scan_list_query)
+        scan_list = [row['name'] for row in cursor.fetchall()]
+
+    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list
 
 # Dash uygulaması
 app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
@@ -227,8 +237,12 @@ app.layout = html.Div([
             ),
         ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
         html.Div([
-            html.Label("Tarama Adı:", style={'color': 'white'}),
-            dcc.Input(id='scan-name-input', type='text', style={'width': '200px', 'backgroundColor': '#34495e', 'color': 'white'}),
+            html.Label("Tarama Seç:", style={'color': 'white'}),
+            dcc.Dropdown(
+                id='scan-dropdown',
+                options=[],  # Bu seçenekler callback ile doldurulacak
+                style={'width': '200px', 'backgroundColor': '#34495e', 'color': 'black'}
+            ),
         ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
         html.Div([
             html.Label("Zafiyet Adı:", style={'color': 'white'}),
@@ -331,15 +345,16 @@ app.layout = html.Div([
      Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
      Output('total-vulnerabilities', 'children'),
-     Output('last-updated', 'children')],
+     Output('last-updated', 'children'),
+     Output('scan-dropdown', 'options')],
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals')],
     [State('severity-dropdown', 'value'),
-     State('scan-name-input', 'value'),
+     State('scan-dropdown', 'value'),
      State('vulnerability-name-input', 'value')]
 )
 def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data = get_data(severity, scan_name, vulnerability_name)
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list = get_data(severity, scan_name, vulnerability_name)
     
     print("Summary Data:", summary_data)  # Debug için eklendi
     
@@ -433,7 +448,10 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     # Son güncelleme zamanını oluştur
     last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
-    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities, last_updated
+    # Tarama dropdown seçeneklerini oluştur
+    scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
+
+    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities, last_updated, scan_options
 
 if __name__ == '__main__':
     app.run_server(debug=True)
