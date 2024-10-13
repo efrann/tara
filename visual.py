@@ -5,6 +5,7 @@ import plotly.graph_objs as go
 import pandas as pd
 import pymysql
 from datetime import datetime, timedelta
+import math
 
 # MySQL bağlantısı
 db = pymysql.connect(
@@ -133,6 +134,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         # En çok görülen 10 zafiyet sorgusu
         top_vulnerabilities_query = f"""
         SELECT 
+            f.name AS folder_name,
+            s.name AS scan_name,
             COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
             p.severity,
             COUNT(*) as count
@@ -144,6 +147,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
             scan_run sr ON hv.scan_run_id = sr.scan_run_id
         JOIN
             scan s ON sr.scan_id = s.scan_id
+        JOIN
+            folder f ON s.folder_id = f.folder_id
         WHERE 
             sr.scan_run_id = (
                 SELECT MAX(scan_run_id) 
@@ -152,7 +157,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
             )
         {severity_condition} {scan_name_condition} {vulnerability_name_condition}
         GROUP BY 
-            p.plugin_id, p.name, p.severity
+            f.name, s.name, p.plugin_id, p.name, p.severity
         ORDER BY 
             count DESC
         LIMIT 10
@@ -230,8 +235,8 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             html.H3("Toplam Zafiyet Sayıları", style={'textAlign': 'center', 'color': 'white'}),
-            html.Div(id='total-vulnerabilities', style={'display': 'flex', 'justifyContent': 'space-around'}),
-        ], style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
+            html.Div(id='total-vulnerabilities', style={'display': 'flex', 'justifyContent': 'space-around', 'flexWrap': 'wrap'}),
+        ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '10px', 'borderRadius': '10px'}),
     ]),
 
     html.Div([
@@ -240,8 +245,8 @@ app.layout = html.Div([
             dash_table.DataTable(
                 id='summary-table',
                 columns=[
-                    {"name": "Tarama Adı", "id": "scan_name"},
                     {"name": "Klasör Adı", "id": "folder_name"},
+                    {"name": "Tarama Adı", "id": "scan_name"},
                     {"name": "Son Tarama Tarihi", "id": "last_scan_date"},
                     {"name": "Toplam Host", "id": "total_hosts"},
                     {"name": "Kritik", "id": "total_critical"},
@@ -251,8 +256,16 @@ app.layout = html.Div([
                     {"name": "Bilgi", "id": "total_info"}
                 ],
                 style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
+                style_cell={'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid white'},
                 style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
+                style_data_conditional=[
+                    {
+                        'if': {'column_id': col},
+                        'backgroundColor': '#2c3e50',
+                        'color': 'white',
+                        'border': '1px solid #e74c3c'
+                    } for col in ['total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']
+                ],
                 sort_action="native",
                 sort_mode="multi",
             ),
@@ -269,7 +282,13 @@ app.layout = html.Div([
             html.H3("En Çok Görülen 10 Zafiyet", style={'textAlign': 'center', 'color': 'white'}),
             dash_table.DataTable(
                 id='top-vulnerabilities-table',
-                columns=[{"name": i, "id": i} for i in ['vulnerability_name', 'severity', 'count']],
+                columns=[
+                    {"name": "Klasör Adı", "id": "folder_name"},
+                    {"name": "Tarama Adı", "id": "scan_name"},
+                    {"name": "Zafiyet Adı", "id": "vulnerability_name"},
+                    {"name": "Önem Derecesi", "id": "severity"},
+                    {"name": "Sayı", "id": "count"}
+                ],
                 style_table={'height': '300px', 'overflowY': 'auto'},
                 style_cell={'backgroundColor': '#34495e', 'color': 'white'},
                 style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
@@ -320,8 +339,8 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     
     # Özet tablo verisi
     summary_table_data = [{
-        'scan_name': row['scan_name'],
         'folder_name': row['folder_name'],
+        'scan_name': row['scan_name'],
         'last_scan_date': row['last_scan_date'],
         'total_hosts': row['total_hosts'],
         'total_critical': row['total_critical'],
@@ -332,25 +351,51 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     } for row in summary_data]
     
     # Zafiyet dağılımı grafiği
+    labels = ['Critical', 'High', 'Medium', 'Low', 'Info']
+    values = [
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 1),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 0)
+    ]
+    colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db']
+
     vulnerability_distribution = {
         'data': [
             go.Pie(
-                labels=['Critical', 'High', 'Medium', 'Low', 'Info'],
-                values=[
-                    sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
-                    sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
-                    sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
-                    sum(item['count'] for item in vulnerability_data if item['severity'] == 1),
-                    sum(item['count'] for item in vulnerability_data if item['severity'] == 0)
-                ],
-                marker=dict(colors=['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db'])
+                labels=labels,
+                values=values,
+                marker=dict(colors=colors),
+                textinfo='none',
+                hoverinfo='label+percent+value',
+                hole=0.3
             )
         ],
         'layout': go.Layout(
             title='Zafiyet Dağılımı',
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#2c3e50',
-            font=dict(color='white')
+            font=dict(color='white'),
+            annotations=[
+                {
+                    'text': f'{label}<br>{value}',
+                    'x': 1.2 * math.cos(math.pi / 2 - (i * 2 * math.pi / len(labels))),
+                    'y': 1.2 * math.sin(math.pi / 2 - (i * 2 * math.pi / len(labels))),
+                    'font': {'size': 12, 'color': color},
+                    'showarrow': True,
+                    'arrowhead': 2,
+                    'arrowsize': 1,
+                    'arrowwidth': 2,
+                    'arrowcolor': color,
+                    'ax': 30 * math.cos(math.pi / 2 - (i * 2 * math.pi / len(labels))),
+                    'ay': 30 * math.sin(math.pi / 2 - (i * 2 * math.pi / len(labels))),
+                }
+                for i, (label, value, color) in enumerate(zip(labels, values, colors))
+            ],
+            showlegend=False,
+            height=500,
+            margin=dict(l=50, r=50, t=50, b=50)
         )
     }
 
@@ -358,30 +403,41 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     vulnerability_table_data = detailed_vulnerability_data
     
     # En çok görülen 10 zafiyet
-    top_vulnerabilities_table_data = top_vulnerabilities_data
+    top_vulnerabilities_table_data = [{
+        'folder_name': row['folder_name'],
+        'scan_name': row['scan_name'],
+        'vulnerability_name': row['vulnerability_name'],
+        'severity': row['severity'],
+        'count': row['count']
+    } for row in top_vulnerabilities_data]
     
     # Toplam zafiyet sayıları
+    severity_info = [
+        {"name": "Kritik", "color": "#e74c3c", "key": "total_critical"},
+        {"name": "Yüksek", "color": "#e67e22", "key": "total_high"},
+        {"name": "Orta", "color": "#f1c40f", "key": "total_medium"},
+        {"name": "Düşük", "color": "#2ecc71", "key": "total_low"},
+        {"name": "Bilgi", "color": "#3498db", "key": "total_info"}
+    ]
+    
     total_vulnerabilities = [
         html.Div([
-            html.H4("Kritik", style={'color': '#e74c3c'}),
-            html.P(total_vulnerabilities_data['total_critical'])
-        ]),
-        html.Div([
-            html.H4("Yüksek", style={'color': '#e67e22'}),
-            html.P(total_vulnerabilities_data['total_high'])
-        ]),
-        html.Div([
-            html.H4("Orta", style={'color': '#f1c40f'}),
-            html.P(total_vulnerabilities_data['total_medium'])
-        ]),
-        html.Div([
-            html.H4("Düşük", style={'color': '#2ecc71'}),
-            html.P(total_vulnerabilities_data['total_low'])
-        ]),
-        html.Div([
-            html.H4("Bilgi", style={'color': '#3498db'}),
-            html.P(total_vulnerabilities_data['total_info'])
-        ])
+            html.H4(info["name"], style={'color': info["color"], 'margin': '0', 'fontSize': '18px'}),
+            html.P(total_vulnerabilities_data[info["key"]], style={
+                'fontSize': '36px', 
+                'fontWeight': 'bold', 
+                'margin': '10px 0',
+                'color': info["color"]
+            })
+        ], style={
+            'textAlign': 'center', 
+            'backgroundColor': '#34495e', 
+            'padding': '15px', 
+            'borderRadius': '10px', 
+            'margin': '10px',
+            'minWidth': '120px',
+            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
+        }) for info in severity_info
     ]
     
     return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities
