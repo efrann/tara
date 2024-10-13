@@ -379,9 +379,11 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     
     total_vulnerabilities = [
         html.Div([
-            html.H4(info["name"], style={'color': info["color"]}),
-            html.P(total_vulnerabilities_data[info["key"]])
-        ]) for info in severity_info
+            html.Div([
+                html.H4(info["name"], style={'color': info["color"], 'margin': '0'}),
+                html.P(total_vulnerabilities_data[info["key"]], style={'fontSize': '24px', 'fontWeight': 'bold', 'margin': '5px 0'})
+            ], style={'textAlign': 'center', 'backgroundColor': '#34495e', 'padding': '10px', 'borderRadius': '5px', 'margin': '5px'})
+        ], className="two columns") for info in severity_info
     ]
     
     return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities
