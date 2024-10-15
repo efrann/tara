@@ -612,7 +612,7 @@ app.layout = html.Div([
      Output('vulnerability-distribution', 'figure'),
      Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
-     Output('top-vulnerabilities-graph', 'figure'),  # Bu çıktıyı güncelliyoruz
+     Output('top-vulnerabilities-graph', 'figure'),
      Output('total-vulnerabilities', 'children'),
      Output('last-updated', 'children'),
      Output('scan-dropdown', 'options')],
@@ -746,7 +746,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
         'data': [go.Pie(
             labels=[row['vulnerability_name'] for row in top_vulnerabilities_data],
             values=[row['count'] for row in top_vulnerabilities_data],
-            textinfo='label+percent',
+            textinfo='percent',
             hoverinfo='label+value+percent',
             marker=dict(
                 colors=[
@@ -760,7 +760,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             ),
             textfont=dict(size=12, color='white'),
             insidetextfont=dict(size=10, color='white'),
-            hovertext=[f"Önem Derecesi: {severity_map[row['severity']]}" for row in top_vulnerabilities_data],
+            hovertext=[f"{row['vulnerability_name']}<br>Önem Derecesi: {severity_map[row['severity']]}" for row in top_vulnerabilities_data],
         )],
         'layout': go.Layout(
             title='En Çok Görülen 10 Zafiyet',
@@ -769,14 +769,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             plot_bgcolor='#34495e',
             font=dict(color='white', size=14),
             height=500,
-            legend=dict(
-                font=dict(color='white'),
-                orientation='h',
-                yanchor='bottom',
-                y=1.02,
-                xanchor='right',
-                x=1
-            )
+            showlegend=False  # Lejantı kaldırıyoruz
         )
     }
 
