@@ -746,7 +746,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
         'data': [go.Pie(
             labels=[row['vulnerability_name'] for row in top_vulnerabilities_data],
             values=[row['count'] for row in top_vulnerabilities_data],
-            textinfo='percent',
+            textinfo='label+percent',
             hoverinfo='label+value+percent',
             marker=dict(
                 colors=[
@@ -760,7 +760,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             ),
             textfont=dict(size=12, color='white'),
             insidetextfont=dict(size=10, color='white'),
-            hovertext=[f"{row['vulnerability_name']}<br>Önem Derecesi: {severity_map[row['severity']]}" for row in top_vulnerabilities_data],
+            hovertext=[f"Önem Derecesi: {severity_map[row['severity']]}" for row in top_vulnerabilities_data],
         )],
         'layout': go.Layout(
             title='En Çok Görülen 10 Zafiyet',
