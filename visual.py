@@ -172,7 +172,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         for row in detailed_vulnerability_data:
             if row['scan_date']:
                 date = row['scan_date']
-                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "May��s", "Haziran", 
+                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
                                   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
                 row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y")
 
