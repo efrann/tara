@@ -338,7 +338,13 @@ app.layout = html.Div([
     # Total Vulnerabilities
     html.Div([
         html.H3("Toplam Zafiyet Sayıları", style={'textAlign': 'center', 'color': 'white', 'marginBottom': '20px'}),
-        html.Div(id='total-vulnerabilities', style={'display': 'flex', 'justifyContent': 'space-around', 'flexWrap': 'wrap'}),
+        html.Div([
+            html.Div(id='severity-4', n_clicks=0),
+            html.Div(id='severity-3', n_clicks=0),
+            html.Div(id='severity-2', n_clicks=0),
+            html.Div(id='severity-1', n_clicks=0),
+            html.Div(id='severity-0', n_clicks=0),
+        ], id='total-vulnerabilities', style={'display': 'flex', 'justifyContent': 'space-around', 'flexWrap': 'wrap'}),
     ], style={'backgroundColor': '#34495e', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
     # Graphs
@@ -591,7 +597,11 @@ app.layout = html.Div([
      Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
      Output('top-vulnerabilities-graph', 'figure'),
-     Output('total-vulnerabilities', 'children'),
+     Output('severity-4', 'children'),
+     Output('severity-3', 'children'),
+     Output('severity-2', 'children'),
+     Output('severity-1', 'children'),
+     Output('severity-0', 'children'),
      Output('last-updated', 'children'),
      Output('scan-dropdown', 'options'),
      Output('severity-dropdown', 'value')],
@@ -615,7 +625,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
 
     summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list = get_data(severity, scan_name, vulnerability_name, ip_address)
     
-    print("Summary Data:", summary_data)  # Debug için eklendi
+    #print("Summary Data:", summary_data)  # Debug için eklendi
     
     # Özet tablo verisi
     summary_table_data = [{
@@ -723,10 +733,8 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
             'minWidth': '120px',
             'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
             'cursor': 'pointer'
-        },
-        id=f'severity-{info["value"]}',
-        n_clicks=0
-        ) for info in severity_info
+        })
+        for info in severity_info
     ]
     
     # Son güncelleme zamanını oluştur
@@ -740,7 +748,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         # Eğer veri yoksa, boş bir grafik döndür
         top_vulnerabilities_graph = go.Figure()
         top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
-        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options, severity
+        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
 
     # En çok görülen 10 zafiyet daire grafiği
     top_vulnerabilities_graph = go.Figure(
@@ -777,7 +785,11 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         showlegend=False,
     )
 
-    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options, severity
+    return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
+            top_vulnerabilities_table_data, top_vulnerabilities_graph, 
+            total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
+            total_vulnerabilities[3], total_vulnerabilities[4], 
+            last_updated, scan_options, severity)
 
 # Combine the two callbacks into one
 @app.callback(
