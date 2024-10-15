@@ -429,22 +429,6 @@ app.layout = html.Div([
                         'textShadow': '0px 0px 1px #000000'
                     }
                 ],
-                style_filter={
-                    'backgroundColor': '#34495e',
-                },
-                filter_action="native",  # Arama özelliğini etkinleştir
-                filter_options={'placeholder': 'Ara...'},
-                css=[{
-                    'selector': '.dash-filter input',
-                    'rule': '''
-                        color: #ecf0f1 !important;
-                        background-color: #34495e !important;
-                        border: 2px solid #3498db !important;
-                        border-radius: 5px;
-                        padding: 8px;
-                        font-weight: bold;
-                    '''
-                }],
             ),
         ], className="six columns"),
 
@@ -514,22 +498,6 @@ app.layout = html.Div([
                         'fontWeight': 'bold',
                     }
                 ],
-                style_filter={
-                    'backgroundColor': '#34495e',
-                },
-                filter_action="native",  # Arama özelliğini etkinleştir
-                filter_options={'placeholder': 'Ara...'},
-                css=[{
-                    'selector': '.dash-filter input',
-                    'rule': '''
-                        color: #ecf0f1 !important;
-                        background-color: #34495e !important;
-                        border: 2px solid #3498db !important;
-                        border-radius: 5px;
-                        padding: 8px;
-                        font-weight: bold;
-                    '''
-                }],
             ),
         ], className="six columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
@@ -603,22 +571,6 @@ app.layout = html.Div([
                         'fontWeight': 'bold',
                     }
                 ],
-                style_filter={
-                    'backgroundColor': '#34495e',
-                },
-                filter_action="native",  # Arama özelliğini etkinleştir
-                filter_options={'placeholder': 'Ara...'},
-                css=[{
-                    'selector': '.dash-filter input',
-                    'rule': '''
-                        color: #ecf0f1 !important;
-                        background-color: #34495e !important;
-                        border: 2px solid #3498db !important;
-                        border-radius: 5px;
-                        padding: 8px;
-                        font-weight: bold;
-                    '''
-                }],
             )
         ], className="twelve columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
