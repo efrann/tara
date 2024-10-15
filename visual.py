@@ -741,12 +741,20 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     # Tarama dropdown seçeneklerini oluştur
     scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
 
+    # Veri kontrolü
+    if not top_vulnerabilities_data:
+        # Eğer veri yoksa, boş bir grafik döndür
+        top_vulnerabilities_graph = go.Figure()
+        top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
+        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options
+
     # En çok görülen 10 zafiyet daire grafiği
-    top_vulnerabilities_graph = {
-        'data': [go.Sunburst(
+    top_vulnerabilities_graph = go.Figure(
+        go.Sunburst(
+            ids=['Top 10 Zafiyetler'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
             labels=['Top 10 Zafiyetler'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
             parents=[''] + ['Top 10 Zafiyetler'] * len(top_vulnerabilities_data),
-            values=[0] + [row['count'] for row in top_vulnerabilities_data],
+            values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
             branchvalues="total",
             marker=dict(
                 colors=['#2c3e50'] + [
@@ -759,18 +767,18 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 ]
             ),
             textinfo='label+percent entry',
-            hovertext=[''] + [f"Önem Derecesi: {severity_map[row['severity']]}<br>Sayı: {row['count']}" for row in top_vulnerabilities_data],
-            hoverinfo='label+text',
-        )],
-        'layout': go.Layout(
-            title='En Çok Görülen 10 Zafiyet',
-            margin=dict(l=0, r=0, t=50, b=0),
-            paper_bgcolor='#2c3e50',
-            plot_bgcolor='#34495e',
-            font=dict(color='white', size=14),
-            height=500,
+            hovertemplate='<b>%{label}</b><br>Sayı: %{value}<br>Yüzde: %{percent:.1%}<extra></extra>',
         )
-    }
+    )
+
+    top_vulnerabilities_graph.update_layout(
+        title='En Çok Görülen 10 Zafiyet',
+        margin=dict(l=0, r=0, t=50, b=0),
+        paper_bgcolor='#2c3e50',
+        plot_bgcolor='#34495e',
+        font=dict(color='white', size=14),
+        height=500,
+    )
 
     return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options
 
