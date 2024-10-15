@@ -744,29 +744,34 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     # En çok görülen 10 zafiyet grafiği
     top_vulnerabilities_graph = {
         'data': [go.Bar(
-            x=[row['vulnerability_name'] for row in top_vulnerabilities_data],
-            y=[row['count'] for row in top_vulnerabilities_data],
+            x=[row['count'] for row in top_vulnerabilities_data],
+            y=[row['vulnerability_name'] for row in top_vulnerabilities_data],
+            orientation='h',
             marker=dict(
                 color=[
                     '#e74c3c' if row['severity'] == 'Kritik' else
                     '#e67e22' if row['severity'] == 'Yüksek' else
                     '#f1c40f' if row['severity'] == 'Orta' else
                     '#2ecc71' if row['severity'] == 'Düşük' else
-                    '#3498db' for row in top_vulnerabilities_data
+                    '#3498db' if row['severity'] == 'Bilgi' else
+                    '#95a5a6' for row in top_vulnerabilities_data
                 ]
             ),
-            text=[row['count'] for row in top_vulnerabilities_data],
+            text=[f"{row['count']} ({row['severity']})" for row in top_vulnerabilities_data],
             textposition='auto',
+            hoverinfo='text',
+            hovertext=[f"Zafiyet: {row['vulnerability_name']}<br>Sayı: {row['count']}<br>Önem Derecesi: {row['severity']}" for row in top_vulnerabilities_data],
         )],
         'layout': go.Layout(
             title='En Çok Görülen 10 Zafiyet',
-            xaxis=dict(title='Zafiyet Adı', tickangle=45, tickfont=dict(size=10)),
-            yaxis=dict(title='Sayı'),
-            margin=dict(l=50, r=50, t=50, b=150),
+            xaxis=dict(title='Sayı', gridcolor='#7f8c8d'),
+            yaxis=dict(title='Zafiyet Adı', automargin=True, gridcolor='#7f8c8d'),
+            margin=dict(l=10, r=10, t=50, b=50),
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#34495e',
             font=dict(color='white'),
-            height=500
+            height=500,
+            bargap=0.2,
         )
     }
 
