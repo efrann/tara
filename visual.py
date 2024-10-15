@@ -300,6 +300,27 @@ app.layout = html.Div([
         html.Button('Filtrele', id='filter-button', style={'marginTop': '20px', 'backgroundColor': '#e74c3c', 'color': 'white'}),
     ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
 
+    # Grafikleri buraya taşıyoruz
+    html.Div([
+        html.Div([
+            html.H3("Zafiyet Dağılımı", style={'textAlign': 'center', 'color': 'white'}),
+            dcc.Graph(id='vulnerability-distribution')
+        ], className="six columns"),
+
+        html.Div([
+            html.H3("En Çok Görülen 10 Zafiyet Grafiği", style={
+                'textAlign': 'center', 
+                'color': '#ecf0f1', 
+                'backgroundColor': '#2c3e50', 
+                'padding': '10px', 
+                'marginBottom': '20px',
+                'borderRadius': '5px',
+                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
+            }),
+            dcc.Graph(id='top-vulnerabilities-graph')
+        ], className="six columns"),
+    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
+
     html.Div([
         html.Div([
             html.H3("Toplam Zafiyet Sayıları", style={'textAlign': 'center', 'color': 'white'}),
@@ -404,13 +425,6 @@ app.layout = html.Div([
         ], className="six columns"),
 
         html.Div([
-            html.H3("Zafiyet Dağılımı", style={'textAlign': 'center', 'color': 'white'}),
-            dcc.Graph(id='vulnerability-distribution')
-        ], className="six columns"),
-    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
-
-    html.Div([
-        html.Div([
             html.H3("En Çok Görülen 10 Zafiyet", style={
                 'textAlign': 'center', 
                 'color': '#ecf0f1', 
@@ -494,19 +508,6 @@ app.layout = html.Div([
                     '''
                 }],
             ),
-        ], className="six columns"),
-
-        html.Div([
-            html.H3("En Çok Görülen 10 Zafiyet Grafiği", style={
-                'textAlign': 'center', 
-                'color': '#ecf0f1', 
-                'backgroundColor': '#2c3e50', 
-                'padding': '10px', 
-                'marginBottom': '20px',
-                'borderRadius': '5px',
-                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
-            }),
-            dcc.Graph(id='top-vulnerabilities-graph')
         ], className="six columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
 
@@ -597,7 +598,7 @@ app.layout = html.Div([
                     '''
                 }],
             )
-        ], className="six columns"),
+        ], className="twelve columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
 
     dcc.Interval(
