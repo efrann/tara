@@ -1,5 +1,5 @@
 import dash
-from dash import dcc, html, dash_table
+from dash import dcc, html, dash_table, callback_context
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import pandas as pd
@@ -213,7 +213,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         cursor.execute(top_vulnerabilities_query)
         top_vulnerabilities_data = cursor.fetchall()
 
-        # Toplam zafiyet sayıları sorgusu
+        # Toplam zafiyet say��ları sorgusu
         total_vulnerabilities_query = f"""
         SELECT 
             SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as total_critical,
@@ -255,67 +255,26 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
 
     return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list
 
-# Toplam zafiyet sayıları grafiği için yeni bir fonksiyon
-def create_radial_chart(total_vulnerabilities_data):
-    severity_info = [
-        {"name": "Kritik", "color": "#e74c3c", "key": "total_critical"},
-        {"name": "Yüksek", "color": "#e67e22", "key": "total_high"},
-        {"name": "Orta", "color": "#f1c40f", "key": "total_medium"},
-        {"name": "Düşük", "color": "#2ecc71", "key": "total_low"},
-        {"name": "Bilgi", "color": "#3498db", "key": "total_info"}
-    ]
-    
-    max_value = max(total_vulnerabilities_data[info["key"]] for info in severity_info)
-    
-    data = []
-    for i, info in enumerate(severity_info):
-        value = total_vulnerabilities_data[info["key"]]
-        percentage = value / max_value
-        
-        data.append(go.Barpolar(
-            r=[percentage],
-            theta=[i * 72],  # 360 / 5 = 72 degrees per category
-            width=[0.8],
-            base=[0],
-            marker_color=[info["color"]],
-            name=info["name"],
-            text=[f"{info['name']}: {value}"],
-            hoverinfo="text"
-        ))
-
-    layout = go.Layout(
-        polar=dict(
-            radialaxis=dict(visible=False, range=[0, 1]),
-            angularaxis=dict(visible=False, direction="clockwise")
-        ),
-        showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        margin=dict(l=20, r=20, t=40, b=20),
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#2c3e50',
-        font=dict(color='white'),
-    )
-
-    fig = go.Figure(data=data, layout=layout)
-    return fig
-
 # Dash uygulaması
 app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
 
 app.layout = html.Div([
+    # Header
     html.Div([
-        html.H1("Nessus Tarama Sonuçları Gösterge Paneli", style={'textAlign': 'center', 'color': 'white'}),
-        html.Img(src="/assets/nessus_logo.png", style={'height': '50px', 'float': 'right'}),
-    ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
+        html.H1("Nessus Tarama Sonuçları Gösterge Paneli", style={'textAlign': 'center', 'color': 'white', 'marginBottom': '0'}),
+        html.Img(src="/assets/nessus_logo.png", style={'height': '50px', 'float': 'right', 'marginTop': '-50px'}),
+    ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
+    # Last updated info
     html.Div([
-        html.P(id='last-updated', style={'color': 'white', 'textAlign': 'right'}),
-        html.P("Bu sayfa her 1 dakikada bir otomatik olarak yenilenir.", style={'color': 'white', 'textAlign': 'right', 'fontStyle': 'italic'}),
-    ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
+        html.P(id='last-updated', style={'color': 'white', 'textAlign': 'right', 'margin': '5px 0'}),
+        html.P("Bu sayfa her 1 dakikada bir otomatik olarak yenilenir.", style={'color': '#bdc3c7', 'textAlign': 'right', 'fontStyle': 'italic', 'margin': '5px 0'}),
+    ], style={'backgroundColor': '#34495e', 'padding': '10px', 'borderRadius': '0 0 10px 10px'}),
 
+    # Filters
     html.Div([
         html.Div([
-            html.Label("Severity:", style={'color': 'white'}),
+            html.Label("Önem Derecesi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
             dcc.Dropdown(
                 id='severity-dropdown',
                 options=[
@@ -323,28 +282,50 @@ app.layout = html.Div([
                     {'label': 'Yüksek', 'value': 3},
                     {'label': 'Orta', 'value': 2},
                     {'label': 'Düşük', 'value': 1},
-                    {'label': 'Info', 'value': 0}
+                    {'label': 'Bilgi', 'value': 0}
                 ],
                 multi=True,
-                style={'width': '200px', 'backgroundColor': '#34495e', 'color': 'black'}
+                placeholder="Seçiniz...",
+                style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'black'}
             ),
-        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
+        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
         html.Div([
-            html.Label("Tarama Seç:", style={'color': 'white'}),
+            html.Label("Tarama Seç:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
             dcc.Dropdown(
                 id='scan-dropdown',
-                options=[],  # Bu seçenekler callback ile doldurulacak
-                style={'width': '200px', 'backgroundColor': '#34495e', 'color': 'black'}
+                options=[],
+                placeholder="Seçiniz...",
+                style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'black'}
             ),
-        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
+        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
         html.Div([
-            html.Label("Zafiyet Adı:", style={'color': 'white'}),
-            dcc.Input(id='vulnerability-name-input', type='text', style={'width': '200px', 'backgroundColor': '#34495e', 'color': 'white'}),
-        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px'}),
-        html.Button('Filtrele', id='filter-button', style={'marginTop': '20px', 'backgroundColor': '#e74c3c', 'color': 'white'}),
-    ], style={'backgroundColor': '#2c3e50', 'padding': '10px'}),
+            html.Label("Zafiyet Adı:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
+            dcc.Input(
+                id='vulnerability-name-input',
+                type='text',
+                placeholder="Zafiyet adı girin...",
+                style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
+            ),
+        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
+        html.Button('Filtrele', id='filter-button', n_clicks=0, style={
+            'marginTop': '25px',
+            'backgroundColor': '#3498db',
+            'color': 'white',
+            'border': 'none',
+            'padding': '10px 20px',
+            'borderRadius': '5px',
+            'cursor': 'pointer',
+            'transition': 'background-color 0.3s',
+        }),
+    ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'marginTop': '20px', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
-    # Grafikleri buraya taşıyoruz
+    # Total Vulnerabilities
+    html.Div([
+        html.H3("Toplam Zafiyet Sayıları", style={'textAlign': 'center', 'color': 'white', 'marginBottom': '20px'}),
+        html.Div(id='total-vulnerabilities', style={'display': 'flex', 'justifyContent': 'space-around', 'flexWrap': 'wrap'}),
+    ], style={'backgroundColor': '#34495e', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
+
+    # Graphs
     html.Div([
         html.Div([
             dcc.Graph(id='vulnerability-distribution', style={'height': '400px'})
@@ -353,25 +334,18 @@ app.layout = html.Div([
         html.Div([
             dcc.Graph(id='top-vulnerabilities-graph', style={'height': '400px'})
         ], className="six columns"),
-    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
+    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
-    html.Div([
-        html.Div([
-            html.H3("Toplam Zafiyet Sayıları", style={'textAlign': 'center', 'color': 'white'}),
-            dcc.Graph(id='total-vulnerabilities', style={'height': '400px'}),
-        ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '10px', 'borderRadius': '10px'}),
-    ]),
-
+    # Tables
     html.Div([
         html.Div([
             html.H3("Özet Bilgiler", style={
                 'textAlign': 'center', 
                 'color': '#ecf0f1', 
-                'backgroundColor': '#2c3e50', 
+                'backgroundColor': '#34495e', 
                 'padding': '10px', 
                 'marginBottom': '20px',
                 'borderRadius': '5px',
-                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
             }),
             dash_table.DataTable(
                 id='summary-table',
@@ -462,11 +436,10 @@ app.layout = html.Div([
             html.H3("En Çok Görülen 10 Zafiyet", style={
                 'textAlign': 'center', 
                 'color': '#ecf0f1', 
-                'backgroundColor': '#2c3e50', 
+                'backgroundColor': '#34495e', 
                 'padding': '10px', 
                 'marginBottom': '20px',
                 'borderRadius': '5px',
-                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
             }),
             dash_table.DataTable(
                 id='top-vulnerabilities-table',
@@ -543,18 +516,17 @@ app.layout = html.Div([
                 }],
             ),
         ], className="six columns"),
-    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
+    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
     html.Div([
         html.Div([
             html.H3("Detaylı Zafiyet Listesi", style={
                 'textAlign': 'center', 
                 'color': '#ecf0f1', 
-                'backgroundColor': '#2c3e50', 
+                'backgroundColor': '#34495e', 
                 'padding': '10px', 
                 'marginBottom': '20px',
                 'borderRadius': '5px',
-                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
             }),
             dash_table.DataTable(
                 id='vulnerability-table',
@@ -633,14 +605,14 @@ app.layout = html.Div([
                 }],
             )
         ], className="twelve columns"),
-    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
+    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
     dcc.Interval(
         id='interval-component',
         interval=60*1000,  # Her 1 dakikada bir güncelle
         n_intervals=0
     )
-], style={'backgroundColor': '#2c3e50'})
+], style={'backgroundColor': '#2c3e50', 'minHeight': '100vh', 'padding': '20px'})
 
 @app.callback(
     [Output('summary-table', 'data'),
@@ -648,7 +620,7 @@ app.layout = html.Div([
      Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
      Output('top-vulnerabilities-graph', 'figure'),
-     Output('total-vulnerabilities', 'figure'),  # Değişiklik burada
+     Output('total-vulnerabilities', 'children'),
      Output('last-updated', 'children'),
      Output('scan-dropdown', 'options')],
     [Input('filter-button', 'n_clicks'),
@@ -741,8 +713,34 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
         'count': row['count']
     } for row in top_vulnerabilities_data]
     
-    # Toplam zafiyet sayıları grafiği
-    total_vulnerabilities_chart = create_radial_chart(total_vulnerabilities_data)
+    # Toplam zafiyet sayıları
+    severity_info = [
+        {"name": "Kritik", "color": "#e74c3c", "key": "total_critical"},
+        {"name": "Yüksek", "color": "#e67e22", "key": "total_high"},
+        {"name": "Orta", "color": "#f1c40f", "key": "total_medium"},
+        {"name": "Düşük", "color": "#2ecc71", "key": "total_low"},
+        {"name": "Bilgi", "color": "#3498db", "key": "total_info"}
+    ]
+    
+    total_vulnerabilities = [
+        html.Div([
+            html.H4(info["name"], style={'color': info["color"], 'margin': '0', 'fontSize': '18px'}),
+            html.P(total_vulnerabilities_data[info["key"]], style={
+                'fontSize': '36px', 
+                'fontWeight': 'bold', 
+                'margin': '10px 0',
+                'color': info["color"]
+            })
+        ], style={
+            'textAlign': 'center', 
+            'backgroundColor': '#34495e', 
+            'padding': '15px', 
+            'borderRadius': '10px', 
+            'margin': '10px',
+            'minWidth': '120px',
+            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
+        }) for info in severity_info
+    ]
     
     # Son güncelleme zamanını oluştur
     last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
@@ -755,7 +753,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
         # Eğer veri yoksa, boş bir grafik döndür
         top_vulnerabilities_graph = go.Figure()
         top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
-        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities_chart, last_updated, scan_options
+        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options
 
     # En çok görülen 10 zafiyet daire grafiği
     top_vulnerabilities_graph = go.Figure(
@@ -792,7 +790,37 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
         showlegend=False,
     )
 
-    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities_chart, last_updated, scan_options
+    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options
+
+# Add a new callback for button hover effect
+@app.callback(
+    Output('filter-button', 'style'),
+    [Input('filter-button', 'n_clicks')]
+)
+def update_button_style(n_clicks):
+    changed_id = [p['prop_id'] for p in callback_context.triggered][0]
+    if 'filter-button' in changed_id:
+        return {
+            'marginTop': '25px',
+            'backgroundColor': '#2980b9',
+            'color': 'white',
+            'border': 'none',
+            'padding': '10px 20px',
+            'borderRadius': '5px',
+            'cursor': 'pointer',
+            'transition': 'background-color 0.3s',
+        }
+    else:
+        return {
+            'marginTop': '25px',
+            'backgroundColor': '#3498db',
+            'color': 'white',
+            'border': 'none',
+            'padding': '10px 20px',
+            'borderRadius': '5px',
+            'cursor': 'pointer',
+            'transition': 'background-color 0.3s',
+        }
 
 if __name__ == '__main__':
     app.run_server(debug=True)
