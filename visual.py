@@ -767,9 +767,9 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 ]
             ),
             textinfo='label',
-            hovertemplate='<b>%{label}</b><br>Sayı: %{value}<br>Yüzde: %{percent:.1%}<extra></extra>',
+            hovertemplate='<b>%{label}</b><br>Sayı: %{value}<br><extra></extra>',
             insidetextorientation='radial',
-            textfont=dict(size=10),
+            textfont=dict(size=20),
         )
     )
 
