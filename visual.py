@@ -172,7 +172,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         for row in detailed_vulnerability_data:
             if row['scan_date']:
                 date = row['scan_date']
-                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
+                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "May��s", "Haziran", 
                                   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
                 row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y")
 
@@ -743,12 +743,14 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
 
     # En çok görülen 10 zafiyet grafiği
     top_vulnerabilities_graph = {
-        'data': [go.Bar(
-            x=[row['count'] for row in top_vulnerabilities_data],
-            y=[row['vulnerability_name'] for row in top_vulnerabilities_data],
-            orientation='h',
+        'data': [go.Treemap(
+            labels=[row['vulnerability_name'] for row in top_vulnerabilities_data],
+            parents=[''] * len(top_vulnerabilities_data),
+            values=[row['count'] for row in top_vulnerabilities_data],
+            textinfo='label+value+percent root',
+            hoverinfo='label+value+percent root',
             marker=dict(
-                color=[
+                colors=[
                     '#e74c3c' if row['severity'] == 'Kritik' else
                     '#e67e22' if row['severity'] == 'Yüksek' else
                     '#f1c40f' if row['severity'] == 'Orta' else
@@ -757,21 +759,17 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                     '#95a5a6' for row in top_vulnerabilities_data
                 ]
             ),
-            text=[f"{row['count']} ({row['severity']})" for row in top_vulnerabilities_data],
-            textposition='auto',
-            hoverinfo='text',
-            hovertext=[f"Zafiyet: {row['vulnerability_name']}<br>Sayı: {row['count']}<br>Önem Derecesi: {row['severity']}" for row in top_vulnerabilities_data],
+            textfont=dict(size=12, color='white'),
+            insidetextfont=dict(size=10, color='white'),
+            hovertext=[f"Önem Derecesi: {row['severity']}" for row in top_vulnerabilities_data],
         )],
         'layout': go.Layout(
             title='En Çok Görülen 10 Zafiyet',
-            xaxis=dict(title='Sayı', gridcolor='#7f8c8d'),
-            yaxis=dict(title='Zafiyet Adı', automargin=True, gridcolor='#7f8c8d'),
-            margin=dict(l=10, r=10, t=50, b=50),
+            margin=dict(l=0, r=0, t=50, b=0),
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#34495e',
-            font=dict(color='white'),
+            font=dict(color='white', size=14),
             height=500,
-            bargap=0.2,
         )
     }
 
