@@ -172,7 +172,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         for row in detailed_vulnerability_data:
             if row['scan_date']:
                 date = row['scan_date']
-                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "May��s", "Haziran", 
+                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
                                   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
                 row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y")
 
@@ -766,10 +766,10 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                     '#95a5a6' for row in top_vulnerabilities_data
                 ]
             ),
-            textinfo='label+value+percent',
+            textinfo='label',
             hovertemplate='<b>%{label}</b><br>Sayı: %{value}<br>Yüzde: %{percent:.1%}<extra></extra>',
             insidetextorientation='radial',
-            textfont=dict(size=12, color='white'),
+            textfont=dict(size=10),
         )
     )
 
