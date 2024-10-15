@@ -769,7 +769,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             textinfo='label',
             hovertemplate='<b>%{label}</b><br>Sayı: %{value}<br><extra></extra>',
             insidetextorientation='radial',
-            textfont=dict(size=20),
+            textfont=dict(size=20, color='white'),  # Yazı rengini beyaz yaptık
         )
     )
 
@@ -784,7 +784,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
         margin=dict(l=20, r=20, t=50, b=20),
         paper_bgcolor='#2c3e50',
         plot_bgcolor='#34495e',
-        font=dict(color='white', size=14),
+        font=dict(color='white', size=10),
         height=600,
         showlegend=False,
     )
