@@ -579,8 +579,11 @@ app.layout = html.Div([
         id='interval-component',
         interval=60*1000,  # Her 1 dakikada bir güncelle
         n_intervals=0
-    )
-], style={'backgroundColor': '#2c3e50', 'minHeight': '100vh', 'padding': '20px'})
+    ),
+
+    # Hidden div for storing clicked severity
+    html.Div(id='clicked-severity', style={'display': 'none'}),
+])
 
 @app.callback(
     [Output('summary-table', 'data'),
@@ -590,15 +593,26 @@ app.layout = html.Div([
      Output('top-vulnerabilities-graph', 'figure'),
      Output('total-vulnerabilities', 'children'),
      Output('last-updated', 'children'),
-     Output('scan-dropdown', 'options')],
+     Output('scan-dropdown', 'options'),
+     Output('severity-dropdown', 'value')],
     [Input('filter-button', 'n_clicks'),
-     Input('interval-component', 'n_intervals')],
+     Input('interval-component', 'n_intervals'),
+     Input('clicked-severity', 'children')],
     [State('severity-dropdown', 'value'),
      State('scan-dropdown', 'value'),
      State('vulnerability-name-input', 'value'),
      State('ip-address-input', 'value')]
 )
-def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name, ip_address):
+def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vulnerability_name, ip_address):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        button_id = 'No clicks yet'
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if button_id == 'clicked-severity' and clicked_severity:
+        severity = [int(clicked_severity)]
+
     summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list = get_data(severity, scan_name, vulnerability_name, ip_address)
     
     print("Summary Data:", summary_data)  # Debug için eklendi
@@ -684,11 +698,11 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name, 
     
     # Toplam zafiyet sayıları
     severity_info = [
-        {"name": "Kritik", "color": "#e74c3c", "key": "total_critical"},
-        {"name": "Yüksek", "color": "#e67e22", "key": "total_high"},
-        {"name": "Orta", "color": "#f1c40f", "key": "total_medium"},
-        {"name": "Düşük", "color": "#2ecc71", "key": "total_low"},
-        {"name": "Bilgi", "color": "#3498db", "key": "total_info"}
+        {"name": "Kritik", "color": "#e74c3c", "key": "total_critical", "value": 4},
+        {"name": "Yüksek", "color": "#e67e22", "key": "total_high", "value": 3},
+        {"name": "Orta", "color": "#f1c40f", "key": "total_medium", "value": 2},
+        {"name": "Düşük", "color": "#2ecc71", "key": "total_low", "value": 1},
+        {"name": "Bilgi", "color": "#3498db", "key": "total_info", "value": 0}
     ]
     
     total_vulnerabilities = [
@@ -707,8 +721,12 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name, 
             'borderRadius': '10px', 
             'margin': '10px',
             'minWidth': '120px',
-            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
-        }) for info in severity_info
+            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
+            'cursor': 'pointer'
+        },
+        id=f'severity-{info["value"]}',
+        n_clicks=0
+        ) for info in severity_info
     ]
     
     # Son güncelleme zamanını oluştur
@@ -722,7 +740,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name, 
         # Eğer veri yoksa, boş bir grafik döndür
         top_vulnerabilities_graph = go.Figure()
         top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
-        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options
+        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options, severity
 
     # En çok görülen 10 zafiyet daire grafiği
     top_vulnerabilities_graph = go.Figure(
@@ -759,7 +777,46 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name, 
         showlegend=False,
     )
 
-    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options
+    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options, severity
+
+# Add a new callback for severity click
+@app.callback(
+    Output('clicked-severity', 'children'),
+    [Input(f'severity-{i}', 'n_clicks') for i in range(5)],
+    [State('severity-dropdown', 'value')]
+)
+def update_clicked_severity(*args):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return dash.no_update
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    clicked_severity = button_id.split('-')[1]
+    current_severity = args[-1]
+
+    if current_severity and int(clicked_severity) in current_severity:
+        return None
+    return clicked_severity
+
+# Add a new callback for sunburst chart click
+@app.callback(
+    Output('clicked-severity', 'children'),
+    [Input('vulnerability-distribution', 'clickData')],
+    [State('severity-dropdown', 'value')]
+)
+def update_clicked_severity_from_chart(clickData, current_severity):
+    if not clickData:
+        return dash.no_update
+    
+    clicked_label = clickData['points'][0]['label']
+    severity_map = {'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1}
+    
+    if clicked_label in severity_map:
+        clicked_severity = severity_map[clicked_label]
+        if current_severity and clicked_severity in current_severity:
+            return None
+        return str(clicked_severity)
+    
+    return dash.no_update
 
 # Add a new callback for button hover effect
 @app.callback(
