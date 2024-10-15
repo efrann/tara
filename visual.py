@@ -767,9 +767,10 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 ]
             ),
             textinfo='label',
-            hovertemplate='<b>%{label}</b><br>Sayı: %{value}<br><extra></extra>',
+            hovertemplate='<b>%{customdata}</b><br>Sayı: %{value}<br><extra></extra>',
             insidetextorientation='radial',
-            textfont=dict(size=20, color='white'),  # Yazı rengini beyaz yaptık
+            textfont=dict(size=10, color='white'),
+            customdata=['Top 10 Zafiyetler'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
         )
     )
 
