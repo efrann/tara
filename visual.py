@@ -612,7 +612,7 @@ app.layout = html.Div([
      Output('vulnerability-distribution', 'figure'),
      Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
-     Output('top-vulnerabilities-graph', 'figure'),  # Yeni çıktı
+     Output('top-vulnerabilities-graph', 'figure'),  # Bu çıktıyı güncelliyoruz
      Output('total-vulnerabilities', 'children'),
      Output('last-updated', 'children'),
      Output('scan-dropdown', 'options')],
@@ -741,35 +741,42 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     # Tarama dropdown seçeneklerini oluştur
     scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
 
-    # En çok görülen 10 zafiyet grafiği
+    # En çok görülen 10 zafiyet pasta grafiği
     top_vulnerabilities_graph = {
-        'data': [go.Treemap(
+        'data': [go.Pie(
             labels=[row['vulnerability_name'] for row in top_vulnerabilities_data],
-            parents=[''] * len(top_vulnerabilities_data),
             values=[row['count'] for row in top_vulnerabilities_data],
-            textinfo='label+value+percent root',
-            hoverinfo='label+value+percent root',
+            textinfo='label+percent',
+            hoverinfo='label+value+percent',
             marker=dict(
                 colors=[
-                    '#e74c3c' if row['severity'] == 'Kritik' else
-                    '#e67e22' if row['severity'] == 'Yüksek' else
-                    '#f1c40f' if row['severity'] == 'Orta' else
-                    '#2ecc71' if row['severity'] == 'Düşük' else
-                    '#3498db' if row['severity'] == 'Bilgi' else
+                    '#e74c3c' if row['severity'] == 4 else
+                    '#e67e22' if row['severity'] == 3 else
+                    '#f1c40f' if row['severity'] == 2 else
+                    '#2ecc71' if row['severity'] == 1 else
+                    '#3498db' if row['severity'] == 0 else
                     '#95a5a6' for row in top_vulnerabilities_data
                 ]
             ),
             textfont=dict(size=12, color='white'),
             insidetextfont=dict(size=10, color='white'),
-            hovertext=[f"Önem Derecesi: {row['severity']}" for row in top_vulnerabilities_data],
+            hovertext=[f"Önem Derecesi: {severity_map[row['severity']]}" for row in top_vulnerabilities_data],
         )],
         'layout': go.Layout(
             title='En Çok Görülen 10 Zafiyet',
-            margin=dict(l=0, r=0, t=50, b=0),
+            margin=dict(l=50, r=50, t=50, b=50),
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#34495e',
             font=dict(color='white', size=14),
             height=500,
+            legend=dict(
+                font=dict(color='white'),
+                orientation='h',
+                yanchor='bottom',
+                y=1.02,
+                xanchor='right',
+                x=1
+            )
         )
     }
 
