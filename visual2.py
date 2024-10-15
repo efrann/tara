@@ -547,6 +547,7 @@ app.layout = html.Div([
         ], className="six columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
+    # Detaylı zafiyet listesi için ayrı bir div
     html.Div([
         html.Div([
             html.H3("Detaylı Zafiyet Listesi", style={
@@ -636,7 +637,6 @@ app.layout = html.Div([
 @app.callback(
     [Output('summary-table', 'data'),
      Output('vulnerability-distribution', 'figure'),
-     Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
      Output('top-vulnerabilities-graph', 'figure'),
      Output('port-usage-graph', 'figure'),
@@ -650,14 +650,13 @@ app.layout = html.Div([
      Output('severity-dropdown', 'value')],
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals'),
-     Input('clicked-severity', 'children'),
-     Input('clicked-port', 'children')],  # Yeni input
+     Input('clicked-severity', 'children')],
     [State('severity-dropdown', 'value'),
      State('scan-dropdown', 'value'),
      State('vulnerability-name-input', 'value'),
      State('ip-address-input', 'value')]
 )
-def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity, scan_name, vulnerability_name, ip_address):
+def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vulnerability_name, ip_address):
     ctx = dash.callback_context
     if not ctx.triggered:
         button_id = 'No clicks yet'
@@ -667,11 +666,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
     if button_id == 'clicked-severity' and clicked_severity:
         severity = [int(clicked_severity)]
     
-    if button_id == 'clicked-port' and clicked_port:
-        ip_address = None  # Reset IP address filter when port is clicked
-        vulnerability_name = f"Port {clicked_port}"  # Filter by port in vulnerability name
-
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data = get_data(severity, scan_name, vulnerability_name, ip_address)
+    summary_data, vulnerability_data, _, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data = get_data(severity, scan_name, vulnerability_name, ip_address)
     
     #print("Summary Data:", summary_data)  # Debug için eklendi
     
@@ -734,9 +729,6 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
         )
     }
 
-    # Detaylı zafiyet listesi
-    vulnerability_table_data = detailed_vulnerability_data
-    
     # En çok görülen 10 zafiyet
     severity_map = {
         4: 'Kritik',
@@ -796,7 +788,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
         # Eğer veri yoksa, boş bir grafik döndür
         top_vulnerabilities_graph = go.Figure()
         top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
-        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
+        return summary_table_data, vulnerability_distribution, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
 
     # En çok görülen 10 zafiyet daire grafiği
     top_vulnerabilities_graph = go.Figure(
@@ -857,12 +849,36 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
         height=400,
     )
 
-    return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
+    return (summary_table_data, vulnerability_distribution, 
             top_vulnerabilities_table_data, top_vulnerabilities_graph, 
             port_usage_graph,
             total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
             total_vulnerabilities[3], total_vulnerabilities[4], 
             last_updated, scan_options, severity)
+
+@app.callback(
+    Output('vulnerability-table', 'data'),
+    [Input('filter-button', 'n_clicks'),
+     Input('interval-component', 'n_intervals'),
+     Input('clicked-port', 'children')],
+    [State('severity-dropdown', 'value'),
+     State('scan-dropdown', 'value'),
+     State('vulnerability-name-input', 'value'),
+     State('ip-address-input', 'value')]
+)
+def update_vulnerability_table(n_clicks, n_intervals, clicked_port, severity, scan_name, vulnerability_name, ip_address):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        button_id = 'No clicks yet'
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if button_id == 'clicked-port' and clicked_port:
+        vulnerability_name = f"Port {clicked_port}"
+
+    _, _, detailed_vulnerability_data, _, _, _, _ = get_data(severity, scan_name, vulnerability_name, ip_address)
+    
+    return detailed_vulnerability_data
 
 # Combine the two callbacks into one
 @app.callback(
