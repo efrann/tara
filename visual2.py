@@ -779,42 +779,39 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
 
     return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options, severity
 
-# Add a new callback for severity click
+# Combine the two callbacks into one
 @app.callback(
     Output('clicked-severity', 'children'),
-    [Input(f'severity-{i}', 'n_clicks') for i in range(5)],
+    [Input(f'severity-{i}', 'n_clicks') for i in range(5)] +
+    [Input('vulnerability-distribution', 'clickData')],
     [State('severity-dropdown', 'value')]
 )
 def update_clicked_severity(*args):
     ctx = dash.callback_context
     if not ctx.triggered:
         return dash.no_update
-    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    clicked_severity = button_id.split('-')[1]
+    
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
     current_severity = args[-1]
 
-    if current_severity and int(clicked_severity) in current_severity:
-        return None
-    return clicked_severity
-
-# Add a new callback for sunburst chart click
-@app.callback(
-    Output('clicked-severity', 'children'),
-    [Input('vulnerability-distribution', 'clickData')],
-    [State('severity-dropdown', 'value')]
-)
-def update_clicked_severity_from_chart(clickData, current_severity):
-    if not clickData:
-        return dash.no_update
-    
-    clicked_label = clickData['points'][0]['label']
-    severity_map = {'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1}
-    
-    if clicked_label in severity_map:
-        clicked_severity = severity_map[clicked_label]
-        if current_severity and clicked_severity in current_severity:
+    if 'severity-' in triggered_id:
+        clicked_severity = triggered_id.split('-')[1]
+        if current_severity and int(clicked_severity) in current_severity:
             return None
-        return str(clicked_severity)
+        return clicked_severity
+    elif triggered_id == 'vulnerability-distribution':
+        clickData = args[-2]  # clickData is the second to last argument
+        if not clickData:
+            return dash.no_update
+        
+        clicked_label = clickData['points'][0]['label']
+        severity_map = {'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1}
+        
+        if clicked_label in severity_map:
+            clicked_severity = severity_map[clicked_label]
+            if current_severity and clicked_severity in current_severity:
+                return None
+            return str(clicked_severity)
     
     return dash.no_update
 
