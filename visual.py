@@ -645,8 +645,8 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
     
     # Zafiyet dağılımı grafiği
-    labels = ['Toplam', 'Kritik', 'Yüksek', 'Orta', 'Düşük']
-    parents = ['', 'Toplam', 'Toplam', 'Toplam', 'Toplam']
+    labels = ['Total', 'Critical', 'High', 'Medium', 'Low']
+    parents = ['', 'Total', 'Total', 'Total', 'Total']
     values = [
         sum(item['count'] for item in vulnerability_data if item['severity'] in [1, 2, 3, 4]),
         sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
@@ -672,7 +672,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             plot_bgcolor='#2c3e50',
             font=dict(color='white', size=14),
             margin=dict(t=0, l=0, r=0, b=0),
-            height=400,  # Yüksekliği 400 piksel olarak ayarladık
+            height=400,
             showlegend=False
         )
     }
@@ -742,9 +742,9 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     # En çok görülen 10 zafiyet daire grafiği
     top_vulnerabilities_graph = go.Figure(
         go.Sunburst(
-            ids=['Top 10 Zafiyetler'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
-            labels=['Top 10 Zafiyetler'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
-            parents=[''] + ['Top 10 Zafiyetler'] * len(top_vulnerabilities_data),
+            ids=['Most Occurent 10 Vulnerabilities'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
+            labels=['Most Occurent 10 Vulnerabilities'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
+            parents=[''] + ['Most Occurent 10 Vulnerabilities'] * len(top_vulnerabilities_data),
             values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
             branchvalues="total",
             marker=dict(
@@ -758,19 +758,19 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                 ]
             ),
             textinfo='label',
-            hovertemplate='<b>%{customdata}</b><br>Sayı: %{value}<br><extra></extra>',
+            hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
             insidetextorientation='radial',
             textfont=dict(size=10, color='white'),
-            customdata=['Top 10 Zafiyetler'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
+            customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
         )
     )
 
     top_vulnerabilities_graph.update_layout(
-        margin=dict(l=20, r=20, t=20, b=20),  # Üst marjini azalttık
+        margin=dict(l=0, r=0, t=0, b=0),
         paper_bgcolor='#2c3e50',
         plot_bgcolor='#34495e',
         font=dict(color='white', size=14),
-        height=400,  # Yüksekliği 400 piksel olarak ayarladık
+        height=400,
         showlegend=False,
     )
 
