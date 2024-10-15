@@ -741,15 +741,15 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     # Tarama dropdown seçeneklerini oluştur
     scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
 
-    # En çok görülen 10 zafiyet pasta grafiği
+    # En çok görülen 10 zafiyet daire grafiği
     top_vulnerabilities_graph = {
-        'data': [go.Pie(
-            labels=[row['vulnerability_name'] for row in top_vulnerabilities_data],
-            values=[row['count'] for row in top_vulnerabilities_data],
-            textinfo='label+percent',
-            hoverinfo='label+value+percent',
+        'data': [go.Sunburst(
+            labels=['Top 10 Zafiyetler'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
+            parents=[''] + ['Top 10 Zafiyetler'] * len(top_vulnerabilities_data),
+            values=[0] + [row['count'] for row in top_vulnerabilities_data],
+            branchvalues="total",
             marker=dict(
-                colors=[
+                colors=['#2c3e50'] + [
                     '#e74c3c' if row['severity'] == 4 else
                     '#e67e22' if row['severity'] == 3 else
                     '#f1c40f' if row['severity'] == 2 else
@@ -758,18 +758,17 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
                     '#95a5a6' for row in top_vulnerabilities_data
                 ]
             ),
-            textfont=dict(size=12, color='white'),
-            insidetextfont=dict(size=10, color='white'),
-            hovertext=[f"Önem Derecesi: {severity_map[row['severity']]}" for row in top_vulnerabilities_data],
+            textinfo='label+percent entry',
+            hovertext=[''] + [f"Önem Derecesi: {severity_map[row['severity']]}<br>Sayı: {row['count']}" for row in top_vulnerabilities_data],
+            hoverinfo='label+text',
         )],
         'layout': go.Layout(
             title='En Çok Görülen 10 Zafiyet',
-            margin=dict(l=50, r=50, t=50, b=50),
+            margin=dict(l=0, r=0, t=50, b=0),
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#34495e',
             font=dict(color='white', size=14),
             height=500,
-            showlegend=False  # Lejantı kaldırıyoruz
         )
     }
 
