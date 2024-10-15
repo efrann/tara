@@ -775,17 +775,10 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     )
 
     top_vulnerabilities_graph.update_layout(
-        title={
-            'text': 'En Çok Görülen 10 Zafiyet',
-            'y': 0.98,
-            'x': 0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'
-        },
         margin=dict(l=20, r=20, t=50, b=20),
         paper_bgcolor='#2c3e50',
         plot_bgcolor='#34495e',
-        font=dict(color='white', size=10),
+        font=dict(color='white', size=20),
         height=600,
         showlegend=False,
     )
