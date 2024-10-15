@@ -303,21 +303,11 @@ app.layout = html.Div([
     # Grafikleri buraya taşıyoruz
     html.Div([
         html.Div([
-            html.H3("Zafiyet Dağılımı", style={'textAlign': 'center', 'color': 'white'}),
-            dcc.Graph(id='vulnerability-distribution')
+            dcc.Graph(id='vulnerability-distribution', style={'height': '400px'})
         ], className="six columns"),
 
         html.Div([
-            html.H3("En Çok Görülen 10 Zafiyet Grafiği", style={
-                'textAlign': 'center', 
-                'color': '#ecf0f1', 
-                'backgroundColor': '#2c3e50', 
-                'padding': '10px', 
-                'marginBottom': '20px',
-                'borderRadius': '5px',
-                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
-            }),
-            dcc.Graph(id='top-vulnerabilities-graph')
+            dcc.Graph(id='top-vulnerabilities-graph', style={'height': '400px'})
         ], className="six columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
 
@@ -682,7 +672,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             plot_bgcolor='#2c3e50',
             font=dict(color='white', size=14),
             margin=dict(t=0, l=0, r=0, b=0),
-            height=400,  # Yüksekliği azalttık
+            height=400,  # Yüksekliği 400 piksel olarak ayarladık
             showlegend=False
         )
     }
@@ -776,11 +766,11 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     )
 
     top_vulnerabilities_graph.update_layout(
-        margin=dict(l=20, r=20, t=50, b=20),
+        margin=dict(l=20, r=20, t=20, b=20),  # Üst marjini azalttık
         paper_bgcolor='#2c3e50',
         plot_bgcolor='#34495e',
-        font=dict(color='white', size=20),
-        height=600,
+        font=dict(color='white', size=14),
+        height=400,  # Yüksekliği 400 piksel olarak ayarladık
         showlegend=False,
     )
 
