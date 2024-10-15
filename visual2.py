@@ -74,22 +74,17 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
         {ip_address_condition}
         GROUP BY 
             s.name, f.name
+        ORDER BY 
+            CASE 
+                WHEN SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) > 0 THEN 1
+                WHEN SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) > 0 THEN 2
+                WHEN SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) > 0 THEN 3
+                WHEN SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) > 0 THEN 4
+                WHEN SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) > 0 THEN 5
+                ELSE 6
+            END,
+            total_critical DESC, total_high DESC, total_medium DESC, total_low DESC, total_info DESC
         """
-        
-        # Severity seçimine göre sıralama ekliyoruz
-        if severity:
-            if 4 in severity:
-                summary_query += " ORDER BY total_critical DESC"
-            elif 3 in severity:
-                summary_query += " ORDER BY total_high DESC"
-            elif 2 in severity:
-                summary_query += " ORDER BY total_medium DESC"
-            elif 1 in severity:
-                summary_query += " ORDER BY total_low DESC"
-            elif 0 in severity:
-                summary_query += " ORDER BY total_info DESC"
-        else:
-            summary_query += " ORDER BY last_scan_date DESC"
         
         cursor.execute(summary_query)
         summary_data = cursor.fetchall()
@@ -123,9 +118,11 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition} {ip_address_condition}
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
         GROUP BY 
             p.severity
+        ORDER BY
+            p.severity DESC
         """
         
         cursor.execute(vulnerability_query)
@@ -168,7 +165,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             )
         {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
         ORDER BY 
-            sr.scan_start DESC, p.severity DESC
+            p.severity DESC, sr.scan_start DESC
         LIMIT 1000
         """
         
@@ -213,7 +210,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
         GROUP BY 
             f.name, s.name, p.plugin_id, p.name, p.severity
         ORDER BY 
-            count DESC
+            p.severity DESC, count DESC
         LIMIT 10
         """
         
@@ -244,7 +241,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition} {ip_address_condition}
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
         """
         
         cursor.execute(total_vulnerabilities_query)
@@ -615,19 +612,6 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name, 
         'total_low': row['total_low'],
         'total_info': row['total_info']
     } for row in summary_data]
-    
-    # Severity seçimine göre sıralama
-    if severity:
-        if 4 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_critical'], reverse=True)
-        elif 3 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_high'], reverse=True)
-        elif 2 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_medium'], reverse=True)
-        elif 1 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_low'], reverse=True)
-        elif 0 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
     
     # Zafiyet dağılımı grafiği
     labels = ['Total', 'Critical', 'High', 'Medium', 'Low']
