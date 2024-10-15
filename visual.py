@@ -752,7 +752,7 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     top_vulnerabilities_graph = go.Figure(
         go.Sunburst(
             ids=['Top 10 Zafiyetler'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
-            labels=['Top 10<br>Zafiyetler'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
+            labels=['Top 10 Zafiyetler'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
             parents=[''] + ['Top 10 Zafiyetler'] * len(top_vulnerabilities_data),
             values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
             branchvalues="total",
@@ -774,12 +774,19 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     )
 
     top_vulnerabilities_graph.update_layout(
-        title='En Çok Görülen 10 Zafiyet',
-        margin=dict(l=0, r=0, t=50, b=0),
+        title={
+            'text': 'En Çok Görülen 10 Zafiyet',
+            'y': 0.98,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'
+        },
+        margin=dict(l=20, r=20, t=50, b=20),
         paper_bgcolor='#2c3e50',
         plot_bgcolor='#34495e',
         font=dict(color='white', size=14),
-        height=600,  # Grafiğin yüksekliğini artırdık
+        height=600,
+        showlegend=False,
     )
 
     return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options
