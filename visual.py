@@ -33,181 +33,217 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         if vulnerability_name:
             vulnerability_name_condition = f"AND p.name LIKE '%{vulnerability_name}%'"
 
-        # Birleştirilmiş sorgu
-        combined_query = f"""
-        WITH latest_scans AS (
-            SELECT scan_id, MAX(scan_run_id) as latest_scan_run_id
-            FROM scan_run
-            GROUP BY scan_id
-        ),
-        summary_data AS (
-            SELECT 
-                s.name AS scan_name,
-                f.name AS folder_name,
-                FROM_UNIXTIME(sr.scan_start) AS last_scan_date,
-                sr.host_count AS total_hosts,
-                sr.critical_count AS total_critical,
-                sr.high_count AS total_high,
-                sr.medium_count AS total_medium,
-                sr.low_count AS total_low,
-                sr.info_count AS total_info
-            FROM 
-                scan s
-            LEFT JOIN 
-                folder f ON s.folder_id = f.folder_id
-            JOIN 
-                latest_scans ls ON s.scan_id = ls.scan_id
-            JOIN 
-                scan_run sr ON ls.latest_scan_run_id = sr.scan_run_id
-            {scan_name_condition}
-        ),
-        detailed_counts AS (
-            SELECT 
-                SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as total_critical,
-                SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) as total_high,
-                SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) as total_medium,
-                SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) as total_low,
-                SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) as total_info
-            FROM 
-                host_vuln hv
-            JOIN 
-                plugin p ON hv.plugin_id = p.plugin_id
-            JOIN
-                latest_scans ls ON hv.scan_run_id = ls.latest_scan_run_id
-            JOIN
-                scan s ON ls.scan_id = s.scan_id
-            {severity_condition} {scan_name_condition}
-        ),
-        vulnerability_distribution AS (
-            SELECT 
-                p.severity,
-                COUNT(*) as count
-            FROM 
-                host_vuln hv
-            JOIN 
-                plugin p ON hv.plugin_id = p.plugin_id
-            JOIN
-                latest_scans ls ON hv.scan_run_id = ls.latest_scan_run_id
-            JOIN
-                scan s ON ls.scan_id = s.scan_id
-            {severity_condition} {scan_name_condition}
-            GROUP BY 
-                p.severity
-        ),
-        detailed_vulnerability_list AS (
-            SELECT 
-                s.name AS scan_name,
-                h.host_ip,
-                COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
-                p.severity,
-                p.family AS plugin_family,
-                vo.port,
-                FROM_UNIXTIME(sr.scan_start) AS scan_date
-            FROM 
-                scan s
-            JOIN 
-                latest_scans ls ON s.scan_id = ls.scan_id
-            JOIN 
-                scan_run sr ON ls.latest_scan_run_id = sr.scan_run_id
-            JOIN 
-                host h ON sr.scan_run_id = h.scan_run_id
-            JOIN 
-                host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND sr.scan_run_id = hv.scan_run_id
-            JOIN 
-                plugin p ON hv.plugin_id = p.plugin_id
-            LEFT JOIN
-                vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
-            {severity_condition} {scan_name_condition} {vulnerability_name_condition}
-        ),
-        top_vulnerabilities AS (
-            SELECT 
-                f.name AS folder_name,
-                s.name AS scan_name,
-                COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
-                p.severity,
-                COUNT(*) as count
-            FROM 
-                host_vuln hv
-            JOIN 
-                plugin p ON hv.plugin_id = p.plugin_id
-            JOIN
-                latest_scans ls ON hv.scan_run_id = ls.latest_scan_run_id
-            JOIN
-                scan s ON ls.scan_id = s.scan_id
-            JOIN
-                folder f ON s.folder_id = f.folder_id
-            {severity_condition} {scan_name_condition} {vulnerability_name_condition}
-            GROUP BY 
-                f.name, s.name, p.plugin_id, p.name, p.severity
-            ORDER BY 
-                count DESC
-            LIMIT 10
-        )
+        # Özet bilgi sorgusu
+        summary_query = f"""
         SELECT 
-            'summary' as data_type,
-            sd.*,
-            dc.total_critical as detailed_critical,
-            dc.total_high as detailed_high,
-            dc.total_medium as detailed_medium,
-            dc.total_low as detailed_low,
-            dc.total_info as detailed_info
+            s.name AS scan_name,
+            f.name AS folder_name,
+            MAX(FROM_UNIXTIME(sr.scan_start)) AS last_scan_date,
+            COUNT(DISTINCT h.host_ip) AS total_hosts,
+            SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) AS total_critical,
+            SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) AS total_high,
+            SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) AS total_medium,
+            SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) AS total_low,
+            SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) AS total_info
         FROM 
-            summary_data sd
-        CROSS JOIN 
-            detailed_counts dc
-        UNION ALL
-        SELECT 
-            'vulnerability_distribution' as data_type,
-            severity,
-            count,
-            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-        FROM 
-            vulnerability_distribution
-        UNION ALL
-        SELECT 
-            'detailed_vulnerability_list' as data_type,
-            scan_name,
-            host_ip,
-            vulnerability_name,
-            severity,
-            plugin_family,
-            port,
-            scan_date,
-            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-        FROM 
-            detailed_vulnerability_list
-        UNION ALL
-        SELECT 
-            'top_vulnerabilities' as data_type,
-            folder_name,
-            scan_name,
-            vulnerability_name,
-            severity,
-            count,
-            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-        FROM 
-            top_vulnerabilities
+            scan s
+        LEFT JOIN 
+            folder f ON s.folder_id = f.folder_id
+        JOIN 
+            scan_run sr ON s.scan_id = sr.scan_id
+        JOIN
+            host h ON sr.scan_run_id = h.scan_run_id
+        LEFT JOIN 
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+        LEFT JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition}
+        {scan_name_condition}
+        GROUP BY 
+            s.name, f.name
         """
         
-        cursor.execute(combined_query)
-        result = cursor.fetchall()
+        # Severity seçimine göre sıralama ekliyoruz
+        if severity:
+            if 4 in severity:
+                summary_query += " ORDER BY total_critical DESC"
+            elif 3 in severity:
+                summary_query += " ORDER BY total_high DESC"
+            elif 2 in severity:
+                summary_query += " ORDER BY total_medium DESC"
+            elif 1 in severity:
+                summary_query += " ORDER BY total_low DESC"
+            elif 0 in severity:
+                summary_query += " ORDER BY total_info DESC"
+        else:
+            summary_query += " ORDER BY last_scan_date DESC"
+        
+        cursor.execute(summary_query)
+        summary_data = cursor.fetchall()
+        
+        # Tarih formatını değiştir
+        for row in summary_data:
+            if row['last_scan_date']:
+                date = row['last_scan_date']
+                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
+                                  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+                row['last_scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y %H:%M")
+        
+        # Zafiyet dağılımı sorgusu
+        vulnerability_query = f"""
+        SELECT 
+            p.severity,
+            COUNT(DISTINCT hv.host_vuln_id) as count
+        FROM 
+            scan s
+        JOIN 
+            scan_run sr ON s.scan_id = sr.scan_id
+        JOIN
+            host h ON sr.scan_run_id = h.scan_run_id
+        LEFT JOIN 
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+        LEFT JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition}
+        GROUP BY 
+            p.severity
+        """
+        
+        cursor.execute(vulnerability_query)
+        vulnerability_data = cursor.fetchall()
+        
+        # Detaylı zafiyet listesi sorgusu
+        detailed_vulnerability_query = f"""
+        SELECT 
+            s.name AS scan_name,
+            h.host_ip,
+            COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
+            CASE 
+                WHEN p.severity = 4 THEN 'Kritik'
+                WHEN p.severity = 3 THEN 'Yüksek'
+                WHEN p.severity = 2 THEN 'Orta'
+                WHEN p.severity = 1 THEN 'Düşük'
+                WHEN p.severity = 0 THEN 'Bilgi'
+                ELSE 'Bilinmeyen'
+            END AS severity,
+            p.family AS plugin_family,
+            vo.port,
+            FROM_UNIXTIME(sr.scan_start) AS scan_date
+        FROM 
+            scan s
+        JOIN 
+            scan_run sr ON s.scan_id = sr.scan_id
+        JOIN 
+            host h ON sr.scan_run_id = h.scan_run_id
+        JOIN 
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+        JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        LEFT JOIN
+            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition}
+        ORDER BY 
+            sr.scan_start DESC, p.severity DESC
+        LIMIT 1000
+        """
+        
+        cursor.execute(detailed_vulnerability_query)
+        detailed_vulnerability_data = cursor.fetchall()
 
-        # Sonuçları ayır
-        summary_data = [r for r in result if r['data_type'] == 'summary']
-        vulnerability_data = [r for r in result if r['data_type'] == 'vulnerability_distribution']
-        detailed_vulnerability_data = [r for r in result if r['data_type'] == 'detailed_vulnerability_list']
-        top_vulnerabilities_data = [r for r in result if r['data_type'] == 'top_vulnerabilities']
+        # Detaylı zafiyet listesindeki tarih formatını değiştir
+        for row in detailed_vulnerability_data:
+            if row['scan_date']:
+                date = row['scan_date']
+                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
+                                  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+                row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y")
 
-        # Toplam zafiyet sayıları
-        total_vulnerabilities_data = {
-            'total_critical': summary_data[0]['detailed_critical'],
-            'total_high': summary_data[0]['detailed_high'],
-            'total_medium': summary_data[0]['detailed_medium'],
-            'total_low': summary_data[0]['detailed_low'],
-            'total_info': summary_data[0]['detailed_info']
-        }
+        # En çok görülen 10 zafiyet sorgusu
+        top_vulnerabilities_query = f"""
+        SELECT 
+            f.name AS folder_name,
+            s.name AS scan_name,
+            COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
+            p.severity,
+            COUNT(DISTINCT hv.host_vuln_id) as count
+        FROM 
+            scan s
+        JOIN 
+            scan_run sr ON s.scan_id = sr.scan_id
+        JOIN
+            host h ON sr.scan_run_id = h.scan_run_id
+        LEFT JOIN 
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+        LEFT JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        JOIN
+            folder f ON s.folder_id = f.folder_id
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition}
+        GROUP BY 
+            f.name, s.name, p.plugin_id, p.name, p.severity
+        ORDER BY 
+            count DESC
+        LIMIT 10
+        """
+        
+        cursor.execute(top_vulnerabilities_query)
+        top_vulnerabilities_data = cursor.fetchall()
 
-        # Mevcut taramaları çekmek için yeni bir sorgu
+        # Toplam zafiyet sayıları sorgusu
+        total_vulnerabilities_query = f"""
+        SELECT 
+            SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as total_critical,
+            SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) as total_high,
+            SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) as total_medium,
+            SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) as total_low,
+            SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) as total_info
+        FROM 
+            scan s
+        JOIN 
+            scan_run sr ON s.scan_id = sr.scan_id
+        JOIN
+            host h ON sr.scan_run_id = h.scan_run_id
+        LEFT JOIN 
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+        LEFT JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition}
+        """
+        
+        cursor.execute(total_vulnerabilities_query)
+        total_vulnerabilities_data = cursor.fetchone()
+
+        # Mevcut taramaları çekmek için yeni bir sorgu ekleyelim
         scan_list_query = """
         SELECT DISTINCT s.name
         FROM scan s
@@ -239,10 +275,10 @@ app.layout = html.Div([
             dcc.Dropdown(
                 id='severity-dropdown',
                 options=[
-                    {'label': 'Critical', 'value': 4},
-                    {'label': 'High', 'value': 3},
-                    {'label': 'Medium', 'value': 2},
-                    {'label': 'Low', 'value': 1},
+                    {'label': 'Kritik', 'value': 4},
+                    {'label': 'Yüksek', 'value': 3},
+                    {'label': 'Orta', 'value': 2},
+                    {'label': 'Düşük', 'value': 1},
                     {'label': 'Info', 'value': 0}
                 ],
                 multi=True,
@@ -349,30 +385,19 @@ app.layout = html.Div([
                     }
                 ],
                 style_filter={
-                    'backgroundColor': '#2c3e50',
-                    'color': '#ecf0f1',
-                    'border': '1px solid #34495e',
-                },
-                style_filter_conditional=[{
-                    'if': {'column_id': c},
                     'backgroundColor': '#34495e',
-                    'color': '#ecf0f1',
-                } for c in ['folder_name', 'scan_name', 'last_scan_date', 'total_hosts', 'total_critical', 'total_high', 'total_medium', 'total_low', 'total_info']],
-                sort_action="native",
-                sort_mode="multi",
-                filter_action="native",
-                page_action="native",
-                page_current=0,
-                page_size=10,
+                },
+                filter_action="native",  # Arama özelliğini etkinleştir
+                filter_options={'placeholder': 'Ara...'},
                 css=[{
-                    'selector': '.dash-spreadsheet td div',
+                    'selector': '.dash-filter input',
                     'rule': '''
-                        line-height: 15px;
-                        max-height: 30px;
-                        min-height: 30px;
-                        height: 30px;
-                        display: block;
-                        overflow-y: hidden;
+                        color: #ecf0f1 !important;
+                        background-color: #34495e !important;
+                        border: 2px solid #3498db !important;
+                        border-radius: 5px;
+                        padding: 8px;
+                        font-weight: bold;
                     '''
                 }],
             ),
@@ -386,7 +411,15 @@ app.layout = html.Div([
 
     html.Div([
         html.Div([
-            html.H3("En Çok Görülen 10 Zafiyet", style={'textAlign': 'center', 'color': 'white'}),
+            html.H3("En Çok Görülen 10 Zafiyet", style={
+                'textAlign': 'center', 
+                'color': '#ecf0f1', 
+                'backgroundColor': '#2c3e50', 
+                'padding': '10px', 
+                'marginBottom': '20px',
+                'borderRadius': '5px',
+                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
+            }),
             dash_table.DataTable(
                 id='top-vulnerabilities-table',
                 columns=[
@@ -397,52 +430,172 @@ app.layout = html.Div([
                     {"name": "Sayı", "id": "count"}
                 ],
                 style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
-                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
+                style_cell={
+                    'backgroundColor': '#34495e',
+                    'color': '#ecf0f1',
+                    'border': '1px solid #2c3e50',
+                    'textAlign': 'left',
+                    'padding': '10px',
+                    'whiteSpace': 'normal',
+                    'height': 'auto',
+                },
+                style_header={
+                    'backgroundColor': '#2c3e50',
+                    'fontWeight': 'bold',
+                    'border': '1px solid #34495e',
+                    'color': '#3498db',
+                },
                 style_data_conditional=[
                     {
                         'if': {'column_id': 'severity', 'filter_query': '{severity} = "Kritik"'},
+                        'backgroundColor': 'rgba(231, 76, 60, 0.1)',
                         'color': '#e74c3c',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
                     },
                     {
                         'if': {'column_id': 'severity', 'filter_query': '{severity} = "Yüksek"'},
+                        'backgroundColor': 'rgba(230, 126, 34, 0.1)',
                         'color': '#e67e22',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
                     },
                     {
                         'if': {'column_id': 'severity', 'filter_query': '{severity} = "Orta"'},
+                        'backgroundColor': 'rgba(241, 196, 15, 0.1)',
                         'color': '#f1c40f',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
                     },
                     {
                         'if': {'column_id': 'severity', 'filter_query': '{severity} = "Düşük"'},
+                        'backgroundColor': 'rgba(46, 204, 113, 0.1)',
                         'color': '#2ecc71',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
                     },
                     {
                         'if': {'column_id': 'severity', 'filter_query': '{severity} = "Bilgi"'},
+                        'backgroundColor': 'rgba(52, 152, 219, 0.1)',
                         'color': '#3498db',
-                        'fontWeight': 'bold'
+                        'fontWeight': 'bold',
                     }
-                ]
+                ],
+                style_filter={
+                    'backgroundColor': '#34495e',
+                },
+                filter_action="native",  # Arama özelliğini etkinleştir
+                filter_options={'placeholder': 'Ara...'},
+                css=[{
+                    'selector': '.dash-filter input',
+                    'rule': '''
+                        color: #ecf0f1 !important;
+                        background-color: #34495e !important;
+                        border: 2px solid #3498db !important;
+                        border-radius: 5px;
+                        padding: 8px;
+                        font-weight: bold;
+                    '''
+                }],
             ),
         ], className="six columns"),
 
         html.Div([
-            html.H3("Detaylı Zafiyet Listesi", style={'textAlign': 'center', 'color': 'white'}),
+            html.H3("En Çok Görülen 10 Zafiyet Grafiği", style={
+                'textAlign': 'center', 
+                'color': '#ecf0f1', 
+                'backgroundColor': '#2c3e50', 
+                'padding': '10px', 
+                'marginBottom': '20px',
+                'borderRadius': '5px',
+                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
+            }),
+            dcc.Graph(id='top-vulnerabilities-graph')
+        ], className="six columns"),
+    ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
+
+    html.Div([
+        html.Div([
+            html.H3("Detaylı Zafiyet Listesi", style={
+                'textAlign': 'center', 
+                'color': '#ecf0f1', 
+                'backgroundColor': '#2c3e50', 
+                'padding': '10px', 
+                'marginBottom': '20px',
+                'borderRadius': '5px',
+                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
+            }),
             dash_table.DataTable(
                 id='vulnerability-table',
-                columns=[{"name": i, "id": i} for i in ['scan_name', 'host_ip', 'vulnerability_name', 'severity', 'plugin_family', 'port', 'scan_date']],
+                columns=[
+                    {"name": "Tarama Adı", "id": "scan_name"},
+                    {"name": "Host IP", "id": "host_ip"},
+                    {"name": "Zafiyet Adı", "id": "vulnerability_name"},
+                    {"name": "Önem Derecesi", "id": "severity"},
+                    {"name": "Plugin Ailesi", "id": "plugin_family"},
+                    {"name": "Port", "id": "port"},
+                    {"name": "Tarama Tarihi", "id": "scan_date"}
+                ],
                 style_table={'height': '300px', 'overflowY': 'auto'},
-                style_cell={'backgroundColor': '#34495e', 'color': 'white'},
-                style_header={'backgroundColor': '#e74c3c', 'fontWeight': 'bold'},
-                filter_action="native",
-                sort_action="native",
-                sort_mode="multi",
-                page_action="native",
-                page_current=0,
-                page_size=10,
+                style_cell={
+                    'backgroundColor': '#34495e',
+                    'color': '#ecf0f1',
+                    'border': '1px solid #2c3e50',
+                    'textAlign': 'left',
+                    'padding': '10px',
+                    'whiteSpace': 'normal',
+                    'height': 'auto',
+                },
+                style_header={
+                    'backgroundColor': '#2c3e50',
+                    'fontWeight': 'bold',
+                    'border': '1px solid #34495e',
+                    'color': '#3498db',
+                },
+                style_data_conditional=[
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Kritik"'},
+                        'backgroundColor': 'rgba(231, 76, 60, 0.1)',
+                        'color': '#e74c3c',
+                        'fontWeight': 'bold',
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Yüksek"'},
+                        'backgroundColor': 'rgba(230, 126, 34, 0.1)',
+                        'color': '#e67e22',
+                        'fontWeight': 'bold',
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Orta"'},
+                        'backgroundColor': 'rgba(241, 196, 15, 0.1)',
+                        'color': '#f1c40f',
+                        'fontWeight': 'bold',
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Düşük"'},
+                        'backgroundColor': 'rgba(46, 204, 113, 0.1)',
+                        'color': '#2ecc71',
+                        'fontWeight': 'bold',
+                    },
+                    {
+                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Bilgi"'},
+                        'backgroundColor': 'rgba(52, 152, 219, 0.1)',
+                        'color': '#3498db',
+                        'fontWeight': 'bold',
+                    }
+                ],
+                style_filter={
+                    'backgroundColor': '#34495e',
+                },
+                filter_action="native",  # Arama özelliğini etkinleştir
+                filter_options={'placeholder': 'Ara...'},
+                css=[{
+                    'selector': '.dash-filter input',
+                    'rule': '''
+                        color: #ecf0f1 !important;
+                        background-color: #34495e !important;
+                        border: 2px solid #3498db !important;
+                        border-radius: 5px;
+                        padding: 8px;
+                        font-weight: bold;
+                    '''
+                }],
             )
         ], className="six columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '10px', 'margin': '10px'}),
@@ -459,6 +612,7 @@ app.layout = html.Div([
      Output('vulnerability-distribution', 'figure'),
      Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
+     Output('top-vulnerabilities-graph', 'figure'),  # Yeni çıktı
      Output('total-vulnerabilities', 'children'),
      Output('last-updated', 'children'),
      Output('scan-dropdown', 'options')],
@@ -485,6 +639,19 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
         'total_low': row['total_low'],
         'total_info': row['total_info']
     } for row in summary_data]
+    
+    # Severity seçimine göre sıralama
+    if severity:
+        if 4 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_critical'], reverse=True)
+        elif 3 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_high'], reverse=True)
+        elif 2 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_medium'], reverse=True)
+        elif 1 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_low'], reverse=True)
+        elif 0 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
     
     # Zafiyet dağılımı grafiği
     labels = ['Toplam', 'Kritik', 'Yüksek', 'Orta', 'Düşük']
@@ -513,8 +680,8 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
             paper_bgcolor='#2c3e50',
             plot_bgcolor='#2c3e50',
             font=dict(color='white', size=14),
-            margin=dict(t=80, l=0, r=0, b=0),
-            height=600,
+            margin=dict(t=0, l=0, r=0, b=0),
+            height=400,  # Yüksekliği azalttık
             showlegend=False
         )
     }
@@ -524,19 +691,18 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     
     # En çok görülen 10 zafiyet
     severity_map = {
-        4: {'text': 'Kritik', 'color': '#e74c3c'},
-        3: {'text': 'Yüksek', 'color': '#e67e22'},
-        2: {'text': 'Orta', 'color': '#f1c40f'},
-        1: {'text': 'Düşük', 'color': '#2ecc71'},
-        0: {'text': 'Bilgi', 'color': '#3498db'}
+        4: 'Kritik',
+        3: 'Yüksek',
+        2: 'Orta',
+        1: 'Düşük',
+        0: 'Bilgi'
     }
     
     top_vulnerabilities_table_data = [{
         'folder_name': row['folder_name'],
         'scan_name': row['scan_name'],
         'vulnerability_name': row['vulnerability_name'],
-        'severity': severity_map[row['severity']]['text'],
-        'severity_color': severity_map[row['severity']]['color'],
+        'severity': severity_map[row['severity']],
         'count': row['count']
     } for row in top_vulnerabilities_data]
     
@@ -575,7 +741,36 @@ def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
     # Tarama dropdown seçeneklerini oluştur
     scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
 
-    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, total_vulnerabilities, last_updated, scan_options
+    # En çok görülen 10 zafiyet grafiği
+    top_vulnerabilities_graph = {
+        'data': [go.Bar(
+            x=[row['vulnerability_name'] for row in top_vulnerabilities_data],
+            y=[row['count'] for row in top_vulnerabilities_data],
+            marker=dict(
+                color=[
+                    '#e74c3c' if row['severity'] == 'Kritik' else
+                    '#e67e22' if row['severity'] == 'Yüksek' else
+                    '#f1c40f' if row['severity'] == 'Orta' else
+                    '#2ecc71' if row['severity'] == 'Düşük' else
+                    '#3498db' for row in top_vulnerabilities_data
+                ]
+            ),
+            text=[row['count'] for row in top_vulnerabilities_data],
+            textposition='auto',
+        )],
+        'layout': go.Layout(
+            title='En Çok Görülen 10 Zafiyet',
+            xaxis=dict(title='Zafiyet Adı', tickangle=45, tickfont=dict(size=10)),
+            yaxis=dict(title='Sayı'),
+            margin=dict(l=50, r=50, t=50, b=150),
+            paper_bgcolor='#2c3e50',
+            plot_bgcolor='#34495e',
+            font=dict(color='white'),
+            height=500
+        )
+    }
+
+    return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities, last_updated, scan_options
 
 if __name__ == '__main__':
     app.run_server(debug=True)
