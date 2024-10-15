@@ -16,7 +16,7 @@ db = pymysql.connect(
 )
 
 # Verileri çekme fonksiyonu
-def get_data(severity=None, scan_name=None, vulnerability_name=None):
+def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=None):
     with db.cursor(pymysql.cursors.DictCursor) as cursor:
         # Severity filtresi için WHERE koşulu
         severity_condition = ""
@@ -32,6 +32,11 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         vulnerability_name_condition = ""
         if vulnerability_name:
             vulnerability_name_condition = f"AND p.name LIKE '%{vulnerability_name}%'"
+
+        # IP adresi filtresi için WHERE koşulu
+        ip_address_condition = ""
+        if ip_address:
+            ip_address_condition = f"AND h.host_ip LIKE '%{ip_address}%'"
 
         # Özet bilgi sorgusu
         summary_query = f"""
@@ -65,6 +70,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
             )
         {severity_condition}
         {scan_name_condition}
+        {vulnerability_name_condition}
+        {ip_address_condition}
         GROUP BY 
             s.name, f.name
         """
@@ -116,7 +123,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition}
+        {severity_condition} {scan_name_condition} {ip_address_condition}
         GROUP BY 
             p.severity
         """
@@ -159,7 +166,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition} {vulnerability_name_condition}
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
         ORDER BY 
             sr.scan_start DESC, p.severity DESC
         LIMIT 1000
@@ -202,7 +209,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition} {vulnerability_name_condition}
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
         GROUP BY 
             f.name, s.name, p.plugin_id, p.name, p.severity
         ORDER BY 
@@ -213,7 +220,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
         cursor.execute(top_vulnerabilities_query)
         top_vulnerabilities_data = cursor.fetchall()
 
-        # Toplam zafiyet say��ları sorgusu
+        # Toplam zafiyet sayıları sorgusu
         total_vulnerabilities_query = f"""
         SELECT 
             SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as total_critical,
@@ -237,7 +244,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None):
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition}
+        {severity_condition} {scan_name_condition} {ip_address_condition}
         """
         
         cursor.execute(total_vulnerabilities_query)
@@ -304,6 +311,15 @@ app.layout = html.Div([
                 id='vulnerability-name-input',
                 type='text',
                 placeholder="Zafiyet adı girin...",
+                style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
+            ),
+        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
+        html.Div([
+            html.Label("IP Adresi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
+            dcc.Input(
+                id='ip-address-input',
+                type='text',
+                placeholder="IP adresi girin...",
                 style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
             ),
         ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
@@ -627,10 +643,11 @@ app.layout = html.Div([
      Input('interval-component', 'n_intervals')],
     [State('severity-dropdown', 'value'),
      State('scan-dropdown', 'value'),
-     State('vulnerability-name-input', 'value')]
+     State('vulnerability-name-input', 'value'),
+     State('ip-address-input', 'value')]
 )
-def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name):
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list = get_data(severity, scan_name, vulnerability_name)
+def update_data(n_clicks, n_intervals, severity, scan_name, vulnerability_name, ip_address):
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list = get_data(severity, scan_name, vulnerability_name, ip_address)
     
     print("Summary Data:", summary_data)  # Debug için eklendi
     
