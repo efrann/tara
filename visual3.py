@@ -17,296 +17,283 @@ db = pymysql.connect(
 
 # Verileri çekme fonksiyonu
 def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=None):
-    try:
-        # Her sorgu öncesi yeni bir bağlantı oluştur
-        db = pymysql.connect(
-            host="localhost",
-            user="root",
-            password="Nessus_Report123*-",
-            database="nessusdb"
-        )
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        # Severity filtresi için WHERE koşulu
+        severity_condition = ""
+        if severity:
+            severity_condition = f"AND p.severity IN ({','.join(map(str, severity))})"
         
-        with db.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Severity filtresi için WHERE koşulu
-            severity_condition = ""
-            if severity:
-                severity_condition = f"AND p.severity IN ({','.join(map(str, severity))})"
-            
-            # Scan name filtresi için WHERE koşulu
-            scan_name_condition = ""
-            if scan_name:
-                scan_name_condition = f"AND s.name LIKE '%{scan_name}%'"
-            
-            # Vulnerability name filtresi için WHERE koşulu
-            vulnerability_name_condition = ""
-            if vulnerability_name:
-                vulnerability_name_condition = f"AND p.name LIKE '%{vulnerability_name}%'"
+        # Scan name filtresi için WHERE koşulu
+        scan_name_condition = ""
+        if scan_name:
+            scan_name_condition = f"AND s.name LIKE '%{scan_name}%'"
+        
+        # Vulnerability name filtresi için WHERE koşulu
+        vulnerability_name_condition = ""
+        if vulnerability_name:
+            vulnerability_name_condition = f"AND p.name LIKE '%{vulnerability_name}%'"
 
-            # IP adresi filtresi için WHERE koşulu
-            ip_address_condition = ""
-            if ip_address:
-                ip_address_condition = f"AND h.host_ip LIKE '%{ip_address}%'"
+        # IP adresi filtresi için WHERE koşulu
+        ip_address_condition = ""
+        if ip_address:
+            ip_address_condition = f"AND h.host_ip LIKE '%{ip_address}%'"
 
-            # Özet bilgi sorgusu
-            summary_query = f"""
-            SELECT 
-                s.name AS scan_name,
-                f.name AS folder_name,
-                MAX(FROM_UNIXTIME(sr.scan_start)) AS last_scan_date,
-                COUNT(DISTINCT h.host_ip) AS total_hosts,
-                SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) AS total_critical,
-                SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) AS total_high,
-                SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) AS total_medium,
-                SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) AS total_low,
-                SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) AS total_info
-            FROM 
-                scan s
-            LEFT JOIN 
-                folder f ON s.folder_id = f.folder_id
-            JOIN 
-                scan_run sr ON s.scan_id = sr.scan_id
-            JOIN
-                host h ON sr.scan_run_id = h.scan_run_id
-            LEFT JOIN 
-                host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-            LEFT JOIN 
-                plugin p ON hv.plugin_id = p.plugin_id
-            WHERE 
-                sr.scan_run_id = (
-                    SELECT MAX(scan_run_id) 
-                    FROM scan_run 
-                    WHERE scan_id = s.scan_id
-                )
-            {severity_condition}
-            {scan_name_condition}
-            {vulnerability_name_condition}
-            {ip_address_condition}
-            GROUP BY 
-                s.name, f.name
-            """
-            
-            # Severity seçimine göre sıralama ekliyoruz
-            if severity:
-                if 4 in severity:
-                    summary_query += " ORDER BY total_critical DESC"
-                elif 3 in severity:
-                    summary_query += " ORDER BY total_high DESC"
-                elif 2 in severity:
-                    summary_query += " ORDER BY total_medium DESC"
-                elif 1 in severity:
-                    summary_query += " ORDER BY total_low DESC"
-                elif 0 in severity:
-                    summary_query += " ORDER BY total_info DESC"
-            else:
-                summary_query += " ORDER BY last_scan_date DESC"
-            
-            cursor.execute(summary_query)
-            summary_data = cursor.fetchall()
-            
-            # Tarih formatını değiştir
-            for row in summary_data:
-                if row['last_scan_date']:
-                    date = row['last_scan_date']
-                    turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
-                                      "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
-                    row['last_scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y %H:%M")
-            
-            # Zafiyet dağılımı sorgusu
-            vulnerability_query = f"""
-            SELECT 
-                p.severity,
-                COUNT(DISTINCT hv.host_vuln_id) as count
-            FROM 
-                scan s
-            JOIN 
-                scan_run sr ON s.scan_id = sr.scan_id
-            JOIN
-                host h ON sr.scan_run_id = h.scan_run_id
-            LEFT JOIN 
-                host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-            LEFT JOIN 
-                plugin p ON hv.plugin_id = p.plugin_id
-            WHERE 
-                sr.scan_run_id = (
-                    SELECT MAX(scan_run_id) 
-                    FROM scan_run 
-                    WHERE scan_id = s.scan_id
-                )
+        # Özet bilgi sorgusu
+        summary_query = f"""
+        SELECT 
+            s.name AS scan_name,
+            f.name AS folder_name,
+            MAX(FROM_UNIXTIME(sr.scan_start)) AS last_scan_date,
+            COUNT(DISTINCT h.host_ip) AS total_hosts,
+            SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) AS total_critical,
+            SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) AS total_high,
+            SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) AS total_medium,
+            SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) AS total_low,
+            SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) AS total_info
+        FROM 
+            scan s
+        LEFT JOIN 
+            folder f ON s.folder_id = f.folder_id
+        JOIN 
+            scan_run sr ON s.scan_id = sr.scan_id
+        JOIN
+            host h ON sr.scan_run_id = h.scan_run_id
+        LEFT JOIN 
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+        LEFT JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition}
+        {scan_name_condition}
+        {vulnerability_name_condition}
+        {ip_address_condition}
+        GROUP BY 
+            s.name, f.name
+        """
+        
+        # Severity seçimine göre sıralama ekliyoruz
+        if severity:
+            if 4 in severity:
+                summary_query += " ORDER BY total_critical DESC"
+            elif 3 in severity:
+                summary_query += " ORDER BY total_high DESC"
+            elif 2 in severity:
+                summary_query += " ORDER BY total_medium DESC"
+            elif 1 in severity:
+                summary_query += " ORDER BY total_low DESC"
+            elif 0 in severity:
+                summary_query += " ORDER BY total_info DESC"
+        else:
+            summary_query += " ORDER BY last_scan_date DESC"
+        
+        cursor.execute(summary_query)
+        summary_data = cursor.fetchall()
+        
+        # Tarih formatını değiştir
+        for row in summary_data:
+            if row['last_scan_date']:
+                date = row['last_scan_date']
+                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
+                                  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+                row['last_scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y %H:%M")
+        
+        # Zafiyet dağılımı sorgusu
+        vulnerability_query = f"""
+        SELECT 
+            p.severity,
+            COUNT(DISTINCT hv.host_vuln_id) as count
+        FROM 
+            scan s
+        JOIN 
+            scan_run sr ON s.scan_id = sr.scan_id
+        JOIN
+            host h ON sr.scan_run_id = h.scan_run_id
+        LEFT JOIN 
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+        LEFT JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
+        GROUP BY 
+            p.severity
+        """
+        
+        cursor.execute(vulnerability_query)
+        vulnerability_data = cursor.fetchall()
+        
+        # Detaylı zafiyet listesi sorgusu
+        detailed_vulnerability_query = f"""
+        SELECT 
+            s.name AS scan_name,
+            h.host_ip,
+            COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
+            CASE 
+                WHEN p.severity = 4 THEN 'Kritik'
+                WHEN p.severity = 3 THEN 'Yüksek'
+                WHEN p.severity = 2 THEN 'Orta'
+                WHEN p.severity = 1 THEN 'Düşük'
+                WHEN p.severity = 0 THEN 'Bilgi'
+                ELSE 'Bilinmeyen'
+            END AS severity,
+            p.family AS plugin_family,
+            vo.port,
+            FROM_UNIXTIME(sr.scan_start) AS scan_date
+        FROM 
+            scan s
+        JOIN 
+            scan_run sr ON s.scan_id = sr.scan_id
+        JOIN 
+            host h ON sr.scan_run_id = h.scan_run_id
+        JOIN 
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+        JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        LEFT JOIN
+            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
+        ORDER BY 
+            sr.scan_start DESC, p.severity DESC
+        LIMIT 1000
+        """
+        
+        cursor.execute(detailed_vulnerability_query)
+        detailed_vulnerability_data = cursor.fetchall()
+
+        # Detaylı zafiyet listesindeki tarih formatını değiştir
+        for row in detailed_vulnerability_data:
+            if row['scan_date']:
+                date = row['scan_date']
+                turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
+                                  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+                row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y")
+
+        # En çok görülen 10 zafiyet sorgusu
+        top_vulnerabilities_query = f"""
+        SELECT 
+            f.name AS folder_name,
+            s.name AS scan_name,
+            COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
+            p.severity,
+            COUNT(DISTINCT hv.host_vuln_id) as count
+        FROM 
+            scan s
+        JOIN 
+            scan_run sr ON s.scan_id = sr.scan_id
+        JOIN
+            host h ON sr.scan_run_id = h.scan_run_id
+        LEFT JOIN 
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+        LEFT JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        JOIN
+            folder f ON s.folder_id = f.folder_id
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
+        GROUP BY 
+            f.name, s.name, p.plugin_id, p.name, p.severity
+        ORDER BY 
+            count DESC
+        LIMIT 10
+        """
+        
+        cursor.execute(top_vulnerabilities_query)
+        top_vulnerabilities_data = cursor.fetchall()
+
+        # Toplam zafiyet sayıları sorgusu
+        total_vulnerabilities_query = f"""
+        SELECT 
+            SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as total_critical,
+            SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) as total_high,
+            SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) as total_medium,
+            SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) as total_low,
+            SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) as total_info
+        FROM 
+            scan s
+        JOIN 
+            scan_run sr ON s.scan_id = sr.scan_id
+        JOIN
+            host h ON sr.scan_run_id = h.scan_run_id
+        LEFT JOIN 
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+        LEFT JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
+        """
+        
+        cursor.execute(total_vulnerabilities_query)
+        total_vulnerabilities_data = cursor.fetchone()
+
+        # Mevcut taramaları çekmek için yeni bir sorgu ekleyelim
+        scan_list_query = """
+        SELECT DISTINCT s.name
+        FROM scan s
+        JOIN scan_run sr ON s.scan_id = sr.scan_id
+        ORDER BY s.name
+        """
+        cursor.execute(scan_list_query)
+        scan_list = [row['name'] for row in cursor.fetchall()]
+
+        # Port kullanım sorgusu
+        port_usage_query = f"""
+        SELECT 
+            vo.port,
+            COUNT(*) as count
+        FROM 
+            scan s
+        JOIN 
+            scan_run sr ON s.scan_id = sr.scan_id
+        JOIN
+            host h ON sr.scan_run_id = h.scan_run_id
+        JOIN 
+            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+        JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        JOIN
+            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
+        WHERE 
+            sr.scan_run_id = (
+                SELECT MAX(scan_run_id) 
+                FROM scan_run 
+                WHERE scan_id = s.scan_id
+            )
+            AND p.family = 'Port scanners'
             {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
-            GROUP BY 
-                p.severity
-            """
-            
-            cursor.execute(vulnerability_query)
-            vulnerability_data = cursor.fetchall()
-            
-            # Detaylı zafiyet listesi sorgusu
-            detailed_vulnerability_query = f"""
-            SELECT 
-                s.name AS scan_name,
-                h.host_ip,
-                COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
-                CASE 
-                    WHEN p.severity = 4 THEN 'Kritik'
-                    WHEN p.severity = 3 THEN 'Yüksek'
-                    WHEN p.severity = 2 THEN 'Orta'
-                    WHEN p.severity = 1 THEN 'Düşük'
-                    WHEN p.severity = 0 THEN 'Bilgi'
-                    ELSE 'Bilinmeyen'
-                END AS severity,
-                p.family AS plugin_family,
-                vo.port,
-                FROM_UNIXTIME(sr.scan_start) AS scan_date
-            FROM 
-                scan s
-            JOIN 
-                scan_run sr ON s.scan_id = sr.scan_id
-            JOIN 
-                host h ON sr.scan_run_id = h.scan_run_id
-            JOIN 
-                host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-            JOIN 
-                plugin p ON hv.plugin_id = p.plugin_id
-            LEFT JOIN
-                vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
-            WHERE 
-                sr.scan_run_id = (
-                    SELECT MAX(scan_run_id) 
-                    FROM scan_run 
-                    WHERE scan_id = s.scan_id
-                )
-            {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
-            ORDER BY 
-                sr.scan_start DESC, p.severity DESC
-            LIMIT 1000
-            """
-            
-            cursor.execute(detailed_vulnerability_query)
-            detailed_vulnerability_data = cursor.fetchall()
-
-            # Detaylı zafiyet listesindeki tarih formatını değiştir
-            for row in detailed_vulnerability_data:
-                if row['scan_date']:
-                    date = row['scan_date']
-                    turkish_months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
-                                      "Temmuz", "A��ustos", "Eylül", "Ekim", "Kasım", "Aralık"]
-                    row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y")
-
-            # En çok görülen 10 zafiyet sorgusu
-            top_vulnerabilities_query = f"""
-            SELECT 
-                f.name AS folder_name,
-                s.name AS scan_name,
-                COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
-                p.severity,
-                COUNT(DISTINCT hv.host_vuln_id) as count
-            FROM 
-                scan s
-            JOIN 
-                scan_run sr ON s.scan_id = sr.scan_id
-            JOIN
-                host h ON sr.scan_run_id = h.scan_run_id
-            LEFT JOIN 
-                host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-            LEFT JOIN 
-                plugin p ON hv.plugin_id = p.plugin_id
-            JOIN
-                folder f ON s.folder_id = f.folder_id
-            WHERE 
-                sr.scan_run_id = (
-                    SELECT MAX(scan_run_id) 
-                    FROM scan_run 
-                    WHERE scan_id = s.scan_id
-                )
-            {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
-            GROUP BY 
-                f.name, s.name, p.plugin_id, p.name, p.severity
-            ORDER BY 
-                count DESC
-            LIMIT 10
-            """
-            
-            cursor.execute(top_vulnerabilities_query)
-            top_vulnerabilities_data = cursor.fetchall()
-
-            # Toplam zafiyet sayıları sorgusu
-            total_vulnerabilities_query = f"""
-            SELECT 
-                SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as total_critical,
-                SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) as total_high,
-                SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) as total_medium,
-                SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) as total_low,
-                SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) as total_info
-            FROM 
-                scan s
-            JOIN 
-                scan_run sr ON s.scan_id = sr.scan_id
-            JOIN
-                host h ON sr.scan_run_id = h.scan_run_id
-            LEFT JOIN 
-                host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-            LEFT JOIN 
-                plugin p ON hv.plugin_id = p.plugin_id
-            WHERE 
-                sr.scan_run_id = (
-                    SELECT MAX(scan_run_id) 
-                    FROM scan_run 
-                    WHERE scan_id = s.scan_id
-                )
-            {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
-            """
-            
-            cursor.execute(total_vulnerabilities_query)
-            total_vulnerabilities_data = cursor.fetchone()
-
-            # Mevcut taramaları çekmek için yeni bir sorgu ekleyelim
-            scan_list_query = """
-            SELECT DISTINCT s.name
-            FROM scan s
-            JOIN scan_run sr ON s.scan_id = sr.scan_id
-            ORDER BY s.name
-            """
-            cursor.execute(scan_list_query)
-            scan_list = [row['name'] for row in cursor.fetchall()]
-
-            # Port kullanım sorgusu
-            port_usage_query = f"""
-            SELECT 
-                vo.port,
-                COUNT(*) as count
-            FROM 
-                scan s
-            JOIN 
-                scan_run sr ON s.scan_id = sr.scan_id
-            JOIN
-                host h ON sr.scan_run_id = h.scan_run_id
-            JOIN 
-                host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-            JOIN 
-                plugin p ON hv.plugin_id = p.plugin_id
-            JOIN
-                vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
-            WHERE 
-                sr.scan_run_id = (
-                    SELECT MAX(scan_run_id) 
-                    FROM scan_run 
-                    WHERE scan_id = s.scan_id
-                )
-                AND p.family = 'Port scanners'
-                {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
-            GROUP BY 
-                vo.port
-            ORDER BY 
-                count DESC
-            LIMIT 10
-            """
-            
-            cursor.execute(port_usage_query)
-            port_usage_data = cursor.fetchall()
-
-    finally:
-        if 'db' in locals() and db.open:
-            db.close()  # Bağlantıyı kapat
+        GROUP BY 
+            vo.port
+        ORDER BY 
+            count DESC
+        LIMIT 10
+        """
+        
+        cursor.execute(port_usage_query)
+        port_usage_data = cursor.fetchall()
 
     return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data
 
@@ -664,7 +651,7 @@ app.layout = html.Div([
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals'),
      Input('clicked-severity', 'children'),
-     Input('clicked-port', 'children')],
+     Input('clicked-port', 'children')],  # Yeni input
     [State('severity-dropdown', 'value'),
      State('scan-dropdown', 'value'),
      State('vulnerability-name-input', 'value'),
@@ -750,13 +737,6 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
     # Detaylı zafiyet listesi
     vulnerability_table_data = detailed_vulnerability_data
     
-    # Eğer bir port seçilmişse, sadece o porta ait zafiyetleri göster
-    if clicked_port:
-        vulnerability_table_data = [
-            vuln for vuln in vulnerability_table_data
-            if vuln['port'] == clicked_port
-        ]
-    
     # En çok görülen 10 zafiyet
     severity_map = {
         4: 'Kritik',
@@ -811,57 +791,78 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
     # Tarama dropdown seçeneklerini oluştur
     scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
 
-    # Severity değerini güncelle
-    new_severity = severity if severity is not None else []
+    # Veri kontrolü
+    if not top_vulnerabilities_data:
+        # Eğer veri yoksa, boş bir grafik döndür
+        top_vulnerabilities_graph = go.Figure()
+        top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
+        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
 
-    # En çok görülen 10 zafiyet grafiği
-    top_vulnerabilities_graph = {
-        'data': [go.Bar(
-            x=[vuln['vulnerability_name'] for vuln in top_vulnerabilities_data],
-            y=[vuln['count'] for vuln in top_vulnerabilities_data],
-            marker_color=['#e74c3c' if vuln['severity'] == 4 else
-                          '#e67e22' if vuln['severity'] == 3 else
-                          '#f1c40f' if vuln['severity'] == 2 else
-                          '#2ecc71' if vuln['severity'] == 1 else
-                          '#3498db' for vuln in top_vulnerabilities_data]
-        )],
-        'layout': go.Layout(
-            title='En Çok Görülen 10 Zafiyet',
-            xaxis={'title': 'Zafiyet Adı', 'tickangle': 45},
-            yaxis={'title': 'Sayı'},
-            margin={'l': 50, 'r': 50, 't': 50, 'b': 100},
-            height=400,
-            paper_bgcolor='#2c3e50',
-            plot_bgcolor='#2c3e50',
-            font=dict(color='white')
+    # En çok görülen 10 zafiyet daire grafiği
+    top_vulnerabilities_graph = go.Figure(
+        go.Sunburst(
+            ids=['Most Occurent 10 Vulnerabilities'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
+            labels=['Most Occurent 10 Vulnerabilities'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
+            parents=[''] + ['Most Occurent 10 Vulnerabilities'] * len(top_vulnerabilities_data),
+            values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
+            branchvalues="total",
+            marker=dict(
+                colors=['#2c3e50'] + [
+                    '#e74c3c' if row['severity'] == 4 else
+                    '#e67e22' if row['severity'] == 3 else
+                    '#f1c40f' if row['severity'] == 2 else
+                    '#2ecc71' if row['severity'] == 1 else
+                    '#3498db' if row['severity'] == 0 else
+                    '#95a5a6' for row in top_vulnerabilities_data
+                ]
+            ),
+            textinfo='label',
+            hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
+            insidetextorientation='radial',
+            textfont=dict(size=10, color='white'),
+            customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
         )
-    }
+    )
+
+    top_vulnerabilities_graph.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor='#2c3e50',
+        plot_bgcolor='#34495e',
+        font=dict(color='white', size=14),
+        height=400,
+        showlegend=False,
+    )
 
     # Port kullanım grafiği
-    port_usage_graph = {
-        'data': [go.Bar(
-            x=[port['port'] for port in port_usage_data],
-            y=[port['count'] for port in port_usage_data],
-            marker_color='#3498db'
-        )],
-        'layout': go.Layout(
-            title='En Çok Kullanılan 10 Port',
-            xaxis={'title': 'Port'},
-            yaxis={'title': 'Sayı'},
-            margin={'l': 50, 'r': 50, 't': 50, 'b': 50},
-            height=400,
-            paper_bgcolor='#2c3e50',
-            plot_bgcolor='#2c3e50',
-            font=dict(color='white')
+    port_usage_graph = go.Figure(
+        go.Bar(
+            x=[str(row['port']) for row in port_usage_data],
+            y=[row['count'] for row in port_usage_data],
+            marker_color='#3498db',
+            text=[row['count'] for row in port_usage_data],
+            textposition='auto',
+            hoverinfo='text',
+            hovertext=[f"Port: {row['port']}<br>Kullanım: {row['count']}" for row in port_usage_data],
         )
-    }
+    )
+
+    port_usage_graph.update_layout(
+        title='En Çok Kullanılan 10 Port',
+        xaxis_title='Port Numarası',
+        yaxis_title='Kullanım Sayısı',
+        paper_bgcolor='#2c3e50',
+        plot_bgcolor='#34495e',
+        font=dict(color='white'),
+        margin=dict(l=50, r=50, t=50, b=50),
+        height=400,
+    )
 
     return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
             top_vulnerabilities_table_data, top_vulnerabilities_graph, 
             port_usage_graph,
             total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
             total_vulnerabilities[3], total_vulnerabilities[4], 
-            last_updated, scan_options, new_severity)
+            last_updated, scan_options, severity)
 
 # Combine the two callbacks into one
 @app.callback(
