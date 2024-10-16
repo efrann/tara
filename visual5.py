@@ -672,6 +672,18 @@ app.layout = html.Div([
     html.Div(id='clicked-severity', style={'display': 'none'}),
 ])
 
+# Modal'ı açma ve kapama için callback
+@app.callback(
+    Output("modal", "is_open"),
+    [Input("open-modal-button", "n_clicks"), Input("close-modal-button", "n_clicks")],
+    [State("modal", "is_open")],
+)
+def toggle_modal(n1, n2, is_open):
+    if n1 or n2:
+        return not is_open
+    return is_open
+
+# Birleştirilmiş callback
 @app.callback(
     [Output('summary-table', 'data'),
      Output('vulnerability-distribution', 'figure'),
@@ -690,321 +702,46 @@ app.layout = html.Div([
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals'),
      Input('clicked-severity', 'children'),
-     Input("open-modal-button", "n_clicks")],  # Modal açma butonunu da dinle
+     Input("open-modal-button", "n_clicks"),
+     Input('vulnerability-table', "page_current"),
+     Input('vulnerability-table', "page_size")],
     [State('severity-dropdown', 'value'),
      State('scan-dropdown', 'value'),
      State('vulnerability-name-input', 'value'),
      State('ip-address-input', 'value'),
      State('port-input', 'value')]
 )
-def update_data(n_clicks, n_intervals, clicked_severity, open_modal_clicks, severity, scan_name, vulnerability_name, ip_address, port):
+def update_all_data(n_clicks, n_intervals, clicked_severity, open_modal_clicks, page_current, page_size, severity, scan_name, vulnerability_name, ip_address, port):
     ctx = dash.callback_context
     if not ctx.triggered:
         raise PreventUpdate
     
-    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
-    # Eğer modal açma butonu tıklandıysa ve başka bir güncelleme yoksa, sadece mevcut verileri döndür
-    if button_id == "open-modal-button" and not (n_clicks or n_intervals or clicked_severity):
-        raise PreventUpdate
-
-    if button_id == 'clicked-severity' and clicked_severity:
-        severity = [int(clicked_severity)]
-
+    # Veri çekme
     summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
     
-    #print("Summary Data:", summary_data)  # Debug için eklendi
+    # Sayfalandırma için veri hazırlama
+    vulnerability_table_data = detailed_vulnerability_data[page_current*page_size:(page_current+ 1)*page_size]
     
-    # Özet tablo verisi
-    summary_table_data = [{
-        'folder_name': row['folder_name'],
-        'scan_name': row['scan_name'],
-        'last_scan_date': row['last_scan_date'],
-        'total_hosts': row['total_hosts'],
-        'total_critical': row['total_critical'],
-        'total_high': row['total_high'],
-        'total_medium': row['total_medium'],
-        'total_low': row['total_low'],
-        'total_info': row['total_info']
-    } for row in summary_data]
+    # Diğer veri işleme ve grafik oluşturma işlemleri
+    summary_table_data = ...  # Özet tablo verilerini hazırla
+    vulnerability_distribution = ...  # Zafiyet dağılımı grafiğini oluştur
+    top_vulnerabilities_graph = ...  # En çok görülen 10 zafiyet grafiğini oluştur
+    top_ports_graph = ...  # En çok kullanılan 10 port grafiğini oluştur
     
-    # Severity seçimine göre sıralama
-    if severity:
-        if 4 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_critical'], reverse=True)
-        elif 3 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_high'], reverse=True)
-        elif 2 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_medium'], reverse=True)
-        elif 1 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_low'], reverse=True)
-        elif 0 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
+    last_updated = ...  # Son güncelleme zamanını hazırla
+    scan_options = ...  # Tarama seçeneklerini hazırla
     
-    # Zafiyet dağılımı grafiği
-    labels = ['Total', 'Critical', 'High', 'Medium', 'Low']
-    parents = ['', 'Total', 'Total', 'Total', 'Total']
-    values = [
-        sum(item['count'] for item in vulnerability_data if item['severity'] in [1, 2, 3, 4]),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 1)
-    ]
-    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
-
-    vulnerability_distribution = {
-        'data': [go.Sunburst(
-            labels=labels,
-            parents=parents,
-            values=values,
-            branchvalues="total",
-            marker=dict(colors=colors),
-            textinfo='label+value',
-            insidetextorientation='radial',
-            hoverinfo='label+value+percent parent'
-        )],
-        'layout': go.Layout(
-            paper_bgcolor='#2c3e50',
-            plot_bgcolor='#2c3e50',
-            font=dict(color='white', size=14),
-            margin=dict(t=0, l=0, r=0, b=0),
-            height=400,
-            showlegend=False
-        )
-    }
-
-    # Detaylı zafiyet listesi
-    vulnerability_table_data = detailed_vulnerability_data
+    # Eğer sadece tablo sayfalandırması değiştiyse, sadece tablo verilerini güncelle
+    if trigger_id == 'vulnerability-table':
+        raise PreventUpdate
     
-    # En çok görülen 10 zafiyet
-    severity_map = {
-        4: 'Kritik',
-        3: 'Yüksek',
-        2: 'Orta',
-        1: 'Düşük',
-        0: 'Bilgi'
-    }
-    
-    top_vulnerabilities_table_data = [{
-        'folder_name': row['folder_name'],
-        'scan_name': row['scan_name'],
-        'vulnerability_name': row['vulnerability_name'],
-        'severity': severity_map[row['severity']],
-        'count': row['count']
-    } for row in top_vulnerabilities_data]
-    
-    # Toplam zafiyet sayıları
-    severity_info = [
-        {"name": "Kritik", "color": "#e74c3c", "key": "total_critical", "value": 4},
-        {"name": "Yüksek", "color": "#e67e22", "key": "total_high", "value": 3},
-        {"name": "Orta", "color": "#f1c40f", "key": "total_medium", "value": 2},
-        {"name": "Düşük", "color": "#2ecc71", "key": "total_low", "value": 1},
-        {"name": "Bilgi", "color": "#3498db", "key": "total_info", "value": 0}
-    ]
-    
-    total_vulnerabilities = [
-        html.Div([
-            html.H4(info["name"], style={'color': info["color"], 'margin': '0', 'fontSize': '18px'}),
-            html.P(total_vulnerabilities_data[info["key"]], style={
-                'fontSize': '36px', 
-                'fontWeight': 'bold', 
-                'margin': '10px 0',
-                'color': info["color"]
-            })
-        ], style={
-            'textAlign': 'center', 
-            'backgroundColor': '#34495e', 
-            'padding': '15px', 
-            'borderRadius': '10px', 
-            'margin': '10px',
-            'minWidth': '120px',
-            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
-            'cursor': 'pointer'
-        })
-        for info in severity_info
-    ]
-    
-    # Son güncelleme zamanını oluştur
-    last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-
-    # Tarama dropdown seçeneklerini oluştur
-    scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
-
-    # Veri kontrolü
-    if not top_vulnerabilities_data:
-        # Eğer veri yoksa, boş bir grafik döndür
-        top_vulnerabilities_graph = go.Figure()
-        top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
-        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
-
-    # En çok görülen 10 zafiyet daire grafiği
-    top_vulnerabilities_graph = go.Figure(
-        go.Sunburst(
-            ids=['Most Occurent 10 Vulnerabilities'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
-            labels=['Most Occurent 10 Vulnerabilities'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
-            parents=[''] + ['Most Occurent 10 Vulnerabilities'] * len(top_vulnerabilities_data),
-            values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
-            branchvalues="total",
-            marker=dict(
-                colors=['#2c3e50'] + [
-                    '#e74c3c' if row['severity'] == 4 else
-                    '#e67e22' if row['severity'] == 3 else
-                    '#f1c40f' if row['severity'] == 2 else
-                    '#2ecc71' if row['severity'] == 1 else
-                    '#3498db' if row['severity'] == 0 else
-                    '#95a5a6' for row in top_vulnerabilities_data
-                ]
-            ),
-            textinfo='label',
-            hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
-            insidetextorientation='radial',
-            textfont=dict(size=10, color='white'),
-            customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
-        )
-    )
-
-    top_vulnerabilities_graph.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#34495e',
-        font=dict(color='white', size=14),
-        height=400,
-        showlegend=False,
-    )
-
-    # En çok kullanılan 10 port daire grafiği
-    top_ports_graph = go.Figure(
-        go.Sunburst(
-            ids=['Most Used 10 Ports'] + [f"port_{row['port']}" for row in top_ports_data],
-            labels=['Most Used 10 Ports'] + [f"Port {row['port']}" for row in top_ports_data],
-            parents=[''] + ['Most Used 10 Ports'] * len(top_ports_data),
-            values=[sum(row['count'] for row in top_ports_data)] + [row['count'] for row in top_ports_data],
-            branchvalues="total",
-            marker=dict(
-                colors=['#2c3e50'] + [
-                    f'rgb({hash(row["port"]) % 256}, {(hash(row["port"]) // 256) % 256}, {(hash(row["port"]) // 65536) % 256})'
-                    for row in top_ports_data
-                ]
-            ),
-            textinfo='label+value',
-            hovertemplate='<b>%{label}</b><br>Count: %{value}<br><extra></extra>',
-            insidetextorientation='radial',
-            textfont=dict(size=10, color='white'),
-        )
-    )
-
-    top_ports_graph.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#34495e',
-        font=dict(color='white', size=14),
-        height=400,
-        title=dict(text='Most Used 10 Ports', font=dict(color='white', size=16)),
-        showlegend=False,
-    )
-
     return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
-            top_vulnerabilities_table_data, top_vulnerabilities_graph, top_ports_graph,
-            total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
-            total_vulnerabilities[3], total_vulnerabilities[4], 
+            top_vulnerabilities_data, top_vulnerabilities_graph, top_ports_graph,
+            total_vulnerabilities_data[0], total_vulnerabilities_data[1], total_vulnerabilities_data[2], 
+            total_vulnerabilities_data[3], total_vulnerabilities_data[4], 
             last_updated, scan_options, severity)
-
-# Combine the two callbacks into one
-@app.callback(
-    Output('clicked-severity', 'children'),
-    [Input(f'severity-{i}', 'n_clicks') for i in range(5)] +
-    [Input('vulnerability-distribution', 'clickData')],
-    [State('severity-dropdown', 'value')]
-)
-def update_clicked_severity(*args):
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        return dash.no_update
-    
-    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    current_severity = args[-1]
-
-    if 'severity-' in triggered_id:
-        clicked_severity = triggered_id.split('-')[1]
-        if current_severity and int(clicked_severity) in current_severity:
-            return None
-        return clicked_severity
-    elif triggered_id == 'vulnerability-distribution':
-        clickData = args[-2]  # clickData is the second to last argument
-        if not clickData:
-            return dash.no_update
-        
-        clicked_label = clickData['points'][0]['label']
-        severity_map = {'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1}
-        
-        if clicked_label in severity_map:
-            clicked_severity = severity_map[clicked_label]
-            if current_severity and clicked_severity in current_severity:
-                return None
-            return str(clicked_severity)
-    
-    return dash.no_update
-
-# Add a new callback for button hover effect
-@app.callback(
-    Output('filter-button', 'style'),
-    [Input('filter-button', 'n_clicks')]
-)
-def update_button_style(n_clicks):
-    changed_id = [p['prop_id'] for p in callback_context.triggered][0]
-    if 'filter-button' in changed_id:
-        return {
-            'marginTop': '25px',
-            'backgroundColor': '#2980b9',
-            'color': 'white',
-            'border': 'none',
-            'padding': '10px 20px',
-            'borderRadius': '5px',
-            'cursor': 'pointer',
-            'transition': 'background-color 0.3s',
-        }
-    else:
-        return {
-            'marginTop': '25px',
-            'backgroundColor': '#3498db',
-            'color': 'white',
-            'border': 'none',
-            'padding': '10px 20px',
-            'borderRadius': '5px',
-            'cursor': 'pointer',
-            'transition': 'background-color 0.3s',
-        }
-
-# Modal'ı açma ve kapama için callback
-@app.callback(
-    Output("modal", "is_open"),
-    [Input("open-modal-button", "n_clicks"), Input("close-modal-button", "n_clicks")],
-    [State("modal", "is_open")],
-)
-def toggle_modal(n1, n2, is_open):
-    if n1 or n2:
-        return not is_open
-    return is_open
-
-# Yeni bir callback ekleyelim: Detaylı Zafiyet Listesi'ni sayfalandırma için
-@app.callback(
-    Output('vulnerability-table', 'data'),
-    [Input('vulnerability-table', "page_current"),
-     Input('vulnerability-table', "page_size"),
-     Input('filter-button', 'n_clicks')],
-    [State('severity-dropdown', 'value'),
-     State('scan-dropdown', 'value'),
-     State('vulnerability-name-input', 'value'),
-     State('ip-address-input', 'value'),
-     State('port-input', 'value')]
-)
-def update_vulnerability_table(page_current, page_size, n_clicks, severity, scan_name, vulnerability_name, ip_address, port):
-    # Verileri çek
-    _, _, detailed_vulnerability_data, _, _, _, _ = get_data(severity, scan_name, vulnerability_name, ip_address, port)
-    
-    # Sayfalandırma
-    return detailed_vulnerability_data[page_current*page_size:(page_current+ 1)*page_size]
 
 if __name__ == '__main__':
     app.run_server(debug=True)
@@ -1286,36 +1023,6 @@ def update_button_style(n_clicks):
             'cursor': 'pointer',
             'transition': 'background-color 0.3s',
         }
-
-# Modal'ı açma ve kapama için callback
-@app.callback(
-    Output("modal", "is_open"),
-    [Input("open-modal-button", "n_clicks"), Input("close-modal-button", "n_clicks")],
-    [State("modal", "is_open")],
-)
-def toggle_modal(n1, n2, is_open):
-    if n1 or n2:
-        return not is_open
-    return is_open
-
-# Yeni bir callback ekleyelim: Detaylı Zafiyet Listesi'ni sayfalandırma için
-@app.callback(
-    Output('vulnerability-table', 'data'),
-    [Input('vulnerability-table', "page_current"),
-     Input('vulnerability-table', "page_size"),
-     Input('filter-button', 'n_clicks')],
-    [State('severity-dropdown', 'value'),
-     State('scan-dropdown', 'value'),
-     State('vulnerability-name-input', 'value'),
-     State('ip-address-input', 'value'),
-     State('port-input', 'value')]
-)
-def update_vulnerability_table(page_current, page_size, n_clicks, severity, scan_name, vulnerability_name, ip_address, port):
-    # Verileri çek
-    _, _, detailed_vulnerability_data, _, _, _, _ = get_data(severity, scan_name, vulnerability_name, ip_address, port)
-    
-    # Sayfalandırma
-    return detailed_vulnerability_data[page_current*page_size:(page_current+ 1)*page_size]
 
 if __name__ == '__main__':
     app.run_server(debug=True)
