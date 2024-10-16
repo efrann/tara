@@ -814,6 +814,48 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
     # Severity değerini güncelle
     new_severity = severity if severity is not None else []
 
+    # En çok görülen 10 zafiyet grafiği
+    top_vulnerabilities_graph = {
+        'data': [go.Bar(
+            x=[vuln['vulnerability_name'] for vuln in top_vulnerabilities_data],
+            y=[vuln['count'] for vuln in top_vulnerabilities_data],
+            marker_color=['#e74c3c' if vuln['severity'] == 4 else
+                          '#e67e22' if vuln['severity'] == 3 else
+                          '#f1c40f' if vuln['severity'] == 2 else
+                          '#2ecc71' if vuln['severity'] == 1 else
+                          '#3498db' for vuln in top_vulnerabilities_data]
+        )],
+        'layout': go.Layout(
+            title='En Çok Görülen 10 Zafiyet',
+            xaxis={'title': 'Zafiyet Adı', 'tickangle': 45},
+            yaxis={'title': 'Sayı'},
+            margin={'l': 50, 'r': 50, 't': 50, 'b': 100},
+            height=400,
+            paper_bgcolor='#2c3e50',
+            plot_bgcolor='#2c3e50',
+            font=dict(color='white')
+        )
+    }
+
+    # Port kullanım grafiği
+    port_usage_graph = {
+        'data': [go.Bar(
+            x=[port['port'] for port in port_usage_data],
+            y=[port['count'] for port in port_usage_data],
+            marker_color='#3498db'
+        )],
+        'layout': go.Layout(
+            title='En Çok Kullanılan 10 Port',
+            xaxis={'title': 'Port'},
+            yaxis={'title': 'Sayı'},
+            margin={'l': 50, 'r': 50, 't': 50, 'b': 50},
+            height=400,
+            paper_bgcolor='#2c3e50',
+            plot_bgcolor='#2c3e50',
+            font=dict(color='white')
+        )
+    }
+
     return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
             top_vulnerabilities_table_data, top_vulnerabilities_graph, 
             port_usage_graph,
