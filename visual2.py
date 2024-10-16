@@ -668,13 +668,11 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
         severity = [int(clicked_severity)]
     
     if button_id == 'clicked-port' and clicked_port:
-        ip_address = None  # Reset IP address filter when port is clicked
-        vulnerability_name = f"Port {clicked_port}"  # Filter by port in vulnerability name
-        severity = None  # Reset severity filter when port is clicked
+        ip_address = None
+        vulnerability_name = f"Port {clicked_port}"
+        severity = None
 
     summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data = get_data(severity, scan_name, vulnerability_name, ip_address)
-    
-    #print("Summary Data:", summary_data)  # Debug için eklendi
     
     # Özet tablo verisi
     summary_table_data = [{
@@ -688,19 +686,6 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
         'total_low': row['total_low'],
         'total_info': row['total_info']
     } for row in summary_data]
-    
-    # Severity seçimine göre sıralama
-    if severity:
-        if 4 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_critical'], reverse=True)
-        elif 3 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_high'], reverse=True)
-        elif 2 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_medium'], reverse=True)
-        elif 1 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_low'], reverse=True)
-        elif 0 in severity:
-            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
     
     # Zafiyet dağılımı grafiği
     labels = ['Total', 'Critical', 'High', 'Medium', 'Low']
@@ -755,50 +740,6 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
         'count': row['count']
     } for row in top_vulnerabilities_data]
     
-    # Toplam zafiyet sayıları
-    severity_info = [
-        {"name": "Kritik", "color": "#e74c3c", "key": "total_critical", "value": 4},
-        {"name": "Yüksek", "color": "#e67e22", "key": "total_high", "value": 3},
-        {"name": "Orta", "color": "#f1c40f", "key": "total_medium", "value": 2},
-        {"name": "Düşük", "color": "#2ecc71", "key": "total_low", "value": 1},
-        {"name": "Bilgi", "color": "#3498db", "key": "total_info", "value": 0}
-    ]
-    
-    total_vulnerabilities = [
-        html.Div([
-            html.H4(info["name"], style={'color': info["color"], 'margin': '0', 'fontSize': '18px'}),
-            html.P(total_vulnerabilities_data[info["key"]], style={
-                'fontSize': '36px', 
-                'fontWeight': 'bold', 
-                'margin': '10px 0',
-                'color': info["color"]
-            })
-        ], style={
-            'textAlign': 'center', 
-            'backgroundColor': '#34495e', 
-            'padding': '15px', 
-            'borderRadius': '10px', 
-            'margin': '10px',
-            'minWidth': '120px',
-            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
-            'cursor': 'pointer'
-        })
-        for info in severity_info
-    ]
-    
-    # Son güncelleme zamanını oluştur
-    last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-
-    # Tarama dropdown seçeneklerini oluştur
-    scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
-
-    # Veri kontrolü
-    if not top_vulnerabilities_data:
-        # Eğer veri yoksa, boş bir grafik döndür
-        top_vulnerabilities_graph = go.Figure()
-        top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
-        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity if severity is not None else dash.no_update
-
     # En çok görülen 10 zafiyet daire grafiği
     top_vulnerabilities_graph = go.Figure(
         go.Sunburst(
@@ -858,13 +799,62 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
         height=400,
     )
 
-    return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
-            top_vulnerabilities_table_data, top_vulnerabilities_graph, 
-            port_usage_graph,
-            total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
-            total_vulnerabilities[3], total_vulnerabilities[4], 
-            last_updated, scan_options, 
-            severity if button_id != 'clicked-port' else None)
+    # Toplam zafiyet sayıları
+    severity_info = [
+        {"name": "Kritik", "color": "#e74c3c", "key": "total_critical", "value": 4},
+        {"name": "Yüksek", "color": "#e67e22", "key": "total_high", "value": 3},
+        {"name": "Orta", "color": "#f1c40f", "key": "total_medium", "value": 2},
+        {"name": "Düşük", "color": "#2ecc71", "key": "total_low", "value": 1},
+        {"name": "Bilgi", "color": "#3498db", "key": "total_info", "value": 0}
+    ]
+    
+    total_vulnerabilities = [
+        html.Div([
+            html.H4(info["name"], style={'color': info["color"], 'margin': '0', 'fontSize': '18px'}),
+            html.P(total_vulnerabilities_data[info["key"]], style={
+                'fontSize': '36px', 
+                'fontWeight': 'bold', 
+                'margin': '10px 0',
+                'color': info["color"]
+            })
+        ], style={
+            'textAlign': 'center', 
+            'backgroundColor': '#34495e', 
+            'padding': '15px', 
+            'borderRadius': '10px', 
+            'margin': '10px',
+            'minWidth': '120px',
+            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
+            'cursor': 'pointer'
+        })
+        for info in severity_info
+    ]
+    
+    # Son güncelleme zamanını oluştur
+    last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+    # Tarama dropdown seçeneklerini oluştur
+    scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
+
+    # Severity dropdown değeri
+    new_severity = severity if button_id != 'clicked-port' else None
+
+    return (
+        summary_table_data,
+        vulnerability_distribution,
+        vulnerability_table_data,
+        top_vulnerabilities_table_data,
+        top_vulnerabilities_graph,
+        port_usage_graph,
+        total_vulnerabilities[0],
+        total_vulnerabilities[1],
+        total_vulnerabilities[2],
+        total_vulnerabilities[3],
+        total_vulnerabilities[4],
+        last_updated,
+        scan_options,
+        new_severity
+    )
 
 # Combine the two callbacks into one
 @app.callback(
