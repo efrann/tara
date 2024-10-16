@@ -832,7 +832,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
     total_vulnerabilities = [
         html.Div([
             html.H4(info["name"], style={'color': info["color"], 'margin': '0', 'fontSize': '18px'}),
-            html.P(total_vulnerabilities_data[info["key"]], style={
+            html.P(values[i] if i < 4 else total_vulnerabilities_data[info["key"]], style={
                 'fontSize': '36px', 
                 'fontWeight': 'bold', 
                 'margin': '10px 0',
@@ -848,7 +848,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
             'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
             'cursor': 'pointer'
         })
-        for info in severity_info
+        for i, info in enumerate(severity_info)
     ]
     
     # Son güncelleme zamanını oluştur
