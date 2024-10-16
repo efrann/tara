@@ -670,6 +670,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
     if button_id == 'clicked-port' and clicked_port:
         ip_address = None  # Reset IP address filter when port is clicked
         vulnerability_name = f"Port {clicked_port}"  # Filter by port in vulnerability name
+        severity = None  # Reset severity filter when port is clicked
 
     summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data = get_data(severity, scan_name, vulnerability_name, ip_address)
     
@@ -862,7 +863,8 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
             port_usage_graph,
             total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
             total_vulnerabilities[3], total_vulnerabilities[4], 
-            last_updated, scan_options, severity if severity is not None else dash.no_update)
+            last_updated, scan_options, 
+            severity if button_id != 'clicked-port' else None)
 
 # Combine the two callbacks into one
 @app.callback(
