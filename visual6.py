@@ -168,6 +168,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             s.name AS scan_name,
             h.host_ip,
             COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
+            p.severity,
             CASE 
                 WHEN p.severity = 4 THEN 'Kritik'
                 WHEN p.severity = 3 THEN 'Yüksek'
@@ -175,7 +176,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 WHEN p.severity = 1 THEN 'Düşük'
                 WHEN p.severity = 0 THEN 'Bilgi'
                 ELSE 'Bilinmeyen'
-            END AS severity,
+            END AS severity_text,
             p.family AS plugin_family,
             vo.port,
             FROM_UNIXTIME(sr.scan_start) AS scan_date
@@ -199,7 +200,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             )
         {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition} {port_condition}
         ORDER BY 
-            sr.scan_start DESC, p.severity DESC
+            p.severity DESC, sr.scan_start DESC
         LIMIT 1000
         """
         
@@ -715,6 +716,9 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         severity = [int(clicked_severity)]
 
     summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
+    
+    # Detaylı zafiyet listesini severity'ye göre sırala
+    detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
     
     #print("Summary Data:", summary_data)  # Debug için eklendi
     
