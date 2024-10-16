@@ -205,7 +205,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                                   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
                 row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y")
 
-        # En çok g��rülen 10 zafiyet sorgusu
+        # En çok görülen 10 zafiyet sorgusu
         top_vulnerabilities_query = f"""
         SELECT 
             f.name AS folder_name,
@@ -258,9 +258,9 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             scan_run sr ON s.scan_id = sr.scan_id
         JOIN
             host h ON sr.scan_run_id = h.scan_run_id
-        LEFT JOIN 
+        JOIN 
             host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-        LEFT JOIN 
+        JOIN 
             plugin p ON hv.plugin_id = p.plugin_id
         LEFT JOIN
             vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
@@ -768,17 +768,16 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
             summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
     
     # Zafiyet dağılımı grafiği
-    labels = ['Total', 'Critical', 'High', 'Medium', 'Low', 'Info']
-    parents = ['', 'Total', 'Total', 'Total', 'Total', 'Total']
+    labels = ['Total', 'Critical', 'High', 'Medium', 'Low']
+    parents = ['', 'Total', 'Total', 'Total', 'Total']
     values = [
-        sum(total_vulnerabilities_data.values()),
-        total_vulnerabilities_data['total_critical'],
-        total_vulnerabilities_data['total_high'],
-        total_vulnerabilities_data['total_medium'],
-        total_vulnerabilities_data['total_low'],
-        total_vulnerabilities_data['total_info']
+        sum(item['count'] for item in vulnerability_data if item['severity'] in [1, 2, 3, 4]),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 1)
     ]
-    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db']
+    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
 
     vulnerability_distribution = {
         'data': [go.Sunburst(
