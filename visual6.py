@@ -133,9 +133,9 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             scan_run sr ON s.scan_id = sr.scan_id
         JOIN
             host h ON sr.scan_run_id = h.scan_run_id
-        LEFT JOIN 
+        JOIN 
             host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-        LEFT JOIN 
+        JOIN 
             plugin p ON hv.plugin_id = p.plugin_id
         LEFT JOIN
             vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
@@ -768,16 +768,18 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
             summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
     
     # Zafiyet dağılımı grafiği
-    labels = ['Total', 'Critical', 'High', 'Medium', 'Low']
-    parents = ['', 'Total', 'Total', 'Total', 'Total']
+    severity_counts = {item['severity']: item['count'] for item in vulnerability_data}
+    labels = ['Total', 'Critical', 'High', 'Medium', 'Low', 'Info']
+    parents = ['', 'Total', 'Total', 'Total', 'Total', 'Total']
     values = [
-        sum(item['count'] for item in vulnerability_data if item['severity'] in [1, 2, 3, 4]),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 1)
+        sum(severity_counts.get(i, 0) for i in range(5)),
+        severity_counts.get(4, 0),
+        severity_counts.get(3, 0),
+        severity_counts.get(2, 0),
+        severity_counts.get(1, 0),
+        severity_counts.get(0, 0)
     ]
-    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
+    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db']
 
     vulnerability_distribution = {
         'data': [go.Sunburst(
@@ -832,7 +834,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
     total_vulnerabilities = [
         html.Div([
             html.H4(info["name"], style={'color': info["color"], 'margin': '0', 'fontSize': '18px'}),
-            html.P(values[i] if i < 4 else total_vulnerabilities_data[info["key"]], style={
+            html.P(severity_counts.get(info["value"], 0), style={
                 'fontSize': '36px', 
                 'fontWeight': 'bold', 
                 'margin': '10px 0',
@@ -848,7 +850,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
             'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
             'cursor': 'pointer'
         })
-        for i, info in enumerate(severity_info)
+        for info in severity_info
     ]
     
     # Son güncelleme zamanını oluştur
