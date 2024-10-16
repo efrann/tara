@@ -17,15 +17,15 @@ db = pymysql.connect(
 
 # Verileri çekme fonksiyonu
 def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=None):
-    # Her sorgu öncesi yeni bir bağlantı oluştur
-    db = pymysql.connect(
-        host="localhost",
-        user="root",
-        password="Nessus_Report123*-",
-        database="nessusdb"
-    )
-    
     try:
+        # Her sorgu öncesi yeni bir bağlantı oluştur
+        db = pymysql.connect(
+            host="localhost",
+            user="root",
+            password="Nessus_Report123*-",
+            database="nessusdb"
+        )
+        
         with db.cursor(pymysql.cursors.DictCursor) as cursor:
             # Severity filtresi için WHERE koşulu
             severity_condition = ""
@@ -305,7 +305,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             port_usage_data = cursor.fetchall()
 
     finally:
-        db.close()  # Bağlantıyı kapat
+        if 'db' in locals() and db.open:
+            db.close()  # Bağlantıyı kapat
 
     return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data
 
@@ -663,7 +664,7 @@ app.layout = html.Div([
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals'),
      Input('clicked-severity', 'children'),
-     Input('clicked-port', 'children')],  # Yeni input
+     Input('clicked-port', 'children')],
     [State('severity-dropdown', 'value'),
      State('scan-dropdown', 'value'),
      State('vulnerability-name-input', 'value'),
@@ -810,78 +811,15 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
     # Tarama dropdown seçeneklerini oluştur
     scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
 
-    # Veri kontrolü
-    if not top_vulnerabilities_data:
-        # Eğer veri yoksa, boş bir grafik döndür
-        top_vulnerabilities_graph = go.Figure()
-        top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
-        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
-
-    # En çok görülen 10 zafiyet daire grafiği
-    top_vulnerabilities_graph = go.Figure(
-        go.Sunburst(
-            ids=['Most Occurent 10 Vulnerabilities'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
-            labels=['Most Occurent 10 Vulnerabilities'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
-            parents=[''] + ['Most Occurent 10 Vulnerabilities'] * len(top_vulnerabilities_data),
-            values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
-            branchvalues="total",
-            marker=dict(
-                colors=['#2c3e50'] + [
-                    '#e74c3c' if row['severity'] == 4 else
-                    '#e67e22' if row['severity'] == 3 else
-                    '#f1c40f' if row['severity'] == 2 else
-                    '#2ecc71' if row['severity'] == 1 else
-                    '#3498db' if row['severity'] == 0 else
-                    '#95a5a6' for row in top_vulnerabilities_data
-                ]
-            ),
-            textinfo='label',
-            hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
-            insidetextorientation='radial',
-            textfont=dict(size=10, color='white'),
-            customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
-        )
-    )
-
-    top_vulnerabilities_graph.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#34495e',
-        font=dict(color='white', size=14),
-        height=400,
-        showlegend=False,
-    )
-
-    # Port kullanım grafiği
-    port_usage_graph = go.Figure(
-        go.Bar(
-            x=[str(row['port']) for row in port_usage_data],
-            y=[row['count'] for row in port_usage_data],
-            marker_color='#3498db',
-            text=[row['count'] for row in port_usage_data],
-            textposition='auto',
-            hoverinfo='text',
-            hovertext=[f"Port: {row['port']}<br>Kullanım: {row['count']}" for row in port_usage_data],
-        )
-    )
-
-    port_usage_graph.update_layout(
-        title='En Çok Kullanılan 10 Port',
-        xaxis_title='Port Numarası',
-        yaxis_title='Kullanım Sayısı',
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#34495e',
-        font=dict(color='white'),
-        margin=dict(l=50, r=50, t=50, b=50),
-        height=400,
-    )
+    # Severity değerini güncelle
+    new_severity = severity if severity is not None else []
 
     return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
             top_vulnerabilities_table_data, top_vulnerabilities_graph, 
             port_usage_graph,
             total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
             total_vulnerabilities[3], total_vulnerabilities[4], 
-            last_updated, scan_options, severity)
+            last_updated, scan_options, new_severity)
 
 # Combine the two callbacks into one
 @app.callback(
