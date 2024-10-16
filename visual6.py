@@ -652,7 +652,6 @@ app.layout = html.Div([
 @app.callback(
     [Output('summary-table', 'data'),
      Output('vulnerability-distribution', 'figure'),
-     Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
      Output('top-vulnerabilities-graph', 'figure'),
      Output('top-ports-graph', 'figure'),  # Yeni çıktı
@@ -892,10 +891,8 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         showlegend=False,
     )
 
-    return (summary_table_data, vulnerability_distribution, detailed_vulnerability_data, 
-            top_vulnerabilities_table_data, top_vulnerabilities_graph, top_ports_graph,
-            total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
-            total_vulnerabilities[3], total_vulnerabilities[4], 
+    return (summary_table_data, vulnerability_distribution, top_vulnerabilities_table_data, top_vulnerabilities_graph, top_ports_graph,
+            total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], 
             last_updated, scan_options, severity)
 
 # Combine the two callbacks into one
@@ -967,17 +964,15 @@ def update_button_style(n_clicks):
 # Modal açma/kapama için callback
 @app.callback(
     [Output('modal', 'style'),
-     Output('vulnerability-table', 'data'),
      Output('vulnerability-table', 'style_data_conditional')],
     [Input('open-modal', 'n_clicks'),
      Input('close-modal', 'n_clicks')],
-    [State('modal', 'style'),
-     State('vulnerability-table', 'data')]
+    [State('modal', 'style')]
 )
-def toggle_modal(open_clicks, close_clicks, modal_style, current_data):
+def toggle_modal(open_clicks, close_clicks, modal_style):
     ctx = dash.callback_context
     if not ctx.triggered:
-        return modal_style, dash.no_update, dash.no_update
+        return modal_style, dash.no_update
     else:
         button_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
@@ -1013,12 +1008,44 @@ def toggle_modal(open_clicks, close_clicks, modal_style, current_data):
             }
         ]
         
-        return modal_style, current_data, style_data_conditional
+        return modal_style, style_data_conditional
     elif button_id == 'close-modal' and close_clicks > 0:
         modal_style['display'] = 'none'
-        return modal_style, dash.no_update, dash.no_update
+        return modal_style, dash.no_update
     
-    return modal_style, dash.no_update, dash.no_update
+    return modal_style, dash.no_update
+
+# Yeni callback ekleyelim
+@app.callback(
+    Output('vulnerability-table', 'data'),
+    [Input('filter-button', 'n_clicks'),
+     Input('interval-component', 'n_intervals')],
+    [State('severity-dropdown', 'value'),
+     State('scan-dropdown', 'value'),
+     State('vulnerability-name-input', 'value'),
+     State('ip-address-input', 'value'),
+     State('port-input', 'value')]
+)
+def update_vulnerability_table(n_clicks, n_intervals, severity, scan_name, vulnerability_name, ip_address, port):
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
+    
+    # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
+    detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
+    for item in detailed_vulnerability_data:
+        if item['severity'] == 4:
+            item['severity_text'] = 'Kritik'
+        elif item['severity'] == 3:
+            item['severity_text'] = 'Yüksek'
+        elif item['severity'] == 2:
+            item['severity_text'] = 'Orta'
+        elif item['severity'] == 1:
+            item['severity_text'] = 'Düşük'
+        elif item['severity'] == 0:
+            item['severity_text'] = 'Bilgi'
+        else:
+            item['severity_text'] = 'Bilinmeyen'
+    
+    return detailed_vulnerability_data
 
 if __name__ == '__main__':
     app.run_server(debug=True)
