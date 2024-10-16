@@ -6,8 +6,6 @@ import pandas as pd
 import pymysql
 from datetime import datetime, timedelta
 import math
-import dash_bootstrap_components as dbc
-from dash.exceptions import PreventUpdate
 
 # MySQL bağlantısı
 db = pymysql.connect(
@@ -325,10 +323,9 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
 
     return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data
 
-# Dash uygulamasını bootstrap teması ile başlatalım
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
+# Dash uygulaması
+app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
 
-# Ana sayfa düzeni
 app.layout = html.Div([
     # Header
     html.Div([
@@ -396,27 +393,16 @@ app.layout = html.Div([
                 style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
             ),
         ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
-        html.Div([
-            html.Button('Filtrele', id='filter-button', n_clicks=0, style={
-                'backgroundColor': '#3498db',
-                'color': 'white',
-                'border': 'none',
-                'padding': '10px 20px',
-                'borderRadius': '5px',
-                'cursor': 'pointer',
-                'transition': 'background-color 0.3s',
-                'marginRight': '10px',  # Add some space between buttons
-            }),
-            html.Button('Detaylı Zafiyet Listesi', id="open-modal-button", n_clicks=0, style={
-                'backgroundColor': '#2ecc71',
-                'color': 'white',
-                'border': 'none',
-                'padding': '10px 20px',
-                'borderRadius': '5px',
-                'cursor': 'pointer',
-                'transition': 'background-color 0.3s',
-            }),
-        ], style={'marginTop': '25px', 'display': 'flex', 'justifyContent': 'flex-end'}),
+        html.Button('Filtrele', id='filter-button', n_clicks=0, style={
+            'marginTop': '25px',
+            'backgroundColor': '#3498db',
+            'color': 'white',
+            'border': 'none',
+            'padding': '10px 20px',
+            'borderRadius': '5px',
+            'cursor': 'pointer',
+            'transition': 'background-color 0.3s',
+        }),
     ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'marginTop': '20px', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
     # Total Vulnerabilities
@@ -596,77 +582,116 @@ app.layout = html.Div([
         ], className="six columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
-    # Modal (pop-up) bileşeni
-    dbc.Modal([
-        dbc.ModalHeader("Detaylı Zafiyet Listesi"),
-        dbc.ModalBody([
-            dash_table.DataTable(
-                id='vulnerability-table',
-                columns=[
-                    {"name": "Tarama Adı", "id": "scan_name"},
-                    {"name": "Host IP", "id": "host_ip"},
-                    {"name": "Zafiyet Adı", "id": "vulnerability_name"},
-                    {"name": "Önem Derecesi", "id": "severity"},
-                    {"name": "Plugin Ailesi", "id": "plugin_family"},
-                    {"name": "Port", "id": "port"},
-                    {"name": "Tarama Tarihi", "id": "scan_date"}
-                ],
-                style_table={'height': '400px', 'overflowY': 'auto'},
-                style_cell={
-                    'backgroundColor': '#34495e',
-                    'color': '#ecf0f1',
-                    'border': '1px solid #2c3e50',
-                    'textAlign': 'left',
-                    'padding': '10px',
-                    'whiteSpace': 'normal',
-                    'height': 'auto',
-                },
-                style_header={
-                    'backgroundColor': '#2c3e50',
-                    'fontWeight': 'bold',
-                    'border': '1px solid #34495e',
-                    'color': '#3498db',
-                },
-                style_data_conditional=[
-                    {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Kritik"'},
-                        'backgroundColor': 'rgba(231, 76, 60, 0.1)',
-                        'color': '#e74c3c',
-                        'fontWeight': 'bold',
+    # Detaylı Zafiyet Listesi Butonu
+    html.Div([
+        html.Button('Detaylı Zafiyet Listesi', id='open-modal', n_clicks=0, style={
+            'backgroundColor': '#3498db',
+            'color': 'white',
+            'border': 'none',
+            'padding': '10px 20px',
+            'borderRadius': '5px',
+            'cursor': 'pointer',
+            'transition': 'background-color 0.3s',
+            'margin': '20px auto',
+            'display': 'block'
+        }),
+    ]),
+
+    # Modal (Pop-up) için div
+    html.Div([
+        html.Div([
+            html.Div([
+                html.H3("Detaylı Zafiyet Listesi", style={
+                    'textAlign': 'center', 
+                    'color': '#ecf0f1', 
+                    'backgroundColor': '#34495e', 
+                    'padding': '10px', 
+                    'marginBottom': '20px',
+                    'borderRadius': '5px',
+                }),
+                dash_table.DataTable(
+                    id='vulnerability-table',
+                    columns=[
+                        {"name": "Tarama Adı", "id": "scan_name"},
+                        {"name": "Host IP", "id": "host_ip"},
+                        {"name": "Zafiyet Adı", "id": "vulnerability_name"},
+                        {"name": "Önem Derecesi", "id": "severity"},
+                        {"name": "Plugin Ailesi", "id": "plugin_family"},
+                        {"name": "Port", "id": "port"},
+                        {"name": "Tarama Tarihi", "id": "scan_date"}
+                    ],
+                    style_table={'height': '400px', 'overflowY': 'auto'},
+                    style_cell={
+                        'backgroundColor': '#34495e',
+                        'color': '#ecf0f1',
+                        'border': '1px solid #2c3e50',
+                        'textAlign': 'left',
+                        'padding': '10px',
+                        'whiteSpace': 'normal',
+                        'height': 'auto',
                     },
-                    {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Yüksek"'},
-                        'backgroundColor': 'rgba(230, 126, 34, 0.1)',
-                        'color': '#e67e22',
+                    style_header={
+                        'backgroundColor': '#2c3e50',
                         'fontWeight': 'bold',
-                    },
-                    {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Orta"'},
-                        'backgroundColor': 'rgba(241, 196, 15, 0.1)',
-                        'color': '#f1c40f',
-                        'fontWeight': 'bold',
-                    },
-                    {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Düşük"'},
-                        'backgroundColor': 'rgba(46, 204, 113, 0.1)',
-                        'color': '#2ecc71',
-                        'fontWeight': 'bold',
-                    },
-                    {
-                        'if': {'column_id': 'severity', 'filter_query': '{severity} = "Bilgi"'},
-                        'backgroundColor': 'rgba(52, 152, 219, 0.1)',
+                        'border': '1px solid #34495e',
                         'color': '#3498db',
-                        'fontWeight': 'bold',
-                    }
-                ],
-                page_size=10,
-                page_current=0,
-            )
-        ]),
-        dbc.ModalFooter(
-            dbc.Button("Kapat", id="close-modal-button", className="ml-auto")
-        ),
-    ], id="modal", size="xl", is_open=False),
+                    },
+                    style_data_conditional=[
+                        {
+                            'if': {'column_id': 'severity', 'filter_query': '{severity} = "Kritik"'},
+                            'backgroundColor': 'rgba(231, 76, 60, 0.1)',
+                            'color': '#e74c3c',
+                            'fontWeight': 'bold',
+                        },
+                        {
+                            'if': {'column_id': 'severity', 'filter_query': '{severity} = "Yüksek"'},
+                            'backgroundColor': 'rgba(230, 126, 34, 0.1)',
+                            'color': '#e67e22',
+                            'fontWeight': 'bold',
+                        },
+                        {
+                            'if': {'column_id': 'severity', 'filter_query': '{severity} = "Orta"'},
+                            'backgroundColor': 'rgba(241, 196, 15, 0.1)',
+                            'color': '#f1c40f',
+                            'fontWeight': 'bold',
+                        },
+                        {
+                            'if': {'column_id': 'severity', 'filter_query': '{severity} = "Düşük"'},
+                            'backgroundColor': 'rgba(46, 204, 113, 0.1)',
+                            'color': '#2ecc71',
+                            'fontWeight': 'bold',
+                        },
+                        {
+                            'if': {'column_id': 'severity', 'filter_query': '{severity} = "Bilgi"'},
+                            'backgroundColor': 'rgba(52, 152, 219, 0.1)',
+                            'color': '#3498db',
+                            'fontWeight': 'bold',
+                        }
+                    ],
+                ),
+                html.Button('Kapat', id='close-modal', n_clicks=0, style={
+                    'backgroundColor': '#e74c3c',
+                    'color': 'white',
+                    'border': 'none',
+                    'padding': '10px 20px',
+                    'borderRadius': '5px',
+                    'cursor': 'pointer',
+                    'transition': 'background-color 0.3s',
+                    'margin': '20px auto',
+                    'display': 'block'
+                }),
+            ], style={
+                'backgroundColor': '#2c3e50',
+                'padding': '20px',
+                'borderRadius': '10px',
+                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
+                'maxWidth': '90%',
+                'margin': '50px auto',
+                'maxHeight': '80vh',
+                'overflowY': 'auto'
+            })
+        ], id='modal', style={'display': 'none', 'position': 'fixed', 'zIndex': '1000', 'left': '0', 'top': '0', 'width': '100%', 'height': '100%', 'overflow': 'auto', 'backgroundColor': 'rgba(0,0,0,0.4)'})
+    ]),
 
     dcc.Interval(
         id='interval-component',
@@ -678,25 +703,13 @@ app.layout = html.Div([
     html.Div(id='clicked-severity', style={'display': 'none'}),
 ])
 
-# Modal'ı açma ve kapama için callback
-@app.callback(
-    Output("modal", "is_open"),
-    [Input("open-modal-button", "n_clicks"), Input("close-modal-button", "n_clicks")],
-    [State("modal", "is_open")],
-)
-def toggle_modal(n1, n2, is_open):
-    if n1 or n2:
-        return not is_open
-    return is_open
-
-# Birleştirilmiş callback
 @app.callback(
     [Output('summary-table', 'data'),
      Output('vulnerability-distribution', 'figure'),
      Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
      Output('top-vulnerabilities-graph', 'figure'),
-     Output('top-ports-graph', 'figure'),
+     Output('top-ports-graph', 'figure'),  # Yeni çıktı
      Output('severity-4', 'children'),
      Output('severity-3', 'children'),
      Output('severity-2', 'children'),
@@ -707,60 +720,19 @@ def toggle_modal(n1, n2, is_open):
      Output('severity-dropdown', 'value')],
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals'),
-     Input('clicked-severity', 'children'),
-     Input("open-modal-button", "n_clicks"),
-     Input('vulnerability-table', "page_current"),
-     Input('vulnerability-table', "page_size")],
+     Input('clicked-severity', 'children')],
     [State('severity-dropdown', 'value'),
      State('scan-dropdown', 'value'),
      State('vulnerability-name-input', 'value'),
      State('ip-address-input', 'value'),
      State('port-input', 'value')]
 )
-def update_all_data(n_clicks, n_intervals, clicked_severity, open_modal_clicks, page_current, page_size, severity, scan_name, vulnerability_name, ip_address, port):
+def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vulnerability_name, ip_address, port):
     ctx = dash.callback_context
     if not ctx.triggered:
-        raise PreventUpdate
-    
-    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    
-    # Veri çekme
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
-    
-    # Sayfalandırma için veri hazırlama
-    vulnerability_table_data = detailed_vulnerability_data[page_current*page_size:(page_current+ 1)*page_size]
-    
-    # Diğer veri işleme ve grafik oluşturma işlemleri
-    summary_table_data = ...  # Özet tablo verilerini hazırla
-    vulnerability_distribution = ...  # Zafiyet dağılımı grafiğini oluştur
-    top_vulnerabilities_graph = ...  # En çok görülen 10 zafiyet grafiğini oluştur
-    top_ports_graph = ...  # En çok kullanılan 10 port grafiğini oluştur
-    
-    last_updated = ...  # Son güncelleme zamanını hazırla
-    scan_options = ...  # Tarama seçeneklerini hazırla
-    
-    # Eğer sadece tablo sayfalandırması değiştiyse, sadece tablo verilerini güncelle
-    if trigger_id == 'vulnerability-table':
-        raise PreventUpdate
-    
-    return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
-            top_vulnerabilities_data, top_vulnerabilities_graph, top_ports_graph,
-            total_vulnerabilities_data[0], total_vulnerabilities_data[1], total_vulnerabilities_data[2], 
-            total_vulnerabilities_data[3], total_vulnerabilities_data[4], 
-            last_updated, scan_options, severity)
-
-if __name__ == '__main__':
-    app.run_server(debug=True)
-def update_data(n_clicks, n_intervals, clicked_severity, open_modal_clicks, severity, scan_name, vulnerability_name, ip_address, port):
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        raise PreventUpdate
-    
-    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    
-    # Eğer modal açma butonu tıklandıysa ve başka bir güncelleme yoksa, sadece mevcut verileri döndür
-    if button_id == "open-modal-button" and not (n_clicks or n_intervals or clicked_severity):
-        raise PreventUpdate
+        button_id = 'No clicks yet'
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
     if button_id == 'clicked-severity' and clicked_severity:
         severity = [int(clicked_severity)]
@@ -1002,37 +974,54 @@ def update_clicked_severity(*args):
 
 # Add a new callback for button hover effect
 @app.callback(
-    [Output('filter-button', 'style'),
-     Output('open-modal-button', 'style')],
-    [Input('filter-button', 'n_clicks'),
-     Input('open-modal-button', 'n_clicks')]
+    Output('filter-button', 'style'),
+    [Input('filter-button', 'n_clicks')]
 )
-def update_button_styles(filter_clicks, modal_clicks):
+def update_button_style(n_clicks):
+    changed_id = [p['prop_id'] for p in callback_context.triggered][0]
+    if 'filter-button' in changed_id:
+        return {
+            'marginTop': '25px',
+            'backgroundColor': '#2980b9',
+            'color': 'white',
+            'border': 'none',
+            'padding': '10px 20px',
+            'borderRadius': '5px',
+            'cursor': 'pointer',
+            'transition': 'background-color 0.3s',
+        }
+    else:
+        return {
+            'marginTop': '25px',
+            'backgroundColor': '#3498db',
+            'color': 'white',
+            'border': 'none',
+            'padding': '10px 20px',
+            'borderRadius': '5px',
+            'cursor': 'pointer',
+            'transition': 'background-color 0.3s',
+        }
+
+# Modal açma/kapama için callback
+@app.callback(
+    Output('modal', 'style'),
+    [Input('open-modal', 'n_clicks'),
+     Input('close-modal', 'n_clicks')],
+    [State('modal', 'style')]
+)
+def toggle_modal(open_clicks, close_clicks, modal_style):
     ctx = dash.callback_context
-    button_id = ctx.triggered[0]['prop_id'].split('.')[0] if ctx.triggered else None
-
-    filter_style = {
-        'backgroundColor': '#2980b9' if button_id == 'filter-button' else '#3498db',
-        'color': 'white',
-        'border': 'none',
-        'padding': '10px 20px',
-        'borderRadius': '5px',
-        'cursor': 'pointer',
-        'transition': 'background-color 0.3s',
-        'marginRight': '10px',
-    }
-
-    modal_style = {
-        'backgroundColor': '#27ae60' if button_id == 'open-modal-button' else '#2ecc71',
-        'color': 'white',
-        'border': 'none',
-        'padding': '10px 20px',
-        'borderRadius': '5px',
-        'cursor': 'pointer',
-        'transition': 'background-color 0.3s',
-    }
-
-    return filter_style, modal_style
+    if not ctx.triggered:
+        return modal_style
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if button_id == 'open-modal' and open_clicks > 0:
+        modal_style['display'] = 'block'
+    elif button_id == 'close-modal' and close_clicks > 0:
+        modal_style['display'] = 'none'
+    
+    return modal_style
 
 if __name__ == '__main__':
     app.run_server(debug=True)
