@@ -15,6 +15,20 @@ db = pymysql.connect(
     database="nessusdb"
 )
 
+def parse_port_input(port_input):
+    if not port_input:
+        return ""
+    
+    ports = []
+    for part in port_input.split(','):
+        if '-' in part:
+            start, end = map(int, part.split('-'))
+            ports.extend(range(start, end + 1))
+        else:
+            ports.append(int(part))
+    
+    return f"AND vo.port IN ({','.join(map(str, ports))})"
+
 # Verileri çekme fonksiyonu
 def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=None, port=None):
     with db.cursor(pymysql.cursors.DictCursor) as cursor:
@@ -39,9 +53,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             ip_address_condition = f"AND h.host_ip LIKE '%{ip_address}%'"
 
         # Port filtresi için WHERE koşulu
-        port_condition = ""
-        if port:
-            port_condition = f"AND vo.port LIKE '%{port}%'"
+        port_condition = parse_port_input(port)
 
         # Özet bilgi sorgusu
         summary_query = f"""
@@ -67,6 +79,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
         LEFT JOIN 
             plugin p ON hv.plugin_id = p.plugin_id
+        LEFT JOIN
+            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
         WHERE 
             sr.scan_run_id = (
                 SELECT MAX(scan_run_id) 
@@ -123,6 +137,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
         LEFT JOIN 
             plugin p ON hv.plugin_id = p.plugin_id
+        LEFT JOIN
+            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
         WHERE 
             sr.scan_run_id = (
                 SELECT MAX(scan_run_id) 
@@ -209,6 +225,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             plugin p ON hv.plugin_id = p.plugin_id
         JOIN
             folder f ON s.folder_id = f.folder_id
+        LEFT JOIN
+            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
         WHERE 
             sr.scan_run_id = (
                 SELECT MAX(scan_run_id) 
@@ -244,6 +262,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
         LEFT JOIN 
             plugin p ON hv.plugin_id = p.plugin_id
+        LEFT JOIN
+            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
         WHERE 
             sr.scan_run_id = (
                 SELECT MAX(scan_run_id) 
