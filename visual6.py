@@ -205,7 +205,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                                   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
                 row['scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y")
 
-        # En çok görülen 10 zafiyet sorgusu
+        # En çok g��rülen 10 zafiyet sorgusu
         top_vulnerabilities_query = f"""
         SELECT 
             f.name AS folder_name,
@@ -768,16 +768,17 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
             summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
     
     # Zafiyet dağılımı grafiği
-    labels = ['Total', 'Critical', 'High', 'Medium', 'Low']
-    parents = ['', 'Total', 'Total', 'Total', 'Total']
+    labels = ['Total', 'Critical', 'High', 'Medium', 'Low', 'Info']
+    parents = ['', 'Total', 'Total', 'Total', 'Total', 'Total']
     values = [
-        sum(item['count'] for item in vulnerability_data if item['severity'] in [1, 2, 3, 4]),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
-        sum(item['count'] for item in vulnerability_data if item['severity'] == 1)
+        sum(total_vulnerabilities_data.values()),
+        total_vulnerabilities_data['total_critical'],
+        total_vulnerabilities_data['total_high'],
+        total_vulnerabilities_data['total_medium'],
+        total_vulnerabilities_data['total_low'],
+        total_vulnerabilities_data['total_info']
     ]
-    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
+    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db']
 
     vulnerability_distribution = {
         'data': [go.Sunburst(
