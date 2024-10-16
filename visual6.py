@@ -122,7 +122,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                                   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
                 row['last_scan_date'] = date.strftime(f"%d {turkish_months[date.month - 1]} %Y %H:%M")
         
-        # Zafiyet dağılımı sorgusu
+        # Zafiyet dağılımı sorgusu (bu sorgu grafik için kullanılıyor)
         vulnerability_query = f"""
         SELECT 
             p.severity,
@@ -152,7 +152,16 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
         
         cursor.execute(vulnerability_query)
         vulnerability_data = cursor.fetchall()
-        
+
+        # Toplam zafiyet sayıları sorgusu (grafik verilerini kullanarak)
+        total_vulnerabilities_data = {
+            'total_critical': next((item['count'] for item in vulnerability_data if item['severity'] == 4), 0),
+            'total_high': next((item['count'] for item in vulnerability_data if item['severity'] == 3), 0),
+            'total_medium': next((item['count'] for item in vulnerability_data if item['severity'] == 2), 0),
+            'total_low': next((item['count'] for item in vulnerability_data if item['severity'] == 1), 0),
+            'total_info': next((item['count'] for item in vulnerability_data if item['severity'] == 0), 0)
+        }
+
         # Detaylı zafiyet listesi sorgusu
         detailed_vulnerability_query = f"""
         SELECT 
@@ -243,38 +252,6 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
         
         cursor.execute(top_vulnerabilities_query)
         top_vulnerabilities_data = cursor.fetchall()
-
-        # Toplam zafiyet sayıları sorgusu
-        total_vulnerabilities_query = f"""
-        SELECT 
-            SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) as total_critical,
-            SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) as total_high,
-            SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) as total_medium,
-            SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) as total_low,
-            SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) as total_info
-        FROM 
-            scan s
-        JOIN 
-            scan_run sr ON s.scan_id = sr.scan_id
-        JOIN
-            host h ON sr.scan_run_id = h.scan_run_id
-        JOIN 
-            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-        JOIN 
-            plugin p ON hv.plugin_id = p.plugin_id
-        LEFT JOIN
-            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
-        WHERE 
-            sr.scan_run_id = (
-                SELECT MAX(scan_run_id) 
-                FROM scan_run 
-                WHERE scan_id = s.scan_id
-            )
-        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition} {port_condition}
-        """
-        
-        cursor.execute(total_vulnerabilities_query)
-        total_vulnerabilities_data = cursor.fetchone()
 
         # Mevcut taramaları çekmek için yeni bir sorgu ekleyelim
         scan_list_query = """
