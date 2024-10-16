@@ -356,6 +356,11 @@ app.layout = html.Div([
         html.Div([
             dcc.Graph(id='top-vulnerabilities-graph', style={'height': '400px'})
         ], className="six columns"),
+
+        # Yeni grafik için bir div ekleyin
+        html.Div([
+            dcc.Graph(id='selected-vulnerability-graph', style={'height': '400px', 'display': 'none'})
+        ], className="twelve columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
     # Tables
@@ -604,16 +609,19 @@ app.layout = html.Div([
      Output('severity-0', 'children'),
      Output('last-updated', 'children'),
      Output('scan-dropdown', 'options'),
-     Output('severity-dropdown', 'value')],
+     Output('severity-dropdown', 'value'),
+     Output('selected-vulnerability-graph', 'figure'),
+     Output('selected-vulnerability-graph', 'style')],
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals'),
-     Input('clicked-severity', 'children')],
+     Input('clicked-severity', 'children'),
+     Input('top-vulnerabilities-graph', 'clickData')],
     [State('severity-dropdown', 'value'),
      State('scan-dropdown', 'value'),
      State('vulnerability-name-input', 'value'),
      State('ip-address-input', 'value')]
 )
-def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vulnerability_name, ip_address):
+def update_data(n_clicks, n_intervals, clicked_severity, click_data, severity, scan_name, vulnerability_name, ip_address):
     ctx = dash.callback_context
     if not ctx.triggered:
         button_id = 'No clicks yet'
@@ -785,11 +793,51 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         showlegend=False,
     )
 
+    # Seçilen zafiyet için grafik
+    selected_vulnerability_graph = go.Figure()
+    selected_vulnerability_style = {'height': '400px', 'display': 'none'}
+
+    if button_id == 'top-vulnerabilities-graph' and click_data:
+        clicked_label = click_data['points'][0]['label']
+        if clicked_label != 'Most Occurent 10 Vulnerabilities':
+            selected_vulnerability = next((v for v in top_vulnerabilities_data if v['vulnerability_name'] == clicked_label), None)
+            if selected_vulnerability:
+                # Seçilen zafiyet için tarama ve klasör bazında dağılımı hesapla
+                distribution = {}
+                for row in detailed_vulnerability_data:
+                    if row['vulnerability_name'] == selected_vulnerability['vulnerability_name']:
+                        key = (row['scan_name'], row['folder_name'])
+                        distribution[key] = distribution.get(key, 0) + 1
+
+                # Grafik verilerini hazırla
+                labels = [f"{scan}<br>{folder}" for scan, folder in distribution.keys()]
+                values = list(distribution.values())
+
+                selected_vulnerability_graph = go.Figure(data=[go.Pie(
+                    labels=labels,
+                    values=values,
+                    textinfo='label+percent',
+                    insidetextorientation='radial',
+                    hole=.3
+                )])
+
+                selected_vulnerability_graph.update_layout(
+                    title=f"Distribution of '{selected_vulnerability['vulnerability_name']}'",
+                    margin=dict(l=20, r=20, t=40, b=20),
+                    paper_bgcolor='#2c3e50',
+                    plot_bgcolor='#34495e',
+                    font=dict(color='white', size=12),
+                    showlegend=False,
+                )
+
+                selected_vulnerability_style = {'height': '400px', 'display': 'block'}
+
     return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
             top_vulnerabilities_table_data, top_vulnerabilities_graph, 
             total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
             total_vulnerabilities[3], total_vulnerabilities[4], 
-            last_updated, scan_options, severity)
+            last_updated, scan_options, severity,
+            selected_vulnerability_graph, selected_vulnerability_style)
 
 # Combine the two callbacks into one
 @app.callback(
