@@ -16,7 +16,7 @@ db = pymysql.connect(
 )
 
 # Verileri çekme fonksiyonu
-def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=None):
+def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=None, port=None):
     with db.cursor(pymysql.cursors.DictCursor) as cursor:
         # Severity filtresi için WHERE koşulu
         severity_condition = ""
@@ -37,6 +37,11 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
         ip_address_condition = ""
         if ip_address:
             ip_address_condition = f"AND h.host_ip LIKE '%{ip_address}%'"
+
+        # Port filtresi için WHERE koşulu
+        port_condition = ""
+        if port:
+            port_condition = f"AND vo.port LIKE '%{port}%'"
 
         # Özet bilgi sorgusu
         summary_query = f"""
@@ -72,6 +77,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
         {scan_name_condition}
         {vulnerability_name_condition}
         {ip_address_condition}
+        {port_condition}
         GROUP BY 
             s.name, f.name
         """
@@ -123,7 +129,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition} {port_condition}
         GROUP BY 
             p.severity
         """
@@ -166,7 +172,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition} {port_condition}
         ORDER BY 
             sr.scan_start DESC, p.severity DESC
         LIMIT 1000
@@ -209,7 +215,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition} {port_condition}
         GROUP BY 
             f.name, s.name, p.plugin_id, p.name, p.severity
         ORDER BY 
@@ -244,7 +250,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
-        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
+        {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition} {port_condition}
         """
         
         cursor.execute(total_vulnerabilities_query)
@@ -260,42 +266,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
         cursor.execute(scan_list_query)
         scan_list = [row['name'] for row in cursor.fetchall()]
 
-        # Port kullanım sorgusu
-        port_usage_query = f"""
-        SELECT 
-            vo.port,
-            COUNT(*) as count
-        FROM 
-            scan s
-        JOIN 
-            scan_run sr ON s.scan_id = sr.scan_id
-        JOIN
-            host h ON sr.scan_run_id = h.scan_run_id
-        JOIN 
-            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-        JOIN 
-            plugin p ON hv.plugin_id = p.plugin_id
-        JOIN
-            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
-        WHERE 
-            sr.scan_run_id = (
-                SELECT MAX(scan_run_id) 
-                FROM scan_run 
-                WHERE scan_id = s.scan_id
-            )
-            AND p.family = 'Port scanners'
-            {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
-        GROUP BY 
-            vo.port
-        ORDER BY 
-            count DESC
-        LIMIT 10
-        """
-        
-        cursor.execute(port_usage_query)
-        port_usage_data = cursor.fetchall()
-
-    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data
+    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list
 
 # Dash uygulaması
 app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
@@ -358,6 +329,15 @@ app.layout = html.Div([
                 style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
             ),
         ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
+        html.Div([
+            html.Label("Port:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
+            dcc.Input(
+                id='port-input',
+                type='text',
+                placeholder="Port numarası girin...",
+                style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
+            ),
+        ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
         html.Button('Filtrele', id='filter-button', n_clicks=0, style={
             'marginTop': '25px',
             'backgroundColor': '#3498db',
@@ -386,15 +366,11 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             dcc.Graph(id='vulnerability-distribution', style={'height': '400px'})
-        ], className="four columns"),
+        ], className="six columns"),
 
         html.Div([
             dcc.Graph(id='top-vulnerabilities-graph', style={'height': '400px'})
-        ], className="four columns"),
-
-        html.Div([
-            dcc.Graph(id='port-usage-graph', style={'height': '400px'})
-        ], className="four columns"),
+        ], className="six columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
     # Tables
@@ -628,9 +604,6 @@ app.layout = html.Div([
 
     # Hidden div for storing clicked severity
     html.Div(id='clicked-severity', style={'display': 'none'}),
-
-    # Tıklanan port için gizli div
-    html.Div(id='clicked-port', style={'display': 'none'}),
 ])
 
 @app.callback(
@@ -639,7 +612,6 @@ app.layout = html.Div([
      Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
      Output('top-vulnerabilities-graph', 'figure'),
-     Output('port-usage-graph', 'figure'),
      Output('severity-4', 'children'),
      Output('severity-3', 'children'),
      Output('severity-2', 'children'),
@@ -650,14 +622,14 @@ app.layout = html.Div([
      Output('severity-dropdown', 'value')],
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals'),
-     Input('clicked-severity', 'children'),
-     Input('clicked-port', 'children')],  # Yeni input
+     Input('clicked-severity', 'children')],
     [State('severity-dropdown', 'value'),
      State('scan-dropdown', 'value'),
      State('vulnerability-name-input', 'value'),
-     State('ip-address-input', 'value')]
+     State('ip-address-input', 'value'),
+     State('port-input', 'value')]
 )
-def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity, scan_name, vulnerability_name, ip_address):
+def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vulnerability_name, ip_address, port):
     ctx = dash.callback_context
     if not ctx.triggered:
         button_id = 'No clicks yet'
@@ -666,12 +638,8 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
 
     if button_id == 'clicked-severity' and clicked_severity:
         severity = [int(clicked_severity)]
-    
-    if button_id == 'clicked-port' and clicked_port:
-        ip_address = None  # Reset IP address filter when port is clicked
-        vulnerability_name = f"Port {clicked_port}"  # Filter by port in vulnerability name
 
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data = get_data(severity, scan_name, vulnerability_name, ip_address)
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list = get_data(severity, scan_name, vulnerability_name, ip_address, port)
     
     #print("Summary Data:", summary_data)  # Debug için eklendi
     
@@ -833,33 +801,8 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
         showlegend=False,
     )
 
-    # Port kullanım grafiği
-    port_usage_graph = go.Figure(
-        go.Bar(
-            x=[str(row['port']) for row in port_usage_data],
-            y=[row['count'] for row in port_usage_data],
-            marker_color='#3498db',
-            text=[row['count'] for row in port_usage_data],
-            textposition='auto',
-            hoverinfo='text',
-            hovertext=[f"Port: {row['port']}<br>Kullanım: {row['count']}" for row in port_usage_data],
-        )
-    )
-
-    port_usage_graph.update_layout(
-        title='En Çok Kullanılan 10 Port',
-        xaxis_title='Port Numarası',
-        yaxis_title='Kullanım Sayısı',
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#34495e',
-        font=dict(color='white'),
-        margin=dict(l=50, r=50, t=50, b=50),
-        height=400,
-    )
-
     return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
             top_vulnerabilities_table_data, top_vulnerabilities_graph, 
-            port_usage_graph,
             total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
             total_vulnerabilities[3], total_vulnerabilities[4], 
             last_updated, scan_options, severity)
@@ -929,15 +872,6 @@ def update_button_style(n_clicks):
             'cursor': 'pointer',
             'transition': 'background-color 0.3s',
         }
-
-@app.callback(
-    Output('clicked-port', 'children'),
-    [Input('port-usage-graph', 'clickData')]
-)
-def update_clicked_port(clickData):
-    if clickData is not None:
-        return clickData['points'][0]['x']
-    return None
 
 if __name__ == '__main__':
     app.run_server(debug=True)
