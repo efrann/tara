@@ -628,6 +628,8 @@ def update_data(n_clicks, n_intervals, clicked_severity, click_data, severity, s
     else:
         button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
+    print(f"Triggered by: {button_id}")  # Debug için eklendi
+
     if button_id == 'clicked-severity' and clicked_severity:
         severity = [int(clicked_severity)]
 
@@ -798,9 +800,12 @@ def update_data(n_clicks, n_intervals, clicked_severity, click_data, severity, s
     selected_vulnerability_style = {'height': '400px', 'display': 'none'}
 
     if button_id == 'top-vulnerabilities-graph' and click_data:
+        print("Click data:", click_data)  # Debug için eklendi
         clicked_label = click_data['points'][0]['label']
+        print(f"Clicked label: {clicked_label}")  # Debug için eklendi
         if clicked_label != 'Most Occurent 10 Vulnerabilities':
             selected_vulnerability = next((v for v in top_vulnerabilities_data if v['vulnerability_name'] == clicked_label), None)
+            print(f"Selected vulnerability: {selected_vulnerability}")  # Debug için eklendi
             if selected_vulnerability:
                 # Seçilen zafiyet için tarama ve klasör bazında dağılımı hesapla
                 distribution = {}
@@ -808,6 +813,8 @@ def update_data(n_clicks, n_intervals, clicked_severity, click_data, severity, s
                     if row['vulnerability_name'] == selected_vulnerability['vulnerability_name']:
                         key = (row['scan_name'], row['folder_name'])
                         distribution[key] = distribution.get(key, 0) + 1
+
+                print(f"Distribution: {distribution}")  # Debug için eklendi
 
                 # Grafik verilerini hazırla
                 labels = [f"{scan}<br>{folder}" for scan, folder in distribution.keys()]
@@ -831,6 +838,9 @@ def update_data(n_clicks, n_intervals, clicked_severity, click_data, severity, s
                 )
 
                 selected_vulnerability_style = {'height': '400px', 'display': 'block'}
+
+    print(f"Selected vulnerability graph: {selected_vulnerability_graph}")  # Debug için eklendi
+    print(f"Selected vulnerability style: {selected_vulnerability_style}")  # Debug için eklendi
 
     return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
             top_vulnerabilities_table_data, top_vulnerabilities_graph, 
