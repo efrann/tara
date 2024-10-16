@@ -135,6 +135,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
         detailed_vulnerability_query = f"""
         SELECT 
             s.name AS scan_name,
+            f.name AS folder_name,  # Folder name eklendi
             h.host_ip,
             COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
             CASE 
@@ -150,6 +151,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             FROM_UNIXTIME(sr.scan_start) AS scan_date
         FROM 
             scan s
+        JOIN 
+            folder f ON s.folder_id = f.folder_id  # Folder tablosu ile join
         JOIN 
             scan_run sr ON s.scan_id = sr.scan_id
         JOIN 
@@ -810,34 +813,48 @@ def update_data(n_clicks, n_intervals, clicked_severity, click_data, severity, s
                 # Seçilen zafiyet için tarama ve klasör bazında dağılımı hesapla
                 distribution = {}
                 for row in detailed_vulnerability_data:
-                    if row['vulnerability_name'] == selected_vulnerability['vulnerability_name']:
-                        key = (row['scan_name'], row['folder_name'])
-                        distribution[key] = distribution.get(key, 0) + 1
+                    try:
+                        if row['vulnerability_name'] == selected_vulnerability['vulnerability_name']:
+                            key = (row['scan_name'], row.get('folder_name', 'Unknown'))  # folder_name yoksa 'Unknown' kullan
+                            distribution[key] = distribution.get(key, 0) + 1
+                    except KeyError as e:
+                        print(f"KeyError in row: {row}")  # Hata ayıklama için
+                        print(f"Error: {e}")
+                        continue
 
                 print(f"Distribution: {distribution}")  # Debug için eklendi
 
-                # Grafik verilerini hazırla
-                labels = [f"{scan}<br>{folder}" for scan, folder in distribution.keys()]
-                values = list(distribution.values())
+                if distribution:  # Dağılım boş değilse grafiği oluştur
+                    # Grafik verilerini hazırla
+                    labels = [f"{scan}<br>{folder}" for scan, folder in distribution.keys()]
+                    values = list(distribution.values())
 
-                selected_vulnerability_graph = go.Figure(data=[go.Pie(
-                    labels=labels,
-                    values=values,
-                    textinfo='label+percent',
-                    insidetextorientation='radial',
-                    hole=.3
-                )])
+                    selected_vulnerability_graph = go.Figure(data=[go.Pie(
+                        labels=labels,
+                        values=values,
+                        textinfo='label+percent',
+                        insidetextorientation='radial',
+                        hole=.3
+                    )])
 
-                selected_vulnerability_graph.update_layout(
-                    title=f"Distribution of '{selected_vulnerability['vulnerability_name']}'",
-                    margin=dict(l=20, r=20, t=40, b=20),
-                    paper_bgcolor='#2c3e50',
-                    plot_bgcolor='#34495e',
-                    font=dict(color='white', size=12),
-                    showlegend=False,
-                )
+                    selected_vulnerability_graph.update_layout(
+                        title=f"Distribution of '{selected_vulnerability['vulnerability_name']}'",
+                        margin=dict(l=20, r=20, t=40, b=20),
+                        paper_bgcolor='#2c3e50',
+                        plot_bgcolor='#34495e',
+                        font=dict(color='white', size=12),
+                        showlegend=False,
+                    )
 
-                selected_vulnerability_style = {'height': '400px', 'display': 'block'}
+                    selected_vulnerability_style = {'height': '400px', 'display': 'block'}
+                else:
+                    print("No distribution data available for the selected vulnerability")
+            else:
+                print("Selected vulnerability not found in top_vulnerabilities_data")
+        else:
+            print("Clicked on 'Most Occurent 10 Vulnerabilities', no action needed")
+    else:
+        print("Not triggered by top-vulnerabilities-graph click or no click data")
 
     print(f"Selected vulnerability graph: {selected_vulnerability_graph}")  # Debug için eklendi
     print(f"Selected vulnerability style: {selected_vulnerability_style}")  # Debug için eklendi
