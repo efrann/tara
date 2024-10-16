@@ -260,42 +260,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
         cursor.execute(scan_list_query)
         scan_list = [row['name'] for row in cursor.fetchall()]
 
-        # Port kullanım sorgusu
-        port_usage_query = f"""
-        SELECT 
-            vo.port,
-            COUNT(*) as count
-        FROM 
-            scan s
-        JOIN 
-            scan_run sr ON s.scan_id = sr.scan_id
-        JOIN
-            host h ON sr.scan_run_id = h.scan_run_id
-        JOIN 
-            host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-        JOIN 
-            plugin p ON hv.plugin_id = p.plugin_id
-        JOIN
-            vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
-        WHERE 
-            sr.scan_run_id = (
-                SELECT MAX(scan_run_id) 
-                FROM scan_run 
-                WHERE scan_id = s.scan_id
-            )
-            AND p.family = 'Port scanners'
-            {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition}
-        GROUP BY 
-            vo.port
-        ORDER BY 
-            count DESC
-        LIMIT 10
-        """
-        
-        cursor.execute(port_usage_query)
-        port_usage_data = cursor.fetchall()
-
-    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data
+    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list
 
 # Dash uygulaması
 app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
@@ -386,15 +351,11 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             dcc.Graph(id='vulnerability-distribution', style={'height': '400px'})
-        ], className="four columns"),
+        ], className="six columns"),
 
         html.Div([
             dcc.Graph(id='top-vulnerabilities-graph', style={'height': '400px'})
-        ], className="four columns"),
-
-        html.Div([
-            dcc.Graph(id='port-usage-graph', style={'height': '400px'})
-        ], className="four columns"),
+        ], className="six columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
     # Tables
@@ -547,7 +508,6 @@ app.layout = html.Div([
         ], className="six columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
-    # Detaylı zafiyet listesi için ayrı bir div
     html.Div([
         html.Div([
             html.H3("Detaylı Zafiyet Listesi", style={
@@ -629,17 +589,14 @@ app.layout = html.Div([
 
     # Hidden div for storing clicked severity
     html.Div(id='clicked-severity', style={'display': 'none'}),
-
-    # Tıklanan port için gizli div
-    html.Div(id='clicked-port', style={'display': 'none'}),
 ])
 
 @app.callback(
     [Output('summary-table', 'data'),
      Output('vulnerability-distribution', 'figure'),
+     Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
      Output('top-vulnerabilities-graph', 'figure'),
-     Output('port-usage-graph', 'figure'),
      Output('severity-4', 'children'),
      Output('severity-3', 'children'),
      Output('severity-2', 'children'),
@@ -665,8 +622,8 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
 
     if button_id == 'clicked-severity' and clicked_severity:
         severity = [int(clicked_severity)]
-    
-    summary_data, vulnerability_data, _, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data = get_data(severity, scan_name, vulnerability_name, ip_address)
+
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list = get_data(severity, scan_name, vulnerability_name, ip_address)
     
     #print("Summary Data:", summary_data)  # Debug için eklendi
     
@@ -729,6 +686,9 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         )
     }
 
+    # Detaylı zafiyet listesi
+    vulnerability_table_data = detailed_vulnerability_data
+    
     # En çok görülen 10 zafiyet
     severity_map = {
         4: 'Kritik',
@@ -788,7 +748,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         # Eğer veri yoksa, boş bir grafik döndür
         top_vulnerabilities_graph = go.Figure()
         top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
-        return summary_table_data, vulnerability_distribution, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
+        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
 
     # En çok görülen 10 zafiyet daire grafiği
     top_vulnerabilities_graph = go.Figure(
@@ -825,60 +785,11 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         showlegend=False,
     )
 
-    # Port kullanım grafiği
-    port_usage_graph = go.Figure(
-        go.Bar(
-            x=[str(row['port']) for row in port_usage_data],
-            y=[row['count'] for row in port_usage_data],
-            marker_color='#3498db',
-            text=[row['count'] for row in port_usage_data],
-            textposition='auto',
-            hoverinfo='text',
-            hovertext=[f"Port: {row['port']}<br>Kullanım: {row['count']}" for row in port_usage_data],
-        )
-    )
-
-    port_usage_graph.update_layout(
-        title='En Çok Kullanılan 10 Port',
-        xaxis_title='Port Numarası',
-        yaxis_title='Kullanım Sayısı',
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#34495e',
-        font=dict(color='white'),
-        margin=dict(l=50, r=50, t=50, b=50),
-        height=400,
-    )
-
-    return (summary_table_data, vulnerability_distribution, 
+    return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
             top_vulnerabilities_table_data, top_vulnerabilities_graph, 
-            port_usage_graph,
             total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
             total_vulnerabilities[3], total_vulnerabilities[4], 
             last_updated, scan_options, severity)
-
-@app.callback(
-    Output('vulnerability-table', 'data'),
-    [Input('filter-button', 'n_clicks'),
-     Input('interval-component', 'n_intervals'),
-     Input('clicked-port', 'children')],
-    [State('severity-dropdown', 'value'),
-     State('scan-dropdown', 'value'),
-     State('vulnerability-name-input', 'value'),
-     State('ip-address-input', 'value')]
-)
-def update_vulnerability_table(n_clicks, n_intervals, clicked_port, severity, scan_name, vulnerability_name, ip_address):
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        button_id = 'No clicks yet'
-    else:
-        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-
-    if button_id == 'clicked-port' and clicked_port:
-        vulnerability_name = f"Port {clicked_port}"
-
-    _, _, detailed_vulnerability_data, _, _, _, _ = get_data(severity, scan_name, vulnerability_name, ip_address)
-    
-    return detailed_vulnerability_data
 
 # Combine the two callbacks into one
 @app.callback(
@@ -945,15 +856,6 @@ def update_button_style(n_clicks):
             'cursor': 'pointer',
             'transition': 'background-color 0.3s',
         }
-
-@app.callback(
-    Output('clicked-port', 'children'),
-    [Input('port-usage-graph', 'clickData')]
-)
-def update_clicked_port(clickData):
-    if clickData is not None:
-        return clickData['points'][0]['x']
-    return None
 
 if __name__ == '__main__':
     app.run_server(debug=True)
