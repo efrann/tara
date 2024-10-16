@@ -6,7 +6,6 @@ import pandas as pd
 import pymysql
 from datetime import datetime, timedelta
 import math
-import plotly.express as px
 
 # MySQL bağlantısı
 db = pymysql.connect(
@@ -287,20 +286,22 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
         cursor.execute(scan_list_query)
         scan_list = [row['name'] for row in cursor.fetchall()]
 
-        # Port kullanım sıklığı sorgusu
-        port_usage_query = f"""
+        # En çok kullanılan 10 port sorgusu
+        top_ports_query = f"""
         SELECT 
             vo.port,
-            COUNT(*) as count
+            COUNT(DISTINCT hv.host_vuln_id) as count
         FROM 
             scan s
         JOIN 
             scan_run sr ON s.scan_id = sr.scan_id
         JOIN
             host h ON sr.scan_run_id = h.scan_run_id
-        JOIN 
+        LEFT JOIN 
             host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
-        JOIN
+        LEFT JOIN 
+            plugin p ON hv.plugin_id = p.plugin_id
+        LEFT JOIN
             vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
         WHERE 
             sr.scan_run_id = (
@@ -308,18 +309,19 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 FROM scan_run 
                 WHERE scan_id = s.scan_id
             )
+            AND vo.port IS NOT NULL
         {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition} {port_condition}
         GROUP BY 
             vo.port
         ORDER BY 
             count DESC
-        LIMIT 20
+        LIMIT 10
         """
         
-        cursor.execute(port_usage_query)
-        port_usage_data = cursor.fetchall()
+        cursor.execute(top_ports_query)
+        top_ports_data = cursor.fetchall()
 
-    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data
+    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data
 
 # Dash uygulaması
 app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
@@ -419,11 +421,15 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             dcc.Graph(id='vulnerability-distribution', style={'height': '400px'})
-        ], className="six columns"),
+        ], className="four columns"),
 
         html.Div([
             dcc.Graph(id='top-vulnerabilities-graph', style={'height': '400px'})
-        ], className="six columns"),
+        ], className="four columns"),
+
+        html.Div([
+            dcc.Graph(id='top-ports-graph', style={'height': '400px'})
+        ], className="four columns"),
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
     # Tables
@@ -657,10 +663,6 @@ app.layout = html.Div([
 
     # Hidden div for storing clicked severity
     html.Div(id='clicked-severity', style={'display': 'none'}),
-
-    html.Div([
-        dcc.Graph(id='port-usage-graph')
-    ], style={'width': '100%', 'display': 'inline-block', 'padding': '0 20'}),
 ])
 
 @app.callback(
@@ -669,6 +671,7 @@ app.layout = html.Div([
      Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
      Output('top-vulnerabilities-graph', 'figure'),
+     Output('top-ports-graph', 'figure'),  # Yeni çıktı
      Output('severity-4', 'children'),
      Output('severity-3', 'children'),
      Output('severity-2', 'children'),
@@ -676,8 +679,7 @@ app.layout = html.Div([
      Output('severity-0', 'children'),
      Output('last-updated', 'children'),
      Output('scan-dropdown', 'options'),
-     Output('severity-dropdown', 'value'),
-     Output('port-usage-graph', 'figure')],  # Yeni çıktı eklendi
+     Output('severity-dropdown', 'value')],
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals'),
      Input('clicked-severity', 'children')],
@@ -697,7 +699,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
     if button_id == 'clicked-severity' and clicked_severity:
         severity = [int(clicked_severity)]
 
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, port_usage_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
     
     #print("Summary Data:", summary_data)  # Debug için eklendi
     
@@ -859,24 +861,42 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         showlegend=False,
     )
 
-    # Port kullanım grafiği
-    port_usage_df = pd.DataFrame(port_usage_data)
-    port_usage_graph = px.bar(port_usage_df, x='port', y='count', 
-                              title='En Çok Kullanılan 20 Port',
-                              labels={'port': 'Port', 'count': 'Kullanım Sayısı'},
-                              color='count',
-                              color_continuous_scale='Viridis')
-    port_usage_graph.update_layout(
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        font_color='white'
+    # En çok kullanılan 10 port daire grafiği
+    top_ports_graph = go.Figure(
+        go.Sunburst(
+            ids=['Most Used 10 Ports'] + [f"port_{row['port']}" for row in top_ports_data],
+            labels=['Most Used 10 Ports'] + [f"Port {row['port']}" for row in top_ports_data],
+            parents=[''] + ['Most Used 10 Ports'] * len(top_ports_data),
+            values=[sum(row['count'] for row in top_ports_data)] + [row['count'] for row in top_ports_data],
+            branchvalues="total",
+            marker=dict(
+                colors=['#2c3e50'] + [
+                    f'rgb({hash(row["port"]) % 256}, {(hash(row["port"]) // 256) % 256}, {(hash(row["port"]) // 65536) % 256})'
+                    for row in top_ports_data
+                ]
+            ),
+            textinfo='label+value',
+            hovertemplate='<b>%{label}</b><br>Count: %{value}<br><extra></extra>',
+            insidetextorientation='radial',
+            textfont=dict(size=10, color='white'),
+        )
+    )
+
+    top_ports_graph.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor='#2c3e50',
+        plot_bgcolor='#34495e',
+        font=dict(color='white', size=14),
+        height=400,
+        title=dict(text='Most Used 10 Ports', font=dict(color='white', size=16)),
+        showlegend=False,
     )
 
     return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
-            top_vulnerabilities_table_data, top_vulnerabilities_graph, 
+            top_vulnerabilities_table_data, top_vulnerabilities_graph, top_ports_graph,
             total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
             total_vulnerabilities[3], total_vulnerabilities[4], 
-            last_updated, scan_options, severity, port_usage_graph)  # port_usage_graph eklendi
+            last_updated, scan_options, severity)
 
 # Combine the two callbacks into one
 @app.callback(
