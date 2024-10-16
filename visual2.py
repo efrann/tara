@@ -651,7 +651,7 @@ app.layout = html.Div([
     [Input('filter-button', 'n_clicks'),
      Input('interval-component', 'n_intervals'),
      Input('clicked-severity', 'children'),
-     Input('clicked-port', 'children')],  # Yeni input
+     Input('clicked-port', 'children')],
     [State('severity-dropdown', 'value'),
      State('scan-dropdown', 'value'),
      State('vulnerability-name-input', 'value'),
@@ -796,7 +796,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
         # Eğer veri yoksa, boş bir grafik döndür
         top_vulnerabilities_graph = go.Figure()
         top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
-        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
+        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity if severity is not None else dash.no_update
 
     # En çok görülen 10 zafiyet daire grafiği
     top_vulnerabilities_graph = go.Figure(
@@ -862,7 +862,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, clicked_port, severity,
             port_usage_graph,
             total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
             total_vulnerabilities[3], total_vulnerabilities[4], 
-            last_updated, scan_options, severity)
+            last_updated, scan_options, severity if severity is not None else dash.no_update)
 
 # Combine the two callbacks into one
 @app.callback(
