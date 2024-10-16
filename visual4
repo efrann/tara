@@ -168,6 +168,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             s.name AS scan_name,
             h.host_ip,
             COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
+            p.severity,
             CASE 
                 WHEN p.severity = 4 THEN 'Kritik'
                 WHEN p.severity = 3 THEN 'Yüksek'
@@ -175,7 +176,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 WHEN p.severity = 1 THEN 'Düşük'
                 WHEN p.severity = 0 THEN 'Bilgi'
                 ELSE 'Bilinmeyen'
-            END AS severity,
+            END AS severity_text,
             p.family AS plugin_family,
             vo.port,
             FROM_UNIXTIME(sr.scan_start) AS scan_date
@@ -199,7 +200,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             )
         {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition} {port_condition}
         ORDER BY 
-            sr.scan_start DESC, p.severity DESC
+            p.severity DESC, sr.scan_start DESC
         LIMIT 1000
         """
         
@@ -592,7 +593,7 @@ app.layout = html.Div([
                         {"name": "Tarama Adı", "id": "scan_name"},
                         {"name": "Host IP", "id": "host_ip"},
                         {"name": "Zafiyet Adı", "id": "vulnerability_name"},
-                        {"name": "Önem Derecesi", "id": "severity"},
+                        {"name": "Önem Derecesi", "id": "severity_text"},
                         {"name": "Plugin Ailesi", "id": "plugin_family"},
                         {"name": "Port", "id": "port"},
                         {"name": "Tarama Tarihi", "id": "scan_date"}
@@ -613,38 +614,6 @@ app.layout = html.Div([
                         'border': '1px solid #34495e',
                         'color': '#3498db',
                     },
-                    style_data_conditional=[
-                        {
-                            'if': {'column_id': 'severity', 'filter_query': '{severity} = "Kritik"'},
-                            'backgroundColor': 'rgba(231, 76, 60, 0.1)',
-                            'color': '#e74c3c',
-                            'fontWeight': 'bold',
-                        },
-                        {
-                            'if': {'column_id': 'severity', 'filter_query': '{severity} = "Yüksek"'},
-                            'backgroundColor': 'rgba(230, 126, 34, 0.1)',
-                            'color': '#e67e22',
-                            'fontWeight': 'bold',
-                        },
-                        {
-                            'if': {'column_id': 'severity', 'filter_query': '{severity} = "Orta"'},
-                            'backgroundColor': 'rgba(241, 196, 15, 0.1)',
-                            'color': '#f1c40f',
-                            'fontWeight': 'bold',
-                        },
-                        {
-                            'if': {'column_id': 'severity', 'filter_query': '{severity} = "Düşük"'},
-                            'backgroundColor': 'rgba(46, 204, 113, 0.1)',
-                            'color': '#2ecc71',
-                            'fontWeight': 'bold',
-                        },
-                        {
-                            'if': {'column_id': 'severity', 'filter_query': '{severity} = "Bilgi"'},
-                            'backgroundColor': 'rgba(52, 152, 219, 0.1)',
-                            'color': '#3498db',
-                            'fontWeight': 'bold',
-                        }
-                    ],
                 ),
                 html.Button('Kapat', id='close-modal', n_clicks=0, style={
                     'backgroundColor': '#e74c3c',
@@ -683,7 +652,6 @@ app.layout = html.Div([
 @app.callback(
     [Output('summary-table', 'data'),
      Output('vulnerability-distribution', 'figure'),
-     Output('vulnerability-table', 'data'),
      Output('top-vulnerabilities-table', 'data'),
      Output('top-vulnerabilities-graph', 'figure'),
      Output('top-ports-graph', 'figure'),  # Yeni çıktı
@@ -715,6 +683,22 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         severity = [int(clicked_severity)]
 
     summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
+    
+    # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
+    detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
+    for item in detailed_vulnerability_data:
+        if item['severity'] == 4:
+            item['severity_text'] = 'Kritik'
+        elif item['severity'] == 3:
+            item['severity_text'] = 'Yüksek'
+        elif item['severity'] == 2:
+            item['severity_text'] = 'Orta'
+        elif item['severity'] == 1:
+            item['severity_text'] = 'Düşük'
+        elif item['severity'] == 0:
+            item['severity_text'] = 'Bilgi'
+        else:
+            item['severity_text'] = 'Bilinmeyen'
     
     #print("Summary Data:", summary_data)  # Debug için eklendi
     
@@ -907,10 +891,8 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         showlegend=False,
     )
 
-    return (summary_table_data, vulnerability_distribution, vulnerability_table_data, 
-            top_vulnerabilities_table_data, top_vulnerabilities_graph, top_ports_graph,
-            total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], 
-            total_vulnerabilities[3], total_vulnerabilities[4], 
+    return (summary_table_data, vulnerability_distribution, top_vulnerabilities_table_data, top_vulnerabilities_graph, top_ports_graph,
+            total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], 
             last_updated, scan_options, severity)
 
 # Combine the two callbacks into one
@@ -981,7 +963,8 @@ def update_button_style(n_clicks):
 
 # Modal açma/kapama için callback
 @app.callback(
-    Output('modal', 'style'),
+    [Output('modal', 'style'),
+     Output('vulnerability-table', 'style_data_conditional')],
     [Input('open-modal', 'n_clicks'),
      Input('close-modal', 'n_clicks')],
     [State('modal', 'style')]
@@ -989,16 +972,80 @@ def update_button_style(n_clicks):
 def toggle_modal(open_clicks, close_clicks, modal_style):
     ctx = dash.callback_context
     if not ctx.triggered:
-        return modal_style
+        return modal_style, dash.no_update
     else:
         button_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
     if button_id == 'open-modal' and open_clicks > 0:
         modal_style['display'] = 'block'
+        
+        # Renklendirme için style_data_conditional
+        style_data_conditional = [
+            {
+                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Kritik"'},
+                'backgroundColor': 'rgba(255, 0, 0, 0.2)',
+                'color': 'red'
+            },
+            {
+                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Yüksek"'},
+                'backgroundColor': 'rgba(255, 165, 0, 0.2)',
+                'color': 'orange'
+            },
+            {
+                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Orta"'},
+                'backgroundColor': 'rgba(255, 255, 0, 0.2)',
+                'color': 'yellow'
+            },
+            {
+                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Düşük"'},
+                'backgroundColor': 'rgba(0, 128, 0, 0.2)',
+                'color': 'green'
+            },
+            {
+                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Bilgi"'},
+                'backgroundColor': 'rgba(0, 0, 255, 0.2)',
+                'color': 'blue'
+            }
+        ]
+        
+        return modal_style, style_data_conditional
     elif button_id == 'close-modal' and close_clicks > 0:
         modal_style['display'] = 'none'
+        return modal_style, dash.no_update
     
-    return modal_style
+    return modal_style, dash.no_update
+
+# Yeni callback ekleyelim
+@app.callback(
+    Output('vulnerability-table', 'data'),
+    [Input('filter-button', 'n_clicks'),
+     Input('interval-component', 'n_intervals')],
+    [State('severity-dropdown', 'value'),
+     State('scan-dropdown', 'value'),
+     State('vulnerability-name-input', 'value'),
+     State('ip-address-input', 'value'),
+     State('port-input', 'value')]
+)
+def update_vulnerability_table(n_clicks, n_intervals, severity, scan_name, vulnerability_name, ip_address, port):
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
+    
+    # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
+    detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
+    for item in detailed_vulnerability_data:
+        if item['severity'] == 4:
+            item['severity_text'] = 'Kritik'
+        elif item['severity'] == 3:
+            item['severity_text'] = 'Yüksek'
+        elif item['severity'] == 2:
+            item['severity_text'] = 'Orta'
+        elif item['severity'] == 1:
+            item['severity_text'] = 'Düşük'
+        elif item['severity'] == 0:
+            item['severity_text'] = 'Bilgi'
+        else:
+            item['severity_text'] = 'Bilinmeyen'
+    
+    return detailed_vulnerability_data
 
 if __name__ == '__main__':
     app.run_server(debug=True)
