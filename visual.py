@@ -534,38 +534,3 @@ def update_table_filter(search_value):
 
 if __name__ == '__main__':
     app.run_server(debug=True)
-
-# Yeni callback ekleyelim
-@app.callback(
-    Output('vulnerability-table', 'data'),
-    [Input('filter-button', 'n_clicks'),
-     Input('interval-component', 'n_intervals')],
-    [State('severity-dropdown', 'value'),
-     State('scan-dropdown', 'value'),
-     State('vulnerability-name-input', 'value'),
-     State('ip-address-input', 'value'),
-     State('port-input', 'value')]
-)
-def update_vulnerability_table(n_clicks, n_intervals, severity, scan_name, vulnerability_name, ip_address, port):
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
-    
-    # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
-    detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
-    for item in detailed_vulnerability_data:
-        if item['severity'] == 4:
-            item['severity_text'] = 'Kritik'
-        elif item['severity'] == 3:
-            item['severity_text'] = 'Yüksek'
-        elif item['severity'] == 2:
-            item['severity_text'] = 'Orta'
-        elif item['severity'] == 1:
-            item['severity_text'] = 'Düşük'
-        elif item['severity'] == 0:
-            item['severity_text'] = 'Bilgi'
-        else:
-            item['severity_text'] = 'Bilinmeyen'
-    
-    return detailed_vulnerability_data
-
-if __name__ == '__main__':
-    app.run_server(debug=True)
