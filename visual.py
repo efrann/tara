@@ -674,6 +674,38 @@ def create_detailed_analysis_layout():
                 'border': '1px solid #34495e',
                 'color': '#3498db',
             },
+            style_data_conditional=[
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Kritik"'},
+                    'backgroundColor': 'rgba(231, 76, 60, 0.1)',
+                    'color': '#e74c3c',
+                    'fontWeight': 'bold',
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Yüksek"'},
+                    'backgroundColor': 'rgba(230, 126, 34, 0.1)',
+                    'color': '#e67e22',
+                    'fontWeight': 'bold',
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Orta"'},
+                    'backgroundColor': 'rgba(241, 196, 15, 0.1)',
+                    'color': '#f1c40f',
+                    'fontWeight': 'bold',
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Düşük"'},
+                    'backgroundColor': 'rgba(46, 204, 113, 0.1)',
+                    'color': '#2ecc71',
+                    'fontWeight': 'bold',
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Bilgi"'},
+                    'backgroundColor': 'rgba(52, 152, 219, 0.1)',
+                    'color': '#3498db',
+                    'fontWeight': 'bold',
+                },
+            ],
             sort_action="native",
             sort_mode="multi",
             page_action="native",
