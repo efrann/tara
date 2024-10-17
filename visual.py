@@ -359,7 +359,11 @@ def create_main_layout():
                     ],
                     multi=True,
                     placeholder="Seçiniz...",
-                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white'},
+                    style={
+                        'width': '100%',
+                        'backgroundColor': '#34495e',
+                        'color': 'white'
+                    },
                     className='dropdown-white-text'
                 ),
             ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
@@ -369,7 +373,11 @@ def create_main_layout():
                     id='scan-dropdown',
                     options=[],
                     placeholder="Seçiniz...",
-                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white'},
+                    style={
+                        'width': '100%',
+                        'backgroundColor': '#34495e',
+                        'color': 'white'
+                    },
                     className='dropdown-white-text'
                 ),
             ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
