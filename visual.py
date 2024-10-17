@@ -220,7 +220,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             cursor.execute(detailed_vulnerability_query)
             detailed_vulnerability_data = cursor.fetchall()
 
-            # Detaylı zafiyet listesindeki tarih formatını değiştir
+            # Detaylı zafiyet listesindeki tarih formatın�� değiştir
             for row in detailed_vulnerability_data:
                 if row['scan_date']:
                     date = row['scan_date']
@@ -361,7 +361,7 @@ def create_main_layout():
                     placeholder="Seçiniz...",
                     style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'black'}
                 ),
-            ], style={'width': '19%', 'display': 'inline-block', 'marginRight': '1%', 'verticalAlign': 'top'}),
+            ], style={'width': '19%', 'marginRight': '1%'}),
             
             html.Div([
                 html.Label("Tarama Seç:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
@@ -371,7 +371,7 @@ def create_main_layout():
                     placeholder="Seçiniz...",
                     style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'black'}
                 ),
-            ], style={'width': '19%', 'display': 'inline-block', 'marginRight': '1%', 'verticalAlign': 'top'}),
+            ], style={'width': '19%', 'marginRight': '1%'}),
             
             html.Div([
                 html.Label("Zafiyet Adı:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
@@ -381,7 +381,7 @@ def create_main_layout():
                     placeholder="Zafiyet adı girin...",
                     style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
                 ),
-            ], style={'width': '19%', 'display': 'inline-block', 'marginRight': '1%', 'verticalAlign': 'top'}),
+            ], style={'width': '19%', 'marginRight': '1%'}),
             
             html.Div([
                 html.Label("IP Adresi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
@@ -391,7 +391,7 @@ def create_main_layout():
                     placeholder="IP adresi girin...",
                     style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
                 ),
-            ], style={'width': '19%', 'display': 'inline-block', 'marginRight': '1%', 'verticalAlign': 'top'}),
+            ], style={'width': '19%', 'marginRight': '1%'}),
             
             html.Div([
                 html.Label("Port:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
@@ -401,37 +401,41 @@ def create_main_layout():
                     placeholder="Port numarası girin...",
                     style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
                 ),
-            ], style={'width': '19%', 'display': 'inline-block', 'verticalAlign': 'top'}),
-            
-            html.Div([
-                html.Button('Filtrele', id='filter-button', n_clicks=0, style={
-                    'backgroundColor': '#3498db',
+            ], style={'width': '19%'}),
+        ], style={
+            'display': 'flex',
+            'justifyContent': 'space-between',
+            'alignItems': 'flex-start',
+            'flexWrap': 'nowrap',
+            'marginBottom': '20px'
+        }),
+        
+        html.Div([
+            html.Button('Filtrele', id='filter-button', n_clicks=0, style={
+                'backgroundColor': '#3498db',
+                'color': 'white',
+                'border': 'none',
+                'padding': '10px 20px',
+                'borderRadius': '5px',
+                'cursor': 'pointer',
+                'transition': 'background-color 0.3s',
+                'marginRight': '10px',
+            }),
+            html.A(
+                html.Button('Detaylı Zafiyet Listesi', style={
+                    'backgroundColor': '#2ecc71',
                     'color': 'white',
                     'border': 'none',
                     'padding': '10px 20px',
                     'borderRadius': '5px',
                     'cursor': 'pointer',
                     'transition': 'background-color 0.3s',
-                    'marginRight': '10px',
-                    'marginTop': '25px',
                 }),
-                html.A(
-                    html.Button('Detaylı Zafiyet Listesi', style={
-                        'backgroundColor': '#2ecc71',
-                        'color': 'white',
-                        'border': 'none',
-                        'padding': '10px 20px',
-                        'borderRadius': '5px',
-                        'cursor': 'pointer',
-                        'transition': 'background-color 0.3s',
-                        'marginTop': '25px',
-                    }),
-                    id='open-new-tab',
-                    href='',
-                    target='_blank'
-                ),
-            ], style={'width': '100%', 'textAlign': 'center', 'marginTop': '20px'}),
-        ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'marginTop': '20px', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
+                id='open-new-tab',
+                href='',
+                target='_blank'
+            ),
+        ], style={'display': 'flex', 'justifyContent': 'center', 'marginTop': '20px'}),
 
         # Total Vulnerabilities
         html.Div([
