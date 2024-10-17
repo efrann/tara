@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import math
 from pymysql.cursors import DictCursor
 from contextlib import contextmanager
+from urllib.parse import urlencode
 
 @contextmanager
 def get_db_connection():
@@ -420,7 +421,7 @@ def create_main_layout():
                         'marginTop': '25px',
                     }),
                     id='open-new-tab',
-                    href='/detailed-analysis',
+                    href='',  # Bu href'i boş bırakıyoruz, callback ile dolduracağız
                     target='_blank'
                 ),
             ], style={'display': 'inline-block', 'verticalAlign': 'bottom'}),
@@ -622,6 +623,13 @@ def create_detailed_analysis_layout():
             'backgroundColor': '#34495e', 
             'padding': '10px', 
             'marginBottom': '20px',
+            'borderRadius': '5px',
+        }),
+        html.Div(id='applied-filters', style={
+            'marginBottom': '20px',
+            'padding': '10px',
+            'backgroundColor': '#2c3e50',
+            'color': '#ecf0f1',
             'borderRadius': '5px',
         }),
         dash_table.DataTable(
@@ -996,35 +1004,87 @@ def update_button_style(n_clicks):
 # Detaylı analiz sayfası için callback
 @app.callback(
     [Output('vulnerability-table', 'data'),
-     Output('ip-ports-info', 'children')],
-    [Input('url', 'pathname')]
+     Output('ip-ports-info', 'children'),
+     Output('applied-filters', 'children')],
+    [Input('url', 'search')]
 )
-def update_detailed_analysis(pathname):
-    if pathname == '/detailed-analysis':
-        summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data = get_data()
-        
-        # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
-        detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
-        for item in detailed_vulnerability_data:
-            if item['severity'] == 4:
-                item['severity_text'] = 'Kritik'
-            elif item['severity'] == 3:
-                item['severity_text'] = 'Yüksek'
-            elif item['severity'] == 2:
-                item['severity_text'] = 'Orta'
-            elif item['severity'] == 1:
-                item['severity_text'] = 'Düşük'
-            elif item['severity'] == 0:
-                item['severity_text'] = 'Bilgi'
-            else:
-                item['severity_text'] = 'Bilinmeyen'
-        
-        # IP portları bilgisini al
-        ip_ports_info = html.Div("IP adresi belirtilmedi.")
-        
-        return detailed_vulnerability_data, ip_ports_info
+def update_detailed_analysis(search):
+    params = dict(param.split('=') for param in search[1:].split('&')) if search else {}
     
-    return [], html.Div()
+    severity = params.get('severity', '').split(',')
+    severity = [int(s) for s in severity if s.isdigit()]
+    scan_name = params.get('scan_name', None)
+    vulnerability_name = params.get('vulnerability_name', None)
+    ip_address = params.get('ip_address', None)
+    port = params.get('port', None)
+
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
+    
+    # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
+    detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
+    for item in detailed_vulnerability_data:
+        if item['severity'] == 4:
+            item['severity_text'] = 'Kritik'
+        elif item['severity'] == 3:
+            item['severity_text'] = 'Yüksek'
+        elif item['severity'] == 2:
+            item['severity_text'] = 'Orta'
+        elif item['severity'] == 1:
+            item['severity_text'] = 'Düşük'
+        elif item['severity'] == 0:
+            item['severity_text'] = 'Bilgi'
+        else:
+            item['severity_text'] = 'Bilinmeyen'
+    
+    # IP portları bilgisini al
+    ip_ports_info = html.Div("IP adresi belirtilmedi.")
+    if ip_address:
+        if ip_ports_data:
+            port_list = [str(port['port']) for port in ip_ports_data]
+            ip_ports_info = html.Div([
+                html.H4(f"{ip_address} IP adresi için açık portlar:", style={'color': '#3498db'}),
+                html.Ul([html.Li(port) for port in port_list], style={'columns': '3', 'listStyleType': 'none'})
+            ])
+    
+    # Uygulanan filtreleri göster
+    applied_filters = []
+    if severity:
+        severity_map = {4: 'Kritik', 3: 'Yüksek', 2: 'Orta', 1: 'Düşük', 0: 'Bilgi'}
+        applied_filters.append(f"Önem Derecesi: {', '.join(severity_map[s] for s in severity)}")
+    if scan_name:
+        applied_filters.append(f"Tarama Adı: {scan_name}")
+    if vulnerability_name:
+        applied_filters.append(f"Zafiyet Adı: {vulnerability_name}")
+    if ip_address:
+        applied_filters.append(f"IP Adresi: {ip_address}")
+    if port:
+        applied_filters.append(f"Port: {port}")
+    
+    applied_filters_div = html.Div([
+        html.H4("Uygulanan Filtreler:"),
+        html.Ul([html.Li(filter_text) for filter_text in applied_filters]) if applied_filters else html.P("Filtre uygulanmadı.")
+    ])
+    
+    return detailed_vulnerability_data, ip_ports_info, applied_filters_div
+
+# Ana sayfadaki 'Detaylı Zafiyet Listesi' butonunun href'ini güncelleyen callback
+@app.callback(
+    Output('open-new-tab', 'href'),
+    [Input('severity-dropdown', 'value'),
+     Input('scan-dropdown', 'value'),
+     Input('vulnerability-name-input', 'value'),
+     Input('ip-address-input', 'value'),
+     Input('port-input', 'value')]
+)
+def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_address, port):
+    params = {
+        'severity': severity,
+        'scan_name': scan_name,
+        'vulnerability_name': vulnerability_name,
+        'ip_address': ip_address,
+        'port': port
+    }
+    return f'/detailed-analysis?{urlencode(params)}'
 
 if __name__ == '__main__':
     app.run_server(debug=True)
