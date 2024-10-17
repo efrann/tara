@@ -336,84 +336,78 @@ def get_main_layout():
     return html.Div([
         html.H1("Nessus Zafiyet Analizi", style={'textAlign': 'center', 'color': 'white'}),
         
+        # Severity sayıları
         html.Div([
-            dcc.Dropdown(
-                id='severity-dropdown',
-                options=[
-                    {'label': 'Kritik', 'value': 4},
-                    {'label': 'Yüksek', 'value': 3},
-                    {'label': 'Orta', 'value': 2},
-                    {'label': 'Düşük', 'value': 1},
-                    {'label': 'Bilgi', 'value': 0}
-                ],
-                multi=True,
-                placeholder="Önem Derecesi Seçin",
-                style={'backgroundColor': '#2c3e50', 'color': 'black', 'width': '200px'}
-            ),
-            dcc.Dropdown(
-                id='scan-dropdown',
-                multi=True,
-                placeholder="Tarama Adı Seçin",
-                style={'backgroundColor': '#2c3e50', 'color': 'black', 'width': '200px'}
-            ),
-            dcc.Input(
-                id='vulnerability-name-input',
-                type='text',
-                placeholder='Zafiyet Adı',
-                style={'backgroundColor': '#2c3e50', 'color': 'white', 'width': '200px'}
-            ),
-            dcc.Input(
-                id='ip-address-input',
-                type='text',
-                placeholder='IP Adresi',
-                style={'backgroundColor': '#2c3e50', 'color': 'white', 'width': '200px'}
-            ),
-            dcc.Input(
-                id='port-input',
-                type='text',
-                placeholder='Port',
-                style={'backgroundColor': '#2c3e50', 'color': 'white', 'width': '200px'}
-            ),
-            html.Button('Filtrele', id='filter-button', n_clicks=0, style={'backgroundColor': '#3498db', 'color': 'white'})
+            html.Div([
+                html.H3("Kritik", style={'color': '#e74c3c'}),
+                html.H2(id='critical-count', style={'color': '#e74c3c'}),
+                dcc.Link("Detaylı Analiz", href='/detailed-analysis?severity=4', target='_blank')
+            ], style={'textAlign': 'center', 'flex': 1}),
+            html.Div([
+                html.H3("Yüksek", style={'color': '#e67e22'}),
+                html.H2(id='high-count', style={'color': '#e67e22'}),
+                dcc.Link("Detaylı Analiz", href='/detailed-analysis?severity=3', target='_blank')
+            ], style={'textAlign': 'center', 'flex': 1}),
+            html.Div([
+                html.H3("Orta", style={'color': '#f1c40f'}),
+                html.H2(id='medium-count', style={'color': '#f1c40f'}),
+                dcc.Link("Detaylı Analiz", href='/detailed-analysis?severity=2', target='_blank')
+            ], style={'textAlign': 'center', 'flex': 1}),
+            html.Div([
+                html.H3("Düşük", style={'color': '#2ecc71'}),
+                html.H2(id='low-count', style={'color': '#2ecc71'}),
+                dcc.Link("Detaylı Analiz", href='/detailed-analysis?severity=1', target='_blank')
+            ], style={'textAlign': 'center', 'flex': 1}),
+            html.Div([
+                html.H3("Bilgi", style={'color': '#3498db'}),
+                html.H2(id='info-count', style={'color': '#3498db'}),
+                dcc.Link("Detaylı Analiz", href='/detailed-analysis?severity=0', target='_blank')
+            ], style={'textAlign': 'center', 'flex': 1}),
         ], style={'display': 'flex', 'justifyContent': 'space-between', 'marginBottom': '20px'}),
         
+        # Grafikler
         html.Div([
-            html.Div(id='severity-4'),
-            html.Div(id='severity-3'),
-            html.Div(id='severity-2'),
-            html.Div(id='severity-1'),
-            html.Div(id='severity-0')
-        ], style={'display': 'flex', 'justifyContent': 'space-between', 'marginBottom': '20px'}),
-        
-        html.Div(id='last-updated'),
-        
-        dcc.Graph(id='vulnerability-distribution'),
-        
-        html.Div([
-            dcc.Graph(id='top-vulnerabilities-graph', style={'width': '50%'}),
-            dcc.Graph(id='top-ports-graph', style={'width': '50%'})
+            dcc.Graph(id='vulnerability-distribution', style={'width': '50%'}),
+            dcc.Graph(id='top-vulnerabilities-graph', style={'width': '50%'})
         ], style={'display': 'flex'}),
         
-        dash_table.DataTable(id='summary-table'),
+        # Özet tablo
+        html.H2("Özet Bilgiler", style={'color': 'white'}),
+        dash_table.DataTable(
+            id='summary-table',
+            style_table={'overflowX': 'auto'},
+            style_cell={
+                'backgroundColor': '#34495e',
+                'color': 'white',
+                'textAlign': 'left'
+            },
+            style_header={
+                'backgroundColor': '#2c3e50',
+                'fontWeight': 'bold'
+            }
+        ),
         
-        html.Button("Detaylı Zafiyet Listesi", id="open-modal", n_clicks=0, style={'backgroundColor': '#3498db', 'color': 'white'}),
-        
-        html.Div(id='modal', style={'display': 'none'}, children=[
-            html.Div([
-                html.H2("Detaylı Zafiyet Listesi"),
-                html.Button("Kapat", id="close-modal", n_clicks=0, style={'backgroundColor': '#e74c3c', 'color': 'white'}),
-                dash_table.DataTable(id='vulnerability-table'),
-                html.Div(id='ip-ports-info')
-            ])
-        ]),
+        # En çok görülen 10 zafiyet
+        html.H2("En Çok Görülen 10 Zafiyet", style={'color': 'white'}),
+        dash_table.DataTable(
+            id='top-vulnerabilities-table',
+            style_table={'overflowX': 'auto'},
+            style_cell={
+                'backgroundColor': '#34495e',
+                'color': 'white',
+                'textAlign': 'left'
+            },
+            style_header={
+                'backgroundColor': '#2c3e50',
+                'fontWeight': 'bold'
+            }
+        ),
         
         dcc.Interval(
             id='interval-component',
             interval=300*1000,  # 5 dakikada bir güncelle
             n_intervals=0
         ),
-        
-        html.Div(id='clicked-severity', style={'display': 'none'})
     ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'color': 'white'})
 
 # Detaylı analiz sayfası layout'u
@@ -495,30 +489,124 @@ def display_page(pathname):
     else:
         return get_main_layout()
 
-# ... existing code ...
-
+# Ana sayfa için callback'ler
 @app.callback(
-    [Output('summary-table', 'data'),
+    [Output('critical-count', 'children'),
+     Output('high-count', 'children'),
+     Output('medium-count', 'children'),
+     Output('low-count', 'children'),
+     Output('info-count', 'children'),
      Output('vulnerability-distribution', 'figure'),
      Output('top-vulnerabilities-graph', 'figure'),
-     Output('top-ports-graph', 'figure'),  # Yeni çıktı
-     Output('severity-4', 'children'),
-     Output('severity-3', 'children'),
-     Output('severity-2', 'children'),
-     Output('severity-1', 'children'),
-     Output('severity-0', 'children'),
-     Output('last-updated', 'children'),
-     Output('scan-dropdown', 'options'),
-     Output('severity-dropdown', 'value')],
-    [Input('filter-button', 'n_clicks'),
-     Input('interval-component', 'n_intervals'),
-     Input('clicked-severity', 'children')],
-    [State('severity-dropdown', 'value'),
-     State('scan-dropdown', 'value'),
-     State('vulnerability-name-input', 'value'),
-     State('ip-address-input', 'value'),
-     State('port-input', 'value')]
+     Output('summary-table', 'data'),
+     Output('summary-table', 'columns'),
+     Output('top-vulnerabilities-table', 'data'),
+     Output('top-vulnerabilities-table', 'columns')],
+    [Input('interval-component', 'n_intervals')]
 )
+def update_main_page(n):
+    # Verileri çek
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data = get_data()
+    
+    # Severity sayıları
+    critical_count = total_vulnerabilities_data['total_critical']
+    high_count = total_vulnerabilities_data['total_high']
+    medium_count = total_vulnerabilities_data['total_medium']
+    low_count = total_vulnerabilities_data['total_low']
+    info_count = total_vulnerabilities_data['total_info']
+    
+    # Vulnerability distribution grafiği
+    vulnerability_distribution = go.Figure(data=[go.Pie(
+        labels=['Kritik', 'Yüksek', 'Orta', 'Düşük', 'Bilgi'],
+        values=[critical_count, high_count, medium_count, low_count, info_count],
+        marker_colors=['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db']
+    )])
+    vulnerability_distribution.update_layout(
+        title_text="Zafiyet Dağılımı",
+        paper_bgcolor='#2c3e50',
+        plot_bgcolor='#2c3e50',
+        font=dict(color='white')
+    )
+    
+    # Top vulnerabilities grafiği
+    top_vulnerabilities = go.Figure(data=[go.Bar(
+        x=[vuln['vulnerability_name'] for vuln in top_vulnerabilities_data[:10]],
+        y=[vuln['count'] for vuln in top_vulnerabilities_data[:10]],
+        marker_color='#3498db'
+    )])
+    top_vulnerabilities.update_layout(
+        title_text="En Çok Görülen 10 Zafiyet",
+        xaxis_title="Zafiyet Adı",
+        yaxis_title="Sayı",
+        paper_bgcolor='#2c3e50',
+        plot_bgcolor='#2c3e50',
+        font=dict(color='white')
+    )
+    
+    # Özet tablo
+    summary_columns = [{"name": i, "id": i} for i in summary_data[0].keys()]
+    
+    # Top vulnerabilities tablo
+    top_vulnerabilities_columns = [{"name": i, "id": i} for i in top_vulnerabilities_data[0].keys()]
+    
+    return (
+        critical_count,
+        high_count,
+        medium_count,
+        low_count,
+        info_count,
+        vulnerability_distribution,
+        top_vulnerabilities,
+        summary_data,
+        summary_columns,
+        top_vulnerabilities_data[:10],
+        top_vulnerabilities_columns
+    )
+
+# Detaylı analiz sayfası için callback
+@app.callback(
+    Output('detailed-vulnerability-table', 'data'),
+    [Input('url', 'search')]
+)
+def update_detailed_table(search):
+    parsed = urllib.parse.urlparse(search)
+    severity = urllib.parse.parse_qs(parsed.query).get('severity', [None])[0]
+    
+    if severity is not None:
+        severity = [int(severity)]
+        summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data = get_data(severity=severity)
+        
+        # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
+        detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
+        for item in detailed_vulnerability_data:
+            if item['severity'] == 4:
+                item['severity_text'] = 'Kritik'
+            elif item['severity'] == 3:
+                item['severity_text'] = 'Yüksek'
+            elif item['severity'] == 2:
+                item['severity_text'] = 'Orta'
+            elif item['severity'] == 1:
+                item['severity_text'] = 'Düşük'
+            elif item['severity'] == 0:
+                item['severity_text'] = 'Bilgi'
+            else:
+                item['severity_text'] = 'Bilinmeyen'
+        
+        return detailed_vulnerability_data
+    return []
+
+# Arama işlevi için callback
+@app.callback(
+    Output('detailed-vulnerability-table', 'filter_query'),
+    [Input('search-input', 'value')]
+)
+def update_table_filter(search_value):
+    if search_value:
+        return f'{{vulnerability_name}} contains "{search_value}" || {{host_ip}} contains "{search_value}" || {{host_fqdn}} contains "{search_value}"'
+    return ''
+
+if __name__ == '__main__':
+    app.run_server(debug=True)
 def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vulnerability_name, ip_address, port):
     ctx = dash.callback_context
     if not ctx.triggered:
@@ -887,7 +975,7 @@ def toggle_modal(open_clicks, close_clicks, filter_clicks, modal_style, ip_addre
             if ip_ports_data:
                 port_list = [str(port['port']) for port in ip_ports_data]
                 ip_ports_info = html.Div([
-                    html.H4(f"{ip_address} IP adresi için açık portlar:", style={'color': '#3498db'}),
+                    html.H4(f"{ip_address} IP adresi için aç��k portlar:", style={'color': '#3498db'}),
                     html.Ul([html.Li(port) for port in port_list], style={'columns': '3', 'listStyleType': 'none'})
                 ])
         return dash.no_update, dash.no_update, ip_ports_info
