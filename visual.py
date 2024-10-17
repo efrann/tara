@@ -6,39 +6,30 @@ import pandas as pd
 import pymysql
 from datetime import datetime, timedelta
 import math
-from pymysql.cursors import DictCursor
-from contextlib import contextmanager
 
-# Bağlantı havuzu oluştur
-connection_pool = pymysql.connect(
-    host="localhost",
-    user="root",
-    password="Nessus_Report123*-",
-    database="nessusdb",
-    cursorclass=DictCursor,
-    autocommit=True,
-    charset='utf8mb4',
-    connect_timeout=5
-)
-
-@contextmanager
-def get_cursor():
-    global connection_pool
-    try:
-        yield connection_pool.cursor()
-    except pymysql.OperationalError:
-        # Bağlantı kopmuşsa yeniden bağlan
-        connection_pool = pymysql.connect(
-            host="localhost",
-            user="root",
-            password="Nessus_Report123*-",
-            database="nessusdb",
-            cursorclass=DictCursor,
-            autocommit=True,
-            charset='utf8mb4',
-            connect_timeout=5
-        )
-        yield connection_pool.cursor()
+# MySQL bağlantısı
+try:
+    db = pymysql.connect(
+        host="localhost",
+        user="root",
+        password="Nessus_Report123*-",
+        database="nessusdb"
+    )
+    print("Bağlantı başarılı!")
+    
+    # Bağlantıyı test etmek için basit bir sorgu çalıştırın
+    with db.cursor() as cursor:
+        cursor.execute("SELECT VERSION()")
+        version = cursor.fetchone()
+        print(f"Database version: {version[0]}")
+        
+except pymysql.Error as e:
+    print(f"Hata kodu: {e.args[0]}, Hata mesajı: {e.args[1]}")
+    raise e
+finally:
+    if 'db' in locals() and db.open:
+        db.close()
+        print("Bağlantı kapatıldı.")
 
 def parse_port_input(port_input):
     if not port_input:
@@ -56,7 +47,7 @@ def parse_port_input(port_input):
 
 # Verileri çekme fonksiyonu
 def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=None, port=None):
-    with get_cursor() as cursor:
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
         # Severity filtresi için WHERE koşulu
         severity_condition = ""
         if severity:
@@ -698,223 +689,227 @@ app.layout = html.Div([
      State('port-input', 'value')]
 )
 def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vulnerability_name, ip_address, port):
-    try:
-        summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
-        
-        # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
-        detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
-        for item in detailed_vulnerability_data:
-            if item['severity'] == 4:
-                item['severity_text'] = 'Kritik'
-            elif item['severity'] == 3:
-                item['severity_text'] = 'Yüksek'
-            elif item['severity'] == 2:
-                item['severity_text'] = 'Orta'
-            elif item['severity'] == 1:
-                item['severity_text'] = 'Düşük'
-            elif item['severity'] == 0:
-                item['severity_text'] = 'Bilgi'
-            else:
-                item['severity_text'] = 'Bilinmeyen'
-        
-        #print("Summary Data:", summary_data)  # Debug için eklendi
-        
-        # Özet tablo verisi
-        summary_table_data = [{
-            'folder_name': row['folder_name'],
-            'scan_name': row['scan_name'],
-            'last_scan_date': row['last_scan_date'],
-            'total_hosts': row['total_hosts'],
-            'total_critical': row['total_critical'],
-            'total_high': row['total_high'],
-            'total_medium': row['total_medium'],
-            'total_low': row['total_low'],
-            'total_info': row['total_info']
-        } for row in summary_data]
-        
-        # Severity seçimine göre sıralama
-        if severity:
-            if 4 in severity:
-                summary_table_data = sorted(summary_table_data, key=lambda x: x['total_critical'], reverse=True)
-            elif 3 in severity:
-                summary_table_data = sorted(summary_table_data, key=lambda x: x['total_high'], reverse=True)
-            elif 2 in severity:
-                summary_table_data = sorted(summary_table_data, key=lambda x: x['total_medium'], reverse=True)
-            elif 1 in severity:
-                summary_table_data = sorted(summary_table_data, key=lambda x: x['total_low'], reverse=True)
-            elif 0 in severity:
-                summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
-        
-        # Zafiyet dağılımı grafiği
-        labels = ['Total', 'Critical', 'High', 'Medium', 'Low']
-        parents = ['', 'Total', 'Total', 'Total', 'Total']
-        values = [
-            sum(item['count'] for item in vulnerability_data if item['severity'] in [1, 2, 3, 4]),
-            sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
-            sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
-            sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
-            sum(item['count'] for item in vulnerability_data if item['severity'] == 1)
-        ]
-        colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        button_id = 'No clicks yet'
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
-        vulnerability_distribution = {
-            'data': [go.Sunburst(
-                labels=labels,
-                parents=parents,
-                values=values,
-                branchvalues="total",
-                marker=dict(colors=colors),
-                textinfo='label+value',
-                insidetextorientation='radial',
-                hoverinfo='label+value+percent parent'
-            )],
-            'layout': go.Layout(
-                paper_bgcolor='#2c3e50',
-                plot_bgcolor='#2c3e50',
-                font=dict(color='white', size=14),
-                margin=dict(t=0, l=0, r=0, b=0),
-                height=400,
-                showlegend=False
-            )
-        }
+    if button_id == 'clicked-severity' and clicked_severity:
+        severity = [int(clicked_severity)]
 
-        # Detaylı zafiyet listesi
-        vulnerability_table_data = detailed_vulnerability_data
-        
-        # En çok görülen 10 zafiyet
-        severity_map = {
-            4: 'Kritik',
-            3: 'Yüksek',
-            2: 'Orta',
-            1: 'Düşük',
-            0: 'Bilgi'
-        }
-        
-        top_vulnerabilities_table_data = [{
-            'folder_name': row['folder_name'],
-            'scan_name': row['scan_name'],
-            'vulnerability_name': row['vulnerability_name'],
-            'severity': severity_map[row['severity']],
-            'count': row['count']
-        } for row in top_vulnerabilities_data]
-        
-        # Toplam zafiyet sayıları
-        severity_info = [
-            {"name": "Kritik", "color": "#e74c3c", "key": "total_critical", "value": 4},
-            {"name": "Yüksek", "color": "#e67e22", "key": "total_high", "value": 3},
-            {"name": "Orta", "color": "#f1c40f", "key": "total_medium", "value": 2},
-            {"name": "Düşük", "color": "#2ecc71", "key": "total_low", "value": 1},
-            {"name": "Bilgi", "color": "#3498db", "key": "total_info", "value": 0}
-        ]
-        
-        total_vulnerabilities = [
-            html.Div([
-                html.H4(info["name"], style={'color': info["color"], 'margin': '0', 'fontSize': '18px'}),
-                html.P(total_vulnerabilities_data[info["key"]], style={
-                    'fontSize': '36px', 
-                    'fontWeight': 'bold', 
-                    'margin': '10px 0',
-                    'color': info["color"]
-                })
-            ], style={
-                'textAlign': 'center', 
-                'backgroundColor': '#34495e', 
-                'padding': '15px', 
-                'borderRadius': '10px', 
-                'margin': '10px',
-                'minWidth': '120px',
-                'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
-                'cursor': 'pointer'
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
+    
+    # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
+    detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
+    for item in detailed_vulnerability_data:
+        if item['severity'] == 4:
+            item['severity_text'] = 'Kritik'
+        elif item['severity'] == 3:
+            item['severity_text'] = 'Yüksek'
+        elif item['severity'] == 2:
+            item['severity_text'] = 'Orta'
+        elif item['severity'] == 1:
+            item['severity_text'] = 'Düşük'
+        elif item['severity'] == 0:
+            item['severity_text'] = 'Bilgi'
+        else:
+            item['severity_text'] = 'Bilinmeyen'
+    
+    #print("Summary Data:", summary_data)  # Debug için eklendi
+    
+    # Özet tablo verisi
+    summary_table_data = [{
+        'folder_name': row['folder_name'],
+        'scan_name': row['scan_name'],
+        'last_scan_date': row['last_scan_date'],
+        'total_hosts': row['total_hosts'],
+        'total_critical': row['total_critical'],
+        'total_high': row['total_high'],
+        'total_medium': row['total_medium'],
+        'total_low': row['total_low'],
+        'total_info': row['total_info']
+    } for row in summary_data]
+    
+    # Severity seçimine göre sıralama
+    if severity:
+        if 4 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_critical'], reverse=True)
+        elif 3 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_high'], reverse=True)
+        elif 2 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_medium'], reverse=True)
+        elif 1 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_low'], reverse=True)
+        elif 0 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
+    
+    # Zafiyet dağılımı grafiği
+    labels = ['Total', 'Critical', 'High', 'Medium', 'Low']
+    parents = ['', 'Total', 'Total', 'Total', 'Total']
+    values = [
+        sum(item['count'] for item in vulnerability_data if item['severity'] in [1, 2, 3, 4]),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 1)
+    ]
+    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
+
+    vulnerability_distribution = {
+        'data': [go.Sunburst(
+            labels=labels,
+            parents=parents,
+            values=values,
+            branchvalues="total",
+            marker=dict(colors=colors),
+            textinfo='label+value',
+            insidetextorientation='radial',
+            hoverinfo='label+value+percent parent'
+        )],
+        'layout': go.Layout(
+            paper_bgcolor='#2c3e50',
+            plot_bgcolor='#2c3e50',
+            font=dict(color='white', size=14),
+            margin=dict(t=0, l=0, r=0, b=0),
+            height=400,
+            showlegend=False
+        )
+    }
+
+    # Detaylı zafiyet listesi
+    vulnerability_table_data = detailed_vulnerability_data
+    
+    # En çok görülen 10 zafiyet
+    severity_map = {
+        4: 'Kritik',
+        3: 'Yüksek',
+        2: 'Orta',
+        1: 'Düşük',
+        0: 'Bilgi'
+    }
+    
+    top_vulnerabilities_table_data = [{
+        'folder_name': row['folder_name'],
+        'scan_name': row['scan_name'],
+        'vulnerability_name': row['vulnerability_name'],
+        'severity': severity_map[row['severity']],
+        'count': row['count']
+    } for row in top_vulnerabilities_data]
+    
+    # Toplam zafiyet sayıları
+    severity_info = [
+        {"name": "Kritik", "color": "#e74c3c", "key": "total_critical", "value": 4},
+        {"name": "Yüksek", "color": "#e67e22", "key": "total_high", "value": 3},
+        {"name": "Orta", "color": "#f1c40f", "key": "total_medium", "value": 2},
+        {"name": "Düşük", "color": "#2ecc71", "key": "total_low", "value": 1},
+        {"name": "Bilgi", "color": "#3498db", "key": "total_info", "value": 0}
+    ]
+    
+    total_vulnerabilities = [
+        html.Div([
+            html.H4(info["name"], style={'color': info["color"], 'margin': '0', 'fontSize': '18px'}),
+            html.P(total_vulnerabilities_data[info["key"]], style={
+                'fontSize': '36px', 
+                'fontWeight': 'bold', 
+                'margin': '10px 0',
+                'color': info["color"]
             })
-            for info in severity_info
-        ]
-        
-        # Son güncelleme zamanını oluştur
-        last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        ], style={
+            'textAlign': 'center', 
+            'backgroundColor': '#34495e', 
+            'padding': '15px', 
+            'borderRadius': '10px', 
+            'margin': '10px',
+            'minWidth': '120px',
+            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
+            'cursor': 'pointer'
+        })
+        for info in severity_info
+    ]
+    
+    # Son güncelleme zamanını oluştur
+    last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
-        # Tarama dropdown seçeneklerini oluştur
-        scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
+    # Tarama dropdown seçeneklerini oluştur
+    scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
 
-        # Veri kontrolü
-        if not top_vulnerabilities_data:
-            # Eğer veri yoksa, boş bir grafik döndür
-            top_vulnerabilities_graph = go.Figure()
-            top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
-            return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
+    # Veri kontrolü
+    if not top_vulnerabilities_data:
+        # Eğer veri yoksa, boş bir grafik döndür
+        top_vulnerabilities_graph = go.Figure()
+        top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
+        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
 
-        # En çok görülen 10 zafiyet daire grafiği
-        top_vulnerabilities_graph = go.Figure(
-            go.Sunburst(
-                ids=['Most Occurent 10 Vulnerabilities'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
-                labels=['Most Occurent 10 Vulnerabilities'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
-                parents=[''] + ['Most Occurent 10 Vulnerabilities'] * len(top_vulnerabilities_data),
-                values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
-                branchvalues="total",
-                marker=dict(
-                    colors=['#2c3e50'] + [
-                        '#e74c3c' if row['severity'] == 4 else
-                        '#e67e22' if row['severity'] == 3 else
-                        '#f1c40f' if row['severity'] == 2 else
-                        '#2ecc71' if row['severity'] == 1 else
-                        '#3498db' if row['severity'] == 0 else
-                        '#95a5a6' for row in top_vulnerabilities_data
-                    ]
-                ),
-                textinfo='label',
-                hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
-                insidetextorientation='radial',
-                textfont=dict(size=10, color='white'),
-                customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
-            )
+    # En çok görülen 10 zafiyet daire grafiği
+    top_vulnerabilities_graph = go.Figure(
+        go.Sunburst(
+            ids=['Most Occurent 10 Vulnerabilities'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
+            labels=['Most Occurent 10 Vulnerabilities'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
+            parents=[''] + ['Most Occurent 10 Vulnerabilities'] * len(top_vulnerabilities_data),
+            values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
+            branchvalues="total",
+            marker=dict(
+                colors=['#2c3e50'] + [
+                    '#e74c3c' if row['severity'] == 4 else
+                    '#e67e22' if row['severity'] == 3 else
+                    '#f1c40f' if row['severity'] == 2 else
+                    '#2ecc71' if row['severity'] == 1 else
+                    '#3498db' if row['severity'] == 0 else
+                    '#95a5a6' for row in top_vulnerabilities_data
+                ]
+            ),
+            textinfo='label',
+            hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
+            insidetextorientation='radial',
+            textfont=dict(size=10, color='white'),
+            customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
         )
+    )
 
-        top_vulnerabilities_graph.update_layout(
-            margin=dict(l=0, r=0, t=0, b=0),
-            paper_bgcolor='#2c3e50',
-            plot_bgcolor='#34495e',
-            font=dict(color='white', size=14),
-            height=400,
-            showlegend=False,
+    top_vulnerabilities_graph.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor='#2c3e50',
+        plot_bgcolor='#34495e',
+        font=dict(color='white', size=14),
+        height=400,
+        showlegend=False,
+    )
+
+    # En çok kullanılan 10 port daire grafiği
+    top_ports_graph = go.Figure(
+        go.Sunburst(
+            ids=['Most Used 10 Ports'] + [f"port_{row['port']}" for row in top_ports_data],
+            labels=['Most Used 10 Ports'] + [f"Port {row['port']}" for row in top_ports_data],
+            parents=[''] + ['Most Used 10 Ports'] * len(top_ports_data),
+            values=[sum(row['count'] for row in top_ports_data)] + [row['count'] for row in top_ports_data],
+            branchvalues="total",
+            marker=dict(
+                colors=['#2c3e50'] + [
+                    f'rgb({hash(row["port"]) % 256}, {(hash(row["port"]) // 256) % 256}, {(hash(row["port"]) // 65536) % 256})'
+                    for row in top_ports_data
+                ]
+            ),
+            textinfo='label+value',
+            hovertemplate='<b>%{label}</b><br>Count: %{value}<br><extra></extra>',
+            insidetextorientation='radial',
+            textfont=dict(size=10, color='white'),
         )
+    )
 
-        # En çok kullanılan 10 port daire grafiği
-        top_ports_graph = go.Figure(
-            go.Sunburst(
-                ids=['Most Used 10 Ports'] + [f"port_{row['port']}" for row in top_ports_data],
-                labels=['Most Used 10 Ports'] + [f"Port {row['port']}" for row in top_ports_data],
-                parents=[''] + ['Most Used 10 Ports'] * len(top_ports_data),
-                values=[sum(row['count'] for row in top_ports_data)] + [row['count'] for row in top_ports_data],
-                branchvalues="total",
-                marker=dict(
-                    colors=['#2c3e50'] + [
-                        f'rgb({hash(row["port"]) % 256}, {(hash(row["port"]) // 256) % 256}, {(hash(row["port"]) // 65536) % 256})'
-                        for row in top_ports_data
-                    ]
-                ),
-                textinfo='label+value',
-                hovertemplate='<b>%{label}</b><br>Count: %{value}<br><extra></extra>',
-                insidetextorientation='radial',
-                textfont=dict(size=10, color='white'),
-            )
-        )
+    top_ports_graph.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor='#2c3e50',
+        plot_bgcolor='#34495e',
+        font=dict(color='white', size=14),
+        height=400,
+        title=dict(text='Most Used 10 Ports', font=dict(color='white', size=16)),
+        showlegend=False,
+    )
 
-        top_ports_graph.update_layout(
-            margin=dict(l=0, r=0, t=0, b=0),
-            paper_bgcolor='#2c3e50',
-            plot_bgcolor='#34495e',
-            font=dict(color='white', size=14),
-            height=400,
-            title=dict(text='Most Used 10 Ports', font=dict(color='white', size=16)),
-            showlegend=False,
-        )
-
-        return (summary_table_data, vulnerability_distribution, top_vulnerabilities_table_data, top_vulnerabilities_graph, top_ports_graph,
-                total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], 
-                last_updated, scan_options, severity)
-    except Exception as e:
-        print(f"Hata oluştu: {str(e)}")
-        # Hata durumunda uygun bir geri dönüş değeri
-        return [dash.no_update] * 14  # Çıktı sayısına göre ayarlayın
+    return (summary_table_data, vulnerability_distribution, top_vulnerabilities_table_data, top_vulnerabilities_graph, top_ports_graph,
+            total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], 
+            last_updated, scan_options, severity)
 
 # Combine the two callbacks into one
 @app.callback(
