@@ -220,7 +220,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             cursor.execute(detailed_vulnerability_query)
             detailed_vulnerability_data = cursor.fetchall()
 
-            # Detaylı zafiyet listesindeki tarih formatın�� değiştir
+            # Detaylı zafiyet listesindeki tarih formatın değiştir
             for row in detailed_vulnerability_data:
                 if row['scan_date']:
                     date = row['scan_date']
@@ -344,98 +344,107 @@ def create_main_layout():
             html.P("Bu sayfa her 1 dakikada bir otomatik olarak yenilenir.", style={'color': '#bdc3c7', 'textAlign': 'right', 'fontStyle': 'italic', 'margin': '5px 0'}),
         ], style={'backgroundColor': '#34495e', 'padding': '10px', 'borderRadius': '0 0 10px 10px'}),
 
-        # Filters
+        # Filters and Buttons
         html.Div([
             html.Div([
-                html.Label("Önem Derecesi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
-                dcc.Dropdown(
-                    id='severity-dropdown',
-                    options=[
-                        {'label': 'Kritik', 'value': 4},
-                        {'label': 'Yüksek', 'value': 3},
-                        {'label': 'Orta', 'value': 2},
-                        {'label': 'Düşük', 'value': 1},
-                        {'label': 'Bilgi', 'value': 0}
-                    ],
-                    multi=True,
-                    placeholder="Seçiniz...",
-                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'black'}
-                ),
-            ], style={'width': '19%', 'marginRight': '1%'}),
-            
-            html.Div([
-                html.Label("Tarama Seç:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
-                dcc.Dropdown(
-                    id='scan-dropdown',
-                    options=[],
-                    placeholder="Seçiniz...",
-                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'black'}
-                ),
-            ], style={'width': '19%', 'marginRight': '1%'}),
-            
-            html.Div([
-                html.Label("Zafiyet Adı:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
-                dcc.Input(
-                    id='vulnerability-name-input',
-                    type='text',
-                    placeholder="Zafiyet adı girin...",
-                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
-                ),
-            ], style={'width': '19%', 'marginRight': '1%'}),
-            
-            html.Div([
-                html.Label("IP Adresi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
-                dcc.Input(
-                    id='ip-address-input',
-                    type='text',
-                    placeholder="IP adresi girin...",
-                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
-                ),
-            ], style={'width': '19%', 'marginRight': '1%'}),
-            
-            html.Div([
-                html.Label("Port:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
-                dcc.Input(
-                    id='port-input',
-                    type='text',
-                    placeholder="Port numarası girin...",
-                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
-                ),
-            ], style={'width': '19%'}),
-        ], style={
-            'display': 'flex',
-            'justifyContent': 'space-between',
-            'alignItems': 'flex-start',
-            'flexWrap': 'nowrap',
-            'marginBottom': '20px'
-        }),
-        
-        html.Div([
-            html.Button('Filtrele', id='filter-button', n_clicks=0, style={
-                'backgroundColor': '#3498db',
-                'color': 'white',
-                'border': 'none',
-                'padding': '10px 20px',
-                'borderRadius': '5px',
-                'cursor': 'pointer',
-                'transition': 'background-color 0.3s',
-                'marginRight': '10px',
+                html.Div([
+                    html.Label("Önem Derecesi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
+                    dcc.Dropdown(
+                        id='severity-dropdown',
+                        options=[
+                            {'label': 'Kritik', 'value': 4},
+                            {'label': 'Yüksek', 'value': 3},
+                            {'label': 'Orta', 'value': 2},
+                            {'label': 'Düşük', 'value': 1},
+                            {'label': 'Bilgi', 'value': 0}
+                        ],
+                        multi=True,
+                        placeholder="Seçiniz...",
+                        style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'black'}
+                    ),
+                ], style={'width': '19%', 'marginRight': '1%'}),
+                
+                html.Div([
+                    html.Label("Tarama Seç:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
+                    dcc.Dropdown(
+                        id='scan-dropdown',
+                        options=[],
+                        placeholder="Seçiniz...",
+                        style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'black'}
+                    ),
+                ], style={'width': '19%', 'marginRight': '1%'}),
+                
+                html.Div([
+                    html.Label("Zafiyet Adı:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
+                    dcc.Input(
+                        id='vulnerability-name-input',
+                        type='text',
+                        placeholder="Zafiyet adı girin...",
+                        style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
+                    ),
+                ], style={'width': '19%', 'marginRight': '1%'}),
+                
+                html.Div([
+                    html.Label("IP Adresi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
+                    dcc.Input(
+                        id='ip-address-input',
+                        type='text',
+                        placeholder="IP adresi girin...",
+                        style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
+                    ),
+                ], style={'width': '19%', 'marginRight': '1%'}),
+                
+                html.Div([
+                    html.Label("Port:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
+                    dcc.Input(
+                        id='port-input',
+                        type='text',
+                        placeholder="Port numarası girin...",
+                        style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
+                    ),
+                ], style={'width': '19%'}),
+            ], style={
+                'display': 'flex',
+                'justifyContent': 'space-between',
+                'alignItems': 'flex-end',
+                'flexWrap': 'nowrap',
+                'marginBottom': '20px'
             }),
-            html.A(
-                html.Button('Detaylı Zafiyet Listesi', style={
-                    'backgroundColor': '#2ecc71',
+            
+            html.Div([
+                html.Button('Filtrele', id='filter-button', n_clicks=0, style={
+                    'backgroundColor': '#3498db',
                     'color': 'white',
                     'border': 'none',
                     'padding': '10px 20px',
                     'borderRadius': '5px',
                     'cursor': 'pointer',
                     'transition': 'background-color 0.3s',
+                    'marginRight': '10px',
                 }),
-                id='open-new-tab',
-                href='',
-                target='_blank'
-            ),
-        ], style={'display': 'flex', 'justifyContent': 'center', 'marginTop': '20px'}),
+                html.A(
+                    html.Button('Detaylı Zafiyet Listesi', style={
+                        'backgroundColor': '#2ecc71',
+                        'color': 'white',
+                        'border': 'none',
+                        'padding': '10px 20px',
+                        'borderRadius': '5px',
+                        'cursor': 'pointer',
+                        'transition': 'background-color 0.3s',
+                    }),
+                    id='open-new-tab',
+                    href='',
+                    target='_blank'
+                ),
+            ], style={'display': 'flex', 'justifyContent': 'flex-end', 'marginTop': '20px'}),
+        ], style={
+            'backgroundColor': '#2c3e50',
+            'padding': '20px',
+            'marginTop': '20px',
+            'marginBottom': '20px',
+            'borderRadius': '10px',
+            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
+        }),
 
         # Total Vulnerabilities
         html.Div([
