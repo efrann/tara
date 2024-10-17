@@ -450,16 +450,25 @@ def create_main_layout():
         html.Div([
             html.Div([
                 dcc.Graph(id='vulnerability-distribution', style={'height': '400px'})
-            ], className="four columns"),
+            ], style={'width': '33%', 'display': 'inline-block', 'padding': '10px'}),
 
             html.Div([
                 dcc.Graph(id='top-vulnerabilities-graph', style={'height': '400px'})
-            ], className="four columns"),
+            ], style={'width': '33%', 'display': 'inline-block', 'padding': '10px'}),
 
             html.Div([
                 dcc.Graph(id='top-ports-graph', style={'height': '400px'})
-            ], className="four columns"),
-        ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
+            ], style={'width': '33%', 'display': 'inline-block', 'padding': '10px'}),
+        ], style={
+            'backgroundColor': '#2c3e50', 
+            'padding': '20px', 
+            'margin': '20px 0', 
+            'borderRadius': '10px', 
+            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
+            'display': 'flex',
+            'flexWrap': 'wrap',
+            'justifyContent': 'space-between'
+        }),
 
         # Tables
         html.Div([
