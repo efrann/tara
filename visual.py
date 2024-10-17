@@ -9,6 +9,7 @@ import math
 from pymysql.cursors import DictCursor
 from contextlib import contextmanager
 from urllib.parse import urlencode, parse_qs, unquote
+import dash_bootstrap_components as dbc
 
 @contextmanager
 def get_db_connection():
@@ -276,7 +277,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             cursor.execute(scan_list_query)
             scan_list = [row['name'] for row in cursor.fetchall()]
 
-            # En çok kullan��lan 10 port sorgusu
+            # En çok kullanlan 10 port sorgusu
             top_ports_query = f"""
             SELECT 
                 vo.port,
@@ -632,6 +633,12 @@ def create_detailed_analysis_layout():
             'color': '#ecf0f1',
             'borderRadius': '5px',
         }),
+        dbc.Input(
+            id='search-input',
+            type='text',
+            placeholder='Ara...',
+            style={'marginBottom': '20px', 'width': '100%'}
+        ),
         dash_table.DataTable(
             id='vulnerability-table',
             columns=[
@@ -661,12 +668,11 @@ def create_detailed_analysis_layout():
                 'border': '1px solid #34495e',
                 'color': '#3498db',
             },
-            filter_action="native",
             sort_action="native",
             sort_mode="multi",
             page_action="native",
             page_current=0,
-            page_size=50,  # Sayfa başına gösterilen veri sayısını artırdık
+            page_size=50,
         ),
         html.Div(id='ip-ports-info', style={
             'marginTop': '20px',
@@ -1012,9 +1018,10 @@ def update_button_style(n_clicks):
     [Output('vulnerability-table', 'data'),
      Output('ip-ports-info', 'children'),
      Output('applied-filters', 'children')],
-    [Input('url', 'search')]
+    [Input('url', 'search'),
+     Input('search-input', 'value')]
 )
-def update_detailed_analysis(search):
+def update_detailed_analysis(search, search_value):
     params = parse_qs(search[1:])
     
     severity = params.get('severity', [])
@@ -1050,6 +1057,14 @@ def update_detailed_analysis(search):
         else:
             item['severity_text'] = 'Bilinmeyen'
     
+    # Arama değeri varsa filtreleme yap
+    if search_value:
+        search_value = search_value.lower()
+        detailed_vulnerability_data = [
+            item for item in detailed_vulnerability_data
+            if any(search_value in str(value).lower() for value in item.values())
+        ]
+    
     # IP portları bilgisini al
     ip_ports_info = html.Div("IP adresi belirtilmedi.")
     if ip_address:
@@ -1073,6 +1088,8 @@ def update_detailed_analysis(search):
         applied_filters.append(f"IP Adresi: {ip_address}")
     if port:
         applied_filters.append(f"Port: {port}")
+    if search_value:
+        applied_filters.append(f"Arama: {search_value}")
     
     applied_filters_div = html.Div([
         html.H4("Uygulanan Filtreler:"),
