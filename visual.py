@@ -412,31 +412,47 @@ def create_main_layout():
             }),
             
             html.Div([
-                html.Button('Filtrele', id='filter-button', n_clicks=0, style={
-                    'backgroundColor': '#3498db',
-                    'color': 'white',
-                    'border': 'none',
-                    'padding': '10px 20px',
-                    'borderRadius': '5px',
-                    'cursor': 'pointer',
-                    'transition': 'background-color 0.3s',
-                    'marginRight': '10px',
-                }),
-                html.A(
-                    html.Button('Detaylı Zafiyet Listesi', style={
-                        'backgroundColor': '#2ecc71',
+                html.Button(
+                    [html.I(className="fas fa-filter", style={'marginRight': '5px'}), "Filtrele"],
+                    id='filter-button',
+                    n_clicks=0,
+                    style={
+                        'backgroundColor': '#3498db',
                         'color': 'white',
                         'border': 'none',
                         'padding': '10px 20px',
                         'borderRadius': '5px',
                         'cursor': 'pointer',
-                        'transition': 'background-color 0.3s',
-                    }),
+                        'transition': 'all 0.3s',
+                        'marginRight': '10px',
+                        'display': 'flex',
+                        'alignItems': 'center',
+                        'justifyContent': 'center',
+                        'boxShadow': '0 2px 5px rgba(0,0,0,0.2)',
+                    }
+                ),
+                html.A(
+                    html.Button(
+                        [html.I(className="fas fa-list-alt", style={'marginRight': '5px'}), "Detaylı Zafiyet Listesi"],
+                        style={
+                            'backgroundColor': '#2ecc71',
+                            'color': 'white',
+                            'border': 'none',
+                            'padding': '10px 20px',
+                            'borderRadius': '5px',
+                            'cursor': 'pointer',
+                            'transition': 'all 0.3s',
+                            'display': 'flex',
+                            'alignItems': 'center',
+                            'justifyContent': 'center',
+                            'boxShadow': '0 2px 5px rgba(0,0,0,0.2)',
+                        }
+                    ),
                     id='open-new-tab',
                     href='',
                     target='_blank'
                 ),
-            ], style={'display': 'flex', 'justifyContent': 'flex-end', 'marginTop': '20px'}),
+            ], style={'display': 'flex', 'justifyContent': 'center', 'marginTop': '20px'}),
         ], style={
             'backgroundColor': '#2c3e50',
             'padding': '20px',
