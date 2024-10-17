@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 import math
 from pymysql.cursors import DictCursor
 from contextlib import contextmanager
-import urllib.parse
 
 @contextmanager
 def get_db_connection():
@@ -588,20 +587,24 @@ app.layout = html.Div([
     ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
     # Detaylı Zafiyet Listesi Butonu
-    html.A('Detaylı Zafiyet Listesi', id='open-new-tab', href='/detailed-vulnerabilities', target='_blank', style={
-        'backgroundColor': '#3498db',
-        'color': 'white',
-        'border': 'none',
-        'padding': '10px 20px',
-        'borderRadius': '5px',
-        'cursor': 'pointer',
-        'transition': 'background-color 0.3s',
-        'margin': '20px auto',
-        'display': 'block',
-        'textDecoration': 'none',
-        'textAlign': 'center',
-        'width': '200px'
-    }),
+    html.Div([
+        html.A(
+            html.Button('Detaylı Zafiyet Listesi', style={
+                'backgroundColor': '#3498db',
+                'color': 'white',
+                'border': 'none',
+                'padding': '10px 20px',
+                'borderRadius': '5px',
+                'cursor': 'pointer',
+                'transition': 'background-color 0.3s',
+                'margin': '20px auto',
+                'display': 'block'
+            }),
+            id='open-new-tab',
+            href='/detailed-analysis',
+            target='_blank'
+        ),
+    ]),
 
     dcc.Interval(
         id='interval-component',
@@ -925,133 +928,67 @@ def update_button_style(n_clicks):
             'transition': 'background-color 0.3s',
         }
 
-# Detaylı zafiyet listesi sayfası için yeni bir layout oluştur
-detailed_vulnerabilities_layout = html.Div([
-    html.H1("Detaylı Zafiyet Listesi", style={'textAlign': 'center', 'color': 'white'}),
-    dash_table.DataTable(
-        id='detailed-vulnerability-table',
-        columns=[
-            {"name": "Tarama Adı", "id": "scan_name"},
-            {"name": "Host IP", "id": "host_ip"},
-            {"name": "Host FQDN", "id": "host_fqdn"},
-            {"name": "Zafiyet Adı", "id": "vulnerability_name"},
-            {"name": "Önem Derecesi", "id": "severity_text"},
-            {"name": "Plugin Ailesi", "id": "plugin_family"},
-            {"name": "Port", "id": "port"},
-            {"name": "CVSS3 Base Score", "id": "cvss3_base_score"},
-            {"name": "Tarama Tarihi", "id": "scan_date"}
-        ],
-        style_table={'height': '600px', 'overflowY': 'auto'},
-        style_cell={
-            'backgroundColor': '#34495e',
-            'color': '#ecf0f1',
-            'border': '1px solid #2c3e50',
-            'textAlign': 'left',
-            'padding': '10px',
-            'whiteSpace': 'normal',
-            'height': 'auto',
-        },
-        style_header={
-            'backgroundColor': '#2c3e50',
-            'fontWeight': 'bold',
-            'border': '1px solid #34495e',
-            'color': '#3498db',
-        },
-        style_data_conditional=[
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Kritik"'},
-                'backgroundColor': 'rgba(231, 76, 60, 0.1)',
-                'color': '#e74c3c'
-            },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Yüksek"'},
-                'backgroundColor': 'rgba(230, 126, 34, 0.1)',
-                'color': '#e67e22'
-            },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Orta"'},
-                'backgroundColor': 'rgba(241, 196, 15, 0.1)',
-                'color': '#f1c40f'
-            },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Düşük"'},
-                'backgroundColor': 'rgba(46, 204, 113, 0.1)',
-                'color': '#2ecc71'
-            },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Bilgi"'},
-                'backgroundColor': 'rgba(52, 152, 219, 0.1)',
-                'color': '#3498db'
-            }
-        ],
-    ),
-    html.Div(id='ip-ports-info', style={
-        'marginTop': '20px',
-        'padding': '10px',
-        'backgroundColor': '#2c3e50',
-        'borderRadius': '5px',
-        'color': '#ecf0f1',
-    }),
-], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'minHeight': '100vh'})
-
-# Ana uygulama ve detaylı zafiyet sayfası için URL yönlendirmesi ekle
-app.layout = html.Div([
-    dcc.Location(id='url', refresh=False),
-    html.Div(id='page-content')
-])
-
+# Yeni bir sayfa oluştur
 @app.callback(Output('page-content', 'children'),
               [Input('url', 'pathname')])
 def display_page(pathname):
-    if pathname == '/detailed-vulnerabilities':
-        return detailed_vulnerabilities_layout
-    else:
-        return app.layout  # Ana sayfa layout'u
-
-# Detaylı zafiyet tablosunu güncellemek için yeni bir callback ekle
-@app.callback(
-    [Output('detailed-vulnerability-table', 'data'),
-     Output('ip-ports-info', 'children')],
-    [Input('url', 'search')]
-)
-def update_detailed_vulnerability_table(search):
-    # URL'den parametreleri al
-    params = urllib.parse.parse_qs(search[1:])
-    severity = [int(s) for s in params.get('severity', [])]
-    scan_name = params.get('scan_name', [None])[0]
-    vulnerability_name = params.get('vulnerability_name', [None])[0]
-    ip_address = params.get('ip_address', [None])[0]
-    port = params.get('port', [None])[0]
-
-    # Verileri al
-    *_, detailed_vulnerability_data, _, _, _, _, ip_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
-
-    # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
-    detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
-    for item in detailed_vulnerability_data:
-        if item['severity'] == 4:
-            item['severity_text'] = 'Kritik'
-        elif item['severity'] == 3:
-            item['severity_text'] = 'Yüksek'
-        elif item['severity'] == 2:
-            item['severity_text'] = 'Orta'
-        elif item['severity'] == 1:
-            item['severity_text'] = 'Düşük'
-        elif item['severity'] == 0:
-            item['severity_text'] = 'Bilgi'
-        else:
-            item['severity_text'] = 'Bilinmeyen'
-
-    # IP portları bilgisini oluştur
-    ip_ports_info = html.Div()
-    if ip_address and ip_ports_data:
-        port_list = [str(port['port']) for port in ip_ports_data]
-        ip_ports_info = html.Div([
-            html.H4(f"{ip_address} IP adresi için açık portlar:", style={'color': '#3498db'}),
-            html.Ul([html.Li(port) for port in port_list], style={'columns': '3', 'listStyleType': 'none'})
+    if pathname == '/detailed-analysis':
+        return html.Div([
+            html.H3("Detaylı Zafiyet Listesi", style={
+                'textAlign': 'center', 
+                'color': '#ecf0f1', 
+                'backgroundColor': '#34495e', 
+                'padding': '10px', 
+                'marginBottom': '20px',
+                'borderRadius': '5px',
+            }),
+            dash_table.DataTable(
+                id='vulnerability-table',
+                columns=[
+                    {"name": "Tarama Adı", "id": "scan_name"},
+                    {"name": "Host IP", "id": "host_ip"},
+                    {"name": "Host FQDN", "id": "host_fqdn"},
+                    {"name": "Zafiyet Adı", "id": "vulnerability_name"},
+                    {"name": "Önem Derecesi", "id": "severity_text"},
+                    {"name": "Plugin Ailesi", "id": "plugin_family"},
+                    {"name": "Port", "id": "port"},
+                    {"name": "CVSS3 Base Score", "id": "cvss3_base_score"},
+                    {"name": "Tarama Tarihi", "id": "scan_date"}
+                ],
+                style_table={'height': '400px', 'overflowY': 'auto'},
+                style_cell={
+                    'backgroundColor': '#34495e',
+                    'color': '#ecf0f1',
+                    'border': '1px solid #2c3e50',
+                    'textAlign': 'left',
+                    'padding': '10px',
+                    'whiteSpace': 'normal',
+                    'height': 'auto',
+                },
+                style_header={
+                    'backgroundColor': '#2c3e50',
+                    'fontWeight': 'bold',
+                    'border': '1px solid #34495e',
+                    'color': '#3498db',
+                },
+            ),
+            html.Div(id='ip-ports-info', style={
+                'marginTop': '20px',
+                'padding': '10px',
+                'backgroundColor': '#2c3e50',
+                'borderRadius': '5px',
+                'color': '#ecf0f1',
+            }),
         ])
+    else:
+        return app.layout
 
-    return detailed_vulnerability_data, ip_ports_info
+# Ana layout'a URL ve page-content ekleyin
+app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
+    html.Div(id='page-content'),
+    # ... mevcut layout içeriği ...
+])
 
 if __name__ == '__main__':
     app.run_server(debug=True)
