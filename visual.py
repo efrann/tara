@@ -393,30 +393,7 @@ main_layout = html.Div([
         dcc.Graph(id='top-ports-graph', style={'width': '50%'})
     ], style={'display': 'flex'}),
     
-    dash_table.DataTable(
-        id='summary-table',
-        columns=[
-            {"name": "Klasör Adı", "id": "folder_name"},
-            {"name": "Tarama Adı", "id": "scan_name"},
-            {"name": "Son Tarama Tarihi", "id": "last_scan_date"},
-            {"name": "Toplam Host", "id": "total_hosts"},
-            {"name": "Kritik", "id": "total_critical"},
-            {"name": "Yüksek", "id": "total_high"},
-            {"name": "Orta", "id": "total_medium"},
-            {"name": "Düşük", "id": "total_low"},
-            {"name": "Bilgi", "id": "total_info"}
-        ],
-        style_table={'height': '300px', 'overflowY': 'auto'},
-        style_cell={
-            'backgroundColor': '#34495e',
-            'color': '#ecf0f1',
-            'textAlign': 'left'
-        },
-        style_header={
-            'backgroundColor': '#2c3e50',
-            'fontWeight': 'bold'
-        }
-    ),
+    dash_table.DataTable(id='summary-table'),
     
     html.Button("Detaylı Zafiyet Listesi", id="open-modal", n_clicks=0),
     
@@ -424,36 +401,7 @@ main_layout = html.Div([
         html.Div([
             html.H2("Detaylı Zafiyet Listesi"),
             html.Button("Kapat", id="close-modal", n_clicks=0),
-            dash_table.DataTable(
-                id='vulnerability-table',
-                columns=[
-                    {"name": "Tarama Adı", "id": "scan_name"},
-                    {"name": "Host IP", "id": "host_ip"},
-                    {"name": "Host FQDN", "id": "host_fqdn"},
-                    {"name": "Zafiyet Adı", "id": "vulnerability_name"},
-                    {"name": "Önem Derecesi", "id": "severity_text"},
-                    {"name": "Plugin Ailesi", "id": "plugin_family"},
-                    {"name": "Port", "id": "port"},
-                    {"name": "CVSS3 Base Score", "id": "cvss3_base_score"},
-                    {"name": "Tarama Tarihi", "id": "scan_date"}
-                ],
-                style_table={'height': '400px', 'overflowY': 'auto'},
-                style_cell={
-                    'backgroundColor': '#34495e',
-                    'color': '#ecf0f1',
-                    'textAlign': 'left'
-                },
-                style_header={
-                    'backgroundColor': '#2c3e50',
-                    'fontWeight': 'bold'
-                },
-                filter_action="native",
-                sort_action="native",
-                sort_mode="multi",
-                page_action="native",
-                page_current= 0,
-                page_size= 20,
-            ),
+            dash_table.DataTable(id='vulnerability-table'),
             html.Div(id='ip-ports-info')
         ])
     ]),
@@ -471,69 +419,7 @@ main_layout = html.Div([
 detailed_analysis_layout = html.Div([
     html.H1("Detaylı Zafiyet Analizi", style={'textAlign': 'center', 'color': 'white'}),
     dcc.Input(id='search-input', type='text', placeholder='Ara...', style={'width': '100%', 'marginBottom': '10px'}),
-    dash_table.DataTable(
-        id='detailed-vulnerability-table',
-        columns=[
-            {"name": "Tarama Adı", "id": "scan_name"},
-            {"name": "Host IP", "id": "host_ip"},
-            {"name": "Host FQDN", "id": "host_fqdn"},
-            {"name": "Zafiyet Adı", "id": "vulnerability_name"},
-            {"name": "Önem Derecesi", "id": "severity_text"},
-            {"name": "Plugin Ailesi", "id": "plugin_family"},
-            {"name": "Port", "id": "port"},
-            {"name": "CVSS3 Base Score", "id": "cvss3_base_score"},
-            {"name": "Tarama Tarihi", "id": "scan_date"}
-        ],
-        style_table={'height': '600px', 'overflowY': 'auto'},
-        style_cell={
-            'backgroundColor': '#34495e',
-            'color': '#ecf0f1',
-            'border': '1px solid #2c3e50',
-            'textAlign': 'left',
-            'padding': '10px',
-            'whiteSpace': 'normal',
-            'height': 'auto',
-        },
-        style_header={
-            'backgroundColor': '#2c3e50',
-            'fontWeight': 'bold',
-            'border': '1px solid #34495e',
-            'color': '#3498db',
-        },
-        style_data_conditional=[
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Kritik"'},
-                'backgroundColor': 'rgba(255, 0, 0, 0.2)',
-                'color': 'red'
-            },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Yüksek"'},
-                'backgroundColor': 'rgba(255, 165, 0, 0.2)',
-                'color': 'orange'
-            },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Orta"'},
-                'backgroundColor': 'rgba(255, 255, 0, 0.2)',
-                'color': 'yellow'
-            },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Düşük"'},
-                'backgroundColor': 'rgba(0, 128, 0, 0.2)',
-                'color': 'green'
-            },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Bilgi"'},
-                'backgroundColor': 'rgba(0, 0, 255, 0.2)',
-                'color': 'blue'
-            }
-        ],
-        filter_action="native",
-        sort_action="native",
-        sort_mode="multi",
-        page_action="native",
-        page_current= 0,
-        page_size= 20,
-    )
+    dash_table.DataTable(id='detailed-vulnerability-table')
 ], style={'backgroundColor': '#2c3e50', 'padding': '20px'})
 
 # Ana uygulama ve detaylı analiz sayfası için ayrı URL'ler tanımlayalım
@@ -556,7 +442,6 @@ def display_page(pathname):
 @app.callback(
     [Output('summary-table', 'data'),
      Output('vulnerability-distribution', 'figure'),
-     Output('top-vulnerabilities-table', 'data'),
      Output('top-vulnerabilities-graph', 'figure'),
      Output('top-ports-graph', 'figure'),  # Yeni çıktı
      Output('severity-4', 'children'),
@@ -802,7 +687,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
         showlegend=False,
     )
 
-    return (summary_table_data, vulnerability_distribution, top_vulnerabilities_table_data, top_vulnerabilities_graph, top_ports_graph,
+    return (summary_table_data, vulnerability_distribution, top_vulnerabilities_graph, top_ports_graph,
             total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], 
             last_updated, scan_options, severity)
 
