@@ -396,16 +396,34 @@ def create_main_layout():
                     style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
                 ),
             ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
-            html.Button('Filtrele', id='filter-button', n_clicks=0, style={
-                'marginTop': '25px',
-                'backgroundColor': '#3498db',
-                'color': 'white',
-                'border': 'none',
-                'padding': '10px 20px',
-                'borderRadius': '5px',
-                'cursor': 'pointer',
-                'transition': 'background-color 0.3s',
-            }),
+            html.Div([
+                html.Button('Filtrele', id='filter-button', n_clicks=0, style={
+                    'backgroundColor': '#3498db',
+                    'color': 'white',
+                    'border': 'none',
+                    'padding': '10px 20px',
+                    'borderRadius': '5px',
+                    'cursor': 'pointer',
+                    'transition': 'background-color 0.3s',
+                    'marginRight': '10px',
+                    'marginTop': '25px',
+                }),
+                html.A(
+                    html.Button('Detaylı Zafiyet Listesi', style={
+                        'backgroundColor': '#2ecc71',
+                        'color': 'white',
+                        'border': 'none',
+                        'padding': '10px 20px',
+                        'borderRadius': '5px',
+                        'cursor': 'pointer',
+                        'transition': 'background-color 0.3s',
+                        'marginTop': '25px',
+                    }),
+                    id='open-new-tab',
+                    href='/detailed-analysis',
+                    target='_blank'
+                ),
+            ], style={'display': 'inline-block', 'verticalAlign': 'bottom'}),
         ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'marginTop': '20px', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
         # Total Vulnerabilities
@@ -584,26 +602,6 @@ def create_main_layout():
                 ),
             ], className="six columns"),
         ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
-
-        # Detaylı Zafiyet Listesi Butonu
-        html.Div([
-            html.A(
-                html.Button('Detaylı Zafiyet Listesi', style={
-                    'backgroundColor': '#3498db',
-                    'color': 'white',
-                    'border': 'none',
-                    'padding': '10px 20px',
-                    'borderRadius': '5px',
-                    'cursor': 'pointer',
-                    'transition': 'background-color 0.3s',
-                    'margin': '20px auto',
-                    'display': 'block'
-                }),
-                id='open-new-tab',
-                href='/detailed-analysis',
-                target='_blank'
-            ),
-        ]),
 
         dcc.Interval(
             id='interval-component',
