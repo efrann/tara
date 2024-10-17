@@ -639,6 +639,7 @@ def create_detailed_analysis_layout():
             'color': '#ecf0f1',
             'borderRadius': '5px',
         }),
+        html.Div(id='ip-ports-info'),  # IP portları bilgisini buraya taşıdık
         dbc.Input(
             id='search-input',
             type='text',
@@ -712,16 +713,9 @@ def create_detailed_analysis_layout():
             page_current=0,
             page_size=50,
         ),
-        html.Div(id='ip-ports-info', style={
-            'marginTop': '20px',
-            'padding': '10px',
-            'backgroundColor': '#2c3e50',
-            'borderRadius': '5px',
-            'color': '#ecf0f1',
-        }),
     ], style={'padding': '20px', 'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
 
-app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
+app = dash.Dash(__name__)
 
 # Ana layout
 app.layout = html.Div([
@@ -1103,16 +1097,29 @@ def update_detailed_analysis(search, search_value):
             if any(search_value in str(value).lower() for value in item.values())
         ]
     
-    # IP portları bilgisini al
-    ip_ports_info = html.Div("IP adresi belirtilmedi.")
+    # IP portları bilgisini al ve geçersiz portları filtrele
+    ip_ports_info = html.Div()
     if ip_address:
         if ip_ports_data:
-            port_list = [str(port['port']) for port in ip_ports_data]
-            ip_ports_info = html.Div([
-                html.H4(f"{ip_address} IP adresi için açık portlar:", style={'color': '#3498db'}),
-                html.Ul([html.Li(port) for port in port_list], style={'columns': '3', 'listStyleType': 'none'})
-            ])
-    
+            valid_ports = [str(port['port']) for port in ip_ports_data if port['port'] not in [None, 0, '0', 'null']]
+            if valid_ports:
+                ip_ports_info = html.Div([
+                    html.H4(f"{ip_address} IP adresi için açık portlar:", style={'color': '#3498db', 'marginBottom': '10px'}),
+                    html.Div([
+                        html.Span(port, style={
+                            'backgroundColor': '#34495e',
+                            'color': '#ecf0f1',
+                            'padding': '5px 10px',
+                            'margin': '2px',
+                            'borderRadius': '5px',
+                            'display': 'inline-block'
+                        }) for port in valid_ports
+                    ], style={'maxHeight': '150px', 'overflowY': 'auto'})
+                ], style={'marginBottom': '20px', 'backgroundColor': '#2c3e50', 'padding': '15px', 'borderRadius': '10px'})
+            else:
+                ip_ports_info = html.Div(f"{ip_address} IP adresi için geçerli açık port bulunamadı.", 
+                                         style={'color': '#e74c3c', 'marginBottom': '20px'})
+
     # Uygulanan filtreleri göster
     applied_filters = []
     if severity:
