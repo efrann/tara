@@ -624,104 +624,113 @@ def create_main_layout():
 # Detaylı analiz sayfası düzeni
 def create_detailed_analysis_layout():
     return html.Div([
-        html.H3("Detaylı Zafiyet Listesi", style={
-            'textAlign': 'center', 
-            'color': '#ecf0f1', 
-            'backgroundColor': '#34495e', 
-            'padding': '10px', 
-            'marginBottom': '20px',
-            'borderRadius': '5px',
-        }),
-        html.Div(id='applied-filters', style={
-            'marginBottom': '20px',
-            'padding': '10px',
-            'backgroundColor': '#2c3e50',
-            'color': '#ecf0f1',
-            'borderRadius': '5px',
-        }),
-        dbc.Input(
-            id='search-input',
-            type='text',
-            placeholder='Ara...',
-            style={'marginBottom': '20px', 'width': '100%', 'padding': '10px'}
-        ),
-        dash_table.DataTable(
-            id='vulnerability-table',
-            columns=[
-                {"name": "Tarama Adı", "id": "scan_name"},
-                {"name": "Host IP", "id": "host_ip"},
-                {"name": "Host FQDN", "id": "host_fqdn"},
-                {"name": "Zafiyet Adı", "id": "vulnerability_name"},
-                {"name": "Önem Derecesi", "id": "severity_text"},
-                {"name": "Plugin Ailesi", "id": "plugin_family"},
-                {"name": "Port", "id": "port"},
-                {"name": "CVSS3 Base Score", "id": "cvss3_base_score"},
-                {"name": "Tarama Tarihi", "id": "scan_date"}
-            ],
-            style_table={'height': '70vh', 'overflowY': 'auto'},
-            style_cell={
-                'backgroundColor': '#34495e',
-                'color': '#ecf0f1',
-                'border': '1px solid #2c3e50',
-                'textAlign': 'left',
-                'padding': '10px',
-                'whiteSpace': 'normal',
-                'height': 'auto',
-            },
-            style_header={
-                'backgroundColor': '#2c3e50',
-                'fontWeight': 'bold',
-                'border': '1px solid #34495e',
-                'color': '#3498db',
-            },
-            style_data_conditional=[
-                {
-                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Kritik"'},
-                    'backgroundColor': 'rgba(231, 76, 60, 0.1)',
-                    'color': '#e74c3c',
-                    'fontWeight': 'bold',
-                },
-                {
-                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Yüksek"'},
-                    'backgroundColor': 'rgba(230, 126, 34, 0.1)',
-                    'color': '#e67e22',
-                    'fontWeight': 'bold',
-                },
-                {
-                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Orta"'},
-                    'backgroundColor': 'rgba(241, 196, 15, 0.1)',
-                    'color': '#f1c40f',
-                    'fontWeight': 'bold',
-                },
-                {
-                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Düşük"'},
-                    'backgroundColor': 'rgba(46, 204, 113, 0.1)',
-                    'color': '#2ecc71',
-                    'fontWeight': 'bold',
-                },
-                {
-                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Bilgi"'},
-                    'backgroundColor': 'rgba(52, 152, 219, 0.1)',
-                    'color': '#3498db',
-                    'fontWeight': 'bold',
-                },
-            ],
-            sort_action="native",
-            sort_mode="multi",
-            page_action="native",
-            page_current=0,
-            page_size=50,
-        ),
-        html.Div(id='ip-ports-info', style={
-            'marginTop': '20px',
-            'padding': '10px',
-            'backgroundColor': '#2c3e50',
-            'borderRadius': '5px',
-            'color': '#ecf0f1',
-        }),
-    ], style={'padding': '20px', 'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
+        dbc.Container([
+            dbc.Row([
+                dbc.Col([
+                    html.H1("Detaylı Zafiyet Analizi", className="text-light text-center mb-4"),
+                    html.Div(id='applied-filters', className="mb-4"),
+                ], width=12),
+            ]),
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H4("Hızlı Arama", className="card-title"),
+                            dbc.Input(
+                                id='search-input',
+                                type='text',
+                                placeholder='Herhangi bir alanda ara...',
+                                className="mb-3"
+                            ),
+                            html.Div(id='search-results', className="text-muted"),
+                        ])
+                    ], color="dark", outline=True, className="mb-4"),
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H4("IP Port Bilgisi", className="card-title"),
+                            html.Div(id='ip-ports-info'),
+                        ])
+                    ], color="dark", outline=True, className="mb-4"),
+                ], md=4),
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H4("Zafiyet Tablosu", className="card-title"),
+                            dash_table.DataTable(
+                                id='vulnerability-table',
+                                columns=[
+                                    {"name": "Tarama Adı", "id": "scan_name"},
+                                    {"name": "Host IP", "id": "host_ip"},
+                                    {"name": "Host FQDN", "id": "host_fqdn"},
+                                    {"name": "Zafiyet Adı", "id": "vulnerability_name"},
+                                    {"name": "Önem Derecesi", "id": "severity_text"},
+                                    {"name": "Plugin Ailesi", "id": "plugin_family"},
+                                    {"name": "Port", "id": "port"},
+                                    {"name": "CVSS3 Base Score", "id": "cvss3_base_score"},
+                                    {"name": "Tarama Tarihi", "id": "scan_date"}
+                                ],
+                                style_table={'overflowX': 'auto'},
+                                style_cell={
+                                    'backgroundColor': '#2c3e50',
+                                    'color': '#ecf0f1',
+                                    'border': '1px solid #34495e',
+                                    'textAlign': 'left',
+                                    'padding': '10px',
+                                    'whiteSpace': 'normal',
+                                    'height': 'auto',
+                                },
+                                style_header={
+                                    'backgroundColor': '#34495e',
+                                    'fontWeight': 'bold',
+                                    'color': '#3498db',
+                                },
+                                style_data_conditional=[
+                                    {
+                                        'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Kritik"'},
+                                        'backgroundColor': 'rgba(231, 76, 60, 0.1)',
+                                        'color': '#e74c3c',
+                                        'fontWeight': 'bold',
+                                    },
+                                    {
+                                        'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Yüksek"'},
+                                        'backgroundColor': 'rgba(230, 126, 34, 0.1)',
+                                        'color': '#e67e22',
+                                        'fontWeight': 'bold',
+                                    },
+                                    {
+                                        'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Orta"'},
+                                        'backgroundColor': 'rgba(241, 196, 15, 0.1)',
+                                        'color': '#f1c40f',
+                                        'fontWeight': 'bold',
+                                    },
+                                    {
+                                        'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Düşük"'},
+                                        'backgroundColor': 'rgba(46, 204, 113, 0.1)',
+                                        'color': '#2ecc71',
+                                        'fontWeight': 'bold',
+                                    },
+                                    {
+                                        'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Bilgi"'},
+                                        'backgroundColor': 'rgba(52, 152, 219, 0.1)',
+                                        'color': '#3498db',
+                                        'fontWeight': 'bold',
+                                    },
+                                ],
+                                sort_action="native",
+                                sort_mode="multi",
+                                page_action="native",
+                                page_current=0,
+                                page_size=15,
+                                filter_action="native",
+                            ),
+                        ])
+                    ], color="dark", outline=True),
+                ], md=8),
+            ]),
+        ], fluid=True, className="py-4"),
+    ], style={'backgroundColor': '#1a2a3a', 'minHeight': '100vh'})
 
-app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 
 # Ana layout
 app.layout = html.Div([
@@ -1055,7 +1064,8 @@ def update_button_style(n_clicks):
 @app.callback(
     [Output('vulnerability-table', 'data'),
      Output('ip-ports-info', 'children'),
-     Output('applied-filters', 'children')],
+     Output('applied-filters', 'children'),
+     Output('search-results', 'children')],
     [Input('url', 'search'),
      Input('search-input', 'value')]
 )
@@ -1134,7 +1144,10 @@ def update_detailed_analysis(search, search_value):
         html.Ul([html.Li(filter_text) for filter_text in applied_filters]) if applied_filters else html.P("Filtre uygulanmadı.")
     ])
     
-    return detailed_vulnerability_data, ip_ports_info, applied_filters_div
+    # Arama sonuçlarını göster
+    search_results = f"{len(detailed_vulnerability_data)} sonuç bulundu." if search_value else ""
+
+    return detailed_vulnerability_data, ip_ports_info, applied_filters_div, search_results
 
 # Ana sayfadaki 'Detaylı Zafiyet Listesi' butonunun href'ini güncelleyen callback
 @app.callback(
