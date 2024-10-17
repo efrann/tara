@@ -308,7 +308,22 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             cursor.execute(top_ports_query)
             top_ports_data = cursor.fetchall()
 
-    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data
+            # IP'ye özgü port bilgilerini çeken yeni sorgu
+            ip_ports_query = f"""
+            SELECT DISTINCT vo.port
+            FROM host h
+            JOIN host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
+            JOIN vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
+            WHERE h.host_ip = %s
+            ORDER BY vo.port
+            """
+            
+            ip_ports_data = []
+            if ip_address:
+                cursor.execute(ip_ports_query, (ip_address,))
+                ip_ports_data = cursor.fetchall()
+
+    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data
 
 # Dash uygulaması
 app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
@@ -656,6 +671,25 @@ app.layout = html.Div([
 
     # Hidden div for storing clicked severity
     html.Div(id='clicked-severity', style={'display': 'none'}),
+
+    # IP'ye özgü portları gösteren yeni bölüm
+    html.Div([
+        html.H3("IP Adresine Özgü Portlar", style={
+            'textAlign': 'center', 
+            'color': '#ecf0f1', 
+            'backgroundColor': '#34495e', 
+            'padding': '10px', 
+            'marginBottom': '20px',
+            'borderRadius': '5px',
+        }),
+        html.Div(id='ip-ports-container', style={
+            'backgroundColor': '#2c3e50',
+            'padding': '20px',
+            'borderRadius': '10px',
+            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
+            'color': '#ecf0f1',
+        })
+    ], style={'marginTop': '20px'}),
 ])
 
 @app.callback(
@@ -691,7 +725,7 @@ def update_data(n_clicks, n_intervals, clicked_severity, severity, scan_name, vu
     if button_id == 'clicked-severity' and clicked_severity:
         severity = [int(clicked_severity)]
 
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
     
     # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
     detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
@@ -1036,7 +1070,7 @@ def toggle_modal(open_clicks, close_clicks, modal_style):
      State('port-input', 'value')]
 )
 def update_vulnerability_table(n_clicks, n_intervals, severity, scan_name, vulnerability_name, ip_address, port):
-    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
     
     # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
     detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
@@ -1055,6 +1089,28 @@ def update_vulnerability_table(n_clicks, n_intervals, severity, scan_name, vulne
             item['severity_text'] = 'Bilinmeyen'
     
     return detailed_vulnerability_data
+
+# Yeni callback fonksiyonu
+@app.callback(
+    Output('ip-ports-container', 'children'),
+    [Input('filter-button', 'n_clicks')],
+    [State('ip-address-input', 'value')]
+)
+def update_ip_ports(n_clicks, ip_address):
+    if not ip_address:
+        return "Lütfen bir IP adresi girin."
+
+    # get_data fonksiyonunu çağırırken sadece ip_address parametresini kullanıyoruz
+    *_, ip_ports_data = get_data(ip_address=ip_address)
+
+    if not ip_ports_data:
+        return f"{ip_address} IP adresi için açık port bulunamadı."
+
+    port_list = [str(port['port']) for port in ip_ports_data]
+    return html.Div([
+        html.P(f"{ip_address} IP adresi için açık portlar:"),
+        html.Ul([html.Li(port) for port in port_list])
+    ])
 
 if __name__ == '__main__':
     app.run_server(debug=True)
