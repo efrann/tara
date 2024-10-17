@@ -637,7 +637,7 @@ def create_detailed_analysis_layout():
             id='search-input',
             type='text',
             placeholder='Ara...',
-            style={'marginBottom': '20px', 'width': '100%'}
+            style={'marginBottom': '20px', 'width': '100%', 'padding': '10px'}
         ),
         dash_table.DataTable(
             id='vulnerability-table',
