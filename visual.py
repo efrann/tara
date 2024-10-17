@@ -359,20 +359,20 @@ def create_main_layout():
                     ],
                     multi=True,
                     placeholder="Seçiniz...",
-                    style={'width': '100%'},
-                    className='custom-dropdown'
+                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white'},
+                    className='dropdown-white-text'
                 ),
-            ], style={'flex': '1', 'marginRight': '10px'}),
+            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
             html.Div([
                 html.Label("Tarama Seç:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
                 dcc.Dropdown(
                     id='scan-dropdown',
                     options=[],
                     placeholder="Seçiniz...",
-                    style={'width': '100%'},
-                    className='custom-dropdown'
+                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white'},
+                    className='dropdown-white-text'
                 ),
-            ], style={'flex': '1', 'marginRight': '10px'}),
+            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
             html.Div([
                 html.Label("Zafiyet Adı:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
                 dcc.Input(
@@ -381,7 +381,7 @@ def create_main_layout():
                     placeholder="Zafiyet adı girin...",
                     style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
                 ),
-            ], style={'flex': '1', 'marginRight': '10px'}),
+            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
             html.Div([
                 html.Label("IP Adresi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
                 dcc.Input(
@@ -390,7 +390,7 @@ def create_main_layout():
                     placeholder="IP adresi girin...",
                     style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
                 ),
-            ], style={'flex': '1', 'marginRight': '10px'}),
+            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
             html.Div([
                 html.Label("Port:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
                 dcc.Input(
@@ -399,17 +399,42 @@ def create_main_layout():
                     placeholder="Port numarası girin...",
                     style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
                 ),
-            ], style={'flex': '1'}),
-        ], style={
-            'display': 'flex', 
-            'justifyContent': 'space-between', 
-            'alignItems': 'flex-end',
-            'backgroundColor': '#2c3e50', 
-            'padding': '20px', 
-            'marginTop': '20px', 
-            'borderRadius': '10px', 
-            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'
-        }),
+            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
+            html.Div([
+                html.Div([
+                    html.Button('Filtrele', id='filter-button', n_clicks=0, style={
+                        'backgroundColor': '#3498db',
+                        'color': 'white',
+                        'border': 'none',
+                        'padding': '10px 20px',
+                        'borderRadius': '5px',
+                        'cursor': 'pointer',
+                        'transition': 'background-color 0.3s',
+                        'marginRight': '10px',
+                        'marginTop': '25px',
+                    }),
+                    html.Span("Seçili filtreleri uygula", style={'color': 'white', 'marginLeft': '5px'}),
+                ], style={'display': 'inline-block', 'verticalAlign': 'bottom', 'marginRight': '20px'}),
+                html.Div([
+                    html.A(
+                        html.Button('Detaylı Zafiyet Listesi', style={
+                            'backgroundColor': '#2ecc71',
+                            'color': 'white',
+                            'border': 'none',
+                            'padding': '10px 20px',
+                            'borderRadius': '5px',
+                            'cursor': 'pointer',
+                            'transition': 'background-color 0.3s',
+                            'marginTop': '25px',
+                        }),
+                        id='open-new-tab',
+                        href='',
+                        target='_blank'
+                    ),
+                    html.Span("Yeni sekmede aç", style={'color': 'white', 'marginLeft': '5px'}),
+                ], style={'display': 'inline-block', 'verticalAlign': 'bottom'}),
+            ], style={'marginTop': '20px'}),
+        ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'marginTop': '20px', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
         # Total Vulnerabilities
         html.Div([
