@@ -678,25 +678,6 @@ app.layout = html.Div([
 
     # Hidden div for storing clicked severity
     html.Div(id='clicked-severity', style={'display': 'none'}),
-
-    # IP'ye özgü portları gösteren yeni bölüm
-    html.Div([
-        html.H3("IP Adresine Özgü Portlar", style={
-            'textAlign': 'center', 
-            'color': '#ecf0f1', 
-            'backgroundColor': '#34495e', 
-            'padding': '10px', 
-            'marginBottom': '20px',
-            'borderRadius': '5px',
-        }),
-        html.Div(id='ip-ports-container', style={
-            'backgroundColor': '#2c3e50',
-            'padding': '20px',
-            'borderRadius': '10px',
-            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
-            'color': '#ecf0f1',
-        })
-    ], style={'marginTop': '20px'}),
 ])
 
 @app.callback(
@@ -1062,6 +1043,7 @@ def toggle_modal(open_clicks, close_clicks, filter_clicks, modal_style, ip_addre
         ]
         
         # IP portları bilgisini al
+        ip_ports_info = html.Div()  # Boş bir div oluştur
         if ip_address:
             *_, ip_ports_data = get_data(ip_address=ip_address)
             if ip_ports_data:
@@ -1070,16 +1052,13 @@ def toggle_modal(open_clicks, close_clicks, filter_clicks, modal_style, ip_addre
                     html.H4(f"{ip_address} IP adresi için açık portlar:", style={'color': '#3498db'}),
                     html.Ul([html.Li(port) for port in port_list], style={'columns': '3', 'listStyleType': 'none'})
                 ])
-            else:
-                ip_ports_info = html.P(f"{ip_address} IP adresi için açık port bulunamadı.")
-        else:
-            ip_ports_info = html.P("IP adresi girilmedi.")
         
         return modal_style, style_data_conditional, ip_ports_info
     elif button_id == 'close-modal' and close_clicks > 0:
         modal_style['display'] = 'none'
         return modal_style, dash.no_update, dash.no_update
     elif button_id == 'filter-button' and filter_clicks > 0:
+        ip_ports_info = html.Div()  # Boş bir div oluştur
         if ip_address:
             *_, ip_ports_data = get_data(ip_address=ip_address)
             if ip_ports_data:
@@ -1088,10 +1067,6 @@ def toggle_modal(open_clicks, close_clicks, filter_clicks, modal_style, ip_addre
                     html.H4(f"{ip_address} IP adresi için açık portlar:", style={'color': '#3498db'}),
                     html.Ul([html.Li(port) for port in port_list], style={'columns': '3', 'listStyleType': 'none'})
                 ])
-            else:
-                ip_ports_info = html.P(f"{ip_address} IP adresi için açık port bulunamadı.")
-        else:
-            ip_ports_info = html.P("IP adresi girilmedi.")
         return dash.no_update, dash.no_update, ip_ports_info
     
     return modal_style, dash.no_update, dash.no_update
