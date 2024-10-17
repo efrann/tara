@@ -331,6 +331,142 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
 # Dash uygulaması
 app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
 
+# Ana sayfa layout'unu tanımlayalım
+main_layout = html.Div([
+    html.H1("Nessus Zafiyet Analizi", style={'textAlign': 'center', 'color': 'white'}),
+    
+    html.Div([
+        dcc.Dropdown(
+            id='severity-dropdown',
+            options=[
+                {'label': 'Kritik', 'value': 4},
+                {'label': 'Yüksek', 'value': 3},
+                {'label': 'Orta', 'value': 2},
+                {'label': 'Düşük', 'value': 1},
+                {'label': 'Bilgi', 'value': 0}
+            ],
+            multi=True,
+            placeholder="Önem Derecesi Seçin",
+            style={'backgroundColor': '#2c3e50', 'color': 'black'}
+        ),
+        dcc.Dropdown(
+            id='scan-dropdown',
+            multi=True,
+            placeholder="Tarama Adı Seçin",
+            style={'backgroundColor': '#2c3e50', 'color': 'black'}
+        ),
+        dcc.Input(
+            id='vulnerability-name-input',
+            type='text',
+            placeholder='Zafiyet Adı',
+            style={'backgroundColor': '#2c3e50', 'color': 'white'}
+        ),
+        dcc.Input(
+            id='ip-address-input',
+            type='text',
+            placeholder='IP Adresi',
+            style={'backgroundColor': '#2c3e50', 'color': 'white'}
+        ),
+        dcc.Input(
+            id='port-input',
+            type='text',
+            placeholder='Port',
+            style={'backgroundColor': '#2c3e50', 'color': 'white'}
+        ),
+        html.Button('Filtrele', id='filter-button', n_clicks=0)
+    ], style={'display': 'flex', 'justifyContent': 'space-between', 'marginBottom': '20px'}),
+    
+    html.Div([
+        html.Div(id='severity-4'),
+        html.Div(id='severity-3'),
+        html.Div(id='severity-2'),
+        html.Div(id='severity-1'),
+        html.Div(id='severity-0')
+    ], style={'display': 'flex', 'justifyContent': 'space-between', 'marginBottom': '20px'}),
+    
+    html.Div(id='last-updated'),
+    
+    dcc.Graph(id='vulnerability-distribution'),
+    
+    html.Div([
+        dcc.Graph(id='top-vulnerabilities-graph', style={'width': '50%'}),
+        dcc.Graph(id='top-ports-graph', style={'width': '50%'})
+    ], style={'display': 'flex'}),
+    
+    dash_table.DataTable(
+        id='summary-table',
+        columns=[
+            {"name": "Klasör Adı", "id": "folder_name"},
+            {"name": "Tarama Adı", "id": "scan_name"},
+            {"name": "Son Tarama Tarihi", "id": "last_scan_date"},
+            {"name": "Toplam Host", "id": "total_hosts"},
+            {"name": "Kritik", "id": "total_critical"},
+            {"name": "Yüksek", "id": "total_high"},
+            {"name": "Orta", "id": "total_medium"},
+            {"name": "Düşük", "id": "total_low"},
+            {"name": "Bilgi", "id": "total_info"}
+        ],
+        style_table={'height': '300px', 'overflowY': 'auto'},
+        style_cell={
+            'backgroundColor': '#34495e',
+            'color': '#ecf0f1',
+            'textAlign': 'left'
+        },
+        style_header={
+            'backgroundColor': '#2c3e50',
+            'fontWeight': 'bold'
+        }
+    ),
+    
+    html.Button("Detaylı Zafiyet Listesi", id="open-modal", n_clicks=0),
+    
+    html.Div(id='modal', style={'display': 'none'}, children=[
+        html.Div([
+            html.H2("Detaylı Zafiyet Listesi"),
+            html.Button("Kapat", id="close-modal", n_clicks=0),
+            dash_table.DataTable(
+                id='vulnerability-table',
+                columns=[
+                    {"name": "Tarama Adı", "id": "scan_name"},
+                    {"name": "Host IP", "id": "host_ip"},
+                    {"name": "Host FQDN", "id": "host_fqdn"},
+                    {"name": "Zafiyet Adı", "id": "vulnerability_name"},
+                    {"name": "Önem Derecesi", "id": "severity_text"},
+                    {"name": "Plugin Ailesi", "id": "plugin_family"},
+                    {"name": "Port", "id": "port"},
+                    {"name": "CVSS3 Base Score", "id": "cvss3_base_score"},
+                    {"name": "Tarama Tarihi", "id": "scan_date"}
+                ],
+                style_table={'height': '400px', 'overflowY': 'auto'},
+                style_cell={
+                    'backgroundColor': '#34495e',
+                    'color': '#ecf0f1',
+                    'textAlign': 'left'
+                },
+                style_header={
+                    'backgroundColor': '#2c3e50',
+                    'fontWeight': 'bold'
+                },
+                filter_action="native",
+                sort_action="native",
+                sort_mode="multi",
+                page_action="native",
+                page_current= 0,
+                page_size= 20,
+            ),
+            html.Div(id='ip-ports-info')
+        ])
+    ]),
+    
+    dcc.Interval(
+        id='interval-component',
+        interval=300*1000,  # 5 dakikada bir güncelle
+        n_intervals=0
+    ),
+    
+    html.Div(id='clicked-severity', style={'display': 'none'})
+])
+
 # Detaylı analiz sayfası için yeni bir layout oluşturalım
 detailed_analysis_layout = html.Div([
     html.H1("Detaylı Zafiyet Analizi", style={'textAlign': 'center', 'color': 'white'}),
@@ -413,7 +549,7 @@ def display_page(pathname):
     if pathname == '/detailed-analysis':
         return detailed_analysis_layout
     else:
-        return main_layout  # Ana sayfa layout'u
+        return main_layout
 
 # ... existing code ...
 
