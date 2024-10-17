@@ -639,6 +639,13 @@ app.layout = html.Div([
                         'color': '#3498db',
                     },
                 ),
+                html.Div(id='ip-ports-info', style={
+                    'marginTop': '20px',
+                    'padding': '10px',
+                    'backgroundColor': '#2c3e50',
+                    'borderRadius': '5px',
+                    'color': '#ecf0f1',
+                }),
                 html.Button('Kapat', id='close-modal', n_clicks=0, style={
                     'backgroundColor': '#e74c3c',
                     'color': 'white',
@@ -1007,15 +1014,18 @@ def update_button_style(n_clicks):
 # Modal açma/kapama için callback
 @app.callback(
     [Output('modal', 'style'),
-     Output('vulnerability-table', 'style_data_conditional')],
+     Output('vulnerability-table', 'style_data_conditional'),
+     Output('ip-ports-info', 'children')],
     [Input('open-modal', 'n_clicks'),
-     Input('close-modal', 'n_clicks')],
-    [State('modal', 'style')]
+     Input('close-modal', 'n_clicks'),
+     Input('filter-button', 'n_clicks')],
+    [State('modal', 'style'),
+     State('ip-address-input', 'value')]
 )
-def toggle_modal(open_clicks, close_clicks, modal_style):
+def toggle_modal(open_clicks, close_clicks, filter_clicks, modal_style, ip_address):
     ctx = dash.callback_context
     if not ctx.triggered:
-        return modal_style, dash.no_update
+        return modal_style, dash.no_update, dash.no_update
     else:
         button_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
@@ -1051,12 +1061,40 @@ def toggle_modal(open_clicks, close_clicks, modal_style):
             }
         ]
         
-        return modal_style, style_data_conditional
+        # IP portları bilgisini al
+        if ip_address:
+            *_, ip_ports_data = get_data(ip_address=ip_address)
+            if ip_ports_data:
+                port_list = [str(port['port']) for port in ip_ports_data]
+                ip_ports_info = html.Div([
+                    html.H4(f"{ip_address} IP adresi için açık portlar:", style={'color': '#3498db'}),
+                    html.Ul([html.Li(port) for port in port_list], style={'columns': '3', 'listStyleType': 'none'})
+                ])
+            else:
+                ip_ports_info = html.P(f"{ip_address} IP adresi için açık port bulunamadı.")
+        else:
+            ip_ports_info = html.P("IP adresi girilmedi.")
+        
+        return modal_style, style_data_conditional, ip_ports_info
     elif button_id == 'close-modal' and close_clicks > 0:
         modal_style['display'] = 'none'
-        return modal_style, dash.no_update
+        return modal_style, dash.no_update, dash.no_update
+    elif button_id == 'filter-button' and filter_clicks > 0:
+        if ip_address:
+            *_, ip_ports_data = get_data(ip_address=ip_address)
+            if ip_ports_data:
+                port_list = [str(port['port']) for port in ip_ports_data]
+                ip_ports_info = html.Div([
+                    html.H4(f"{ip_address} IP adresi için açık portlar:", style={'color': '#3498db'}),
+                    html.Ul([html.Li(port) for port in port_list], style={'columns': '3', 'listStyleType': 'none'})
+                ])
+            else:
+                ip_ports_info = html.P(f"{ip_address} IP adresi için açık port bulunamadı.")
+        else:
+            ip_ports_info = html.P("IP adresi girilmedi.")
+        return dash.no_update, dash.no_update, ip_ports_info
     
-    return modal_style, dash.no_update
+    return modal_style, dash.no_update, dash.no_update
 
 # Yeni callback ekleyelim
 @app.callback(
@@ -1089,28 +1127,6 @@ def update_vulnerability_table(n_clicks, n_intervals, severity, scan_name, vulne
             item['severity_text'] = 'Bilinmeyen'
     
     return detailed_vulnerability_data
-
-# Yeni callback fonksiyonu
-@app.callback(
-    Output('ip-ports-container', 'children'),
-    [Input('filter-button', 'n_clicks')],
-    [State('ip-address-input', 'value')]
-)
-def update_ip_ports(n_clicks, ip_address):
-    if not ip_address:
-        return "Lütfen bir IP adresi girin."
-
-    # get_data fonksiyonunu çağırırken sadece ip_address parametresini kullanıyoruz
-    *_, ip_ports_data = get_data(ip_address=ip_address)
-
-    if not ip_ports_data:
-        return f"{ip_address} IP adresi için açık port bulunamadı."
-
-    port_list = [str(port['port']) for port in ip_ports_data]
-    return html.Div([
-        html.P(f"{ip_address} IP adresi için açık portlar:"),
-        html.Ul([html.Li(port) for port in port_list])
-    ])
 
 if __name__ == '__main__':
     app.run_server(debug=True)
