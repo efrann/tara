@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import math
 from pymysql.cursors import DictCursor
 from contextlib import contextmanager
-from urllib.parse import urlencode
+from urllib.parse import urlencode, parse_qs, unquote
 
 @contextmanager
 def get_db_connection():
@@ -1009,14 +1009,22 @@ def update_button_style(n_clicks):
     [Input('url', 'search')]
 )
 def update_detailed_analysis(search):
-    params = dict(param.split('=') for param in search[1:].split('&')) if search else {}
+    params = parse_qs(search[1:])
     
-    severity = params.get('severity', '').split(',')
-    severity = [int(s) for s in severity if s.isdigit()]
-    scan_name = params.get('scan_name', None)
-    vulnerability_name = params.get('vulnerability_name', None)
-    ip_address = params.get('ip_address', None)
-    port = params.get('port', None)
+    severity = params.get('severity', [])
+    severity = [int(s) for s in severity[0].split(',') if s.isdigit()] if severity else []
+    
+    scan_name = params.get('scan_name', [None])[0]
+    scan_name = unquote(scan_name) if scan_name else None
+    
+    vulnerability_name = params.get('vulnerability_name', [None])[0]
+    vulnerability_name = unquote(vulnerability_name) if vulnerability_name else None
+    
+    ip_address = params.get('ip_address', [None])[0]
+    ip_address = unquote(ip_address) if ip_address else None
+    
+    port = params.get('port', [None])[0]
+    port = unquote(port) if port else None
 
     summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
     
@@ -1050,7 +1058,7 @@ def update_detailed_analysis(search):
     applied_filters = []
     if severity:
         severity_map = {4: 'Kritik', 3: 'Yüksek', 2: 'Orta', 1: 'Düşük', 0: 'Bilgi'}
-        applied_filters.append(f"Önem Derecesi: {', '.join(severity_map[s] for s in severity)}")
+        applied_filters.append(f"Önem Derecesi: {', '.join(severity_map[s] for s in severity if s in severity_map)}")
     if scan_name:
         applied_filters.append(f"Tarama Adı: {scan_name}")
     if vulnerability_name:
@@ -1077,13 +1085,18 @@ def update_detailed_analysis(search):
      Input('port-input', 'value')]
 )
 def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_address, port):
-    params = {
-        'severity': severity,
-        'scan_name': scan_name,
-        'vulnerability_name': vulnerability_name,
-        'ip_address': ip_address,
-        'port': port
-    }
+    params = {}
+    if severity:
+        params['severity'] = ','.join(map(str, severity))
+    if scan_name:
+        params['scan_name'] = scan_name
+    if vulnerability_name:
+        params['vulnerability_name'] = vulnerability_name
+    if ip_address:
+        params['ip_address'] = ip_address
+    if port:
+        params['port'] = port
+    
     return f'/detailed-analysis?{urlencode(params)}'
 
 if __name__ == '__main__':
