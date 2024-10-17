@@ -1101,7 +1101,11 @@ def update_detailed_analysis(search, search_value):
     ip_ports_info = html.Div()
     if ip_address:
         if ip_ports_data:
-            valid_ports = [str(port['port']) for port in ip_ports_data if port['port'] not in [None, 0, '0', 'null']]
+            valid_ports = [
+                str(port['port']) for port in ip_ports_data 
+                if port['port'] not in [None, 0, '0', 'null', ''] and 
+                not str(port['port']).startswith('0')
+            ]
             if valid_ports:
                 ip_ports_info = html.Div([
                     html.H4(f"{ip_address} IP adresi için açık portlar:", style={'color': '#3498db', 'marginBottom': '10px'}),
