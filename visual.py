@@ -171,11 +171,12 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 'total_info': next((item['count'] for item in vulnerability_data if item['severity'] == 0), 0)
             }
 
-            # Detaylı zafiyet listesi sorgusu
+            # Detaylı zafiyet listesi sorgusunu güncelleyelim
             detailed_vulnerability_query = f"""
             SELECT 
                 s.name AS scan_name,
                 h.host_ip,
+                h.host_fqdn,
                 COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
                 p.severity,
                 CASE 
@@ -188,6 +189,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 END AS severity_text,
                 p.family AS plugin_family,
                 vo.port,
+                p.cvss3_base_score,
                 FROM_UNIXTIME(sr.scan_start) AS scan_date
             FROM 
                 scan s
@@ -616,10 +618,12 @@ app.layout = html.Div([
                     columns=[
                         {"name": "Tarama Adı", "id": "scan_name"},
                         {"name": "Host IP", "id": "host_ip"},
+                        {"name": "Host FQDN", "id": "host_fqdn"},
                         {"name": "Zafiyet Adı", "id": "vulnerability_name"},
                         {"name": "Önem Derecesi", "id": "severity_text"},
                         {"name": "Plugin Ailesi", "id": "plugin_family"},
                         {"name": "Port", "id": "port"},
+                        {"name": "CVSS3 Base Score", "id": "cvss3_base_score"},
                         {"name": "Tarama Tarihi", "id": "scan_date"}
                     ],
                     style_table={'height': '400px', 'overflowY': 'auto'},
