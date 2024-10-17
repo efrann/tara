@@ -329,154 +329,156 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
     return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data
 
 # Dash uygulaması
-app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
+app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'], suppress_callback_exceptions=True)
 
 # Ana sayfa layout'u
-main_layout = html.Div([
-    html.H1("Nessus Zafiyet Analizi", style={'textAlign': 'center', 'color': 'white'}),
-    
-    html.Div([
-        dcc.Dropdown(
-            id='severity-dropdown',
-            options=[
-                {'label': 'Kritik', 'value': 4},
-                {'label': 'Yüksek', 'value': 3},
-                {'label': 'Orta', 'value': 2},
-                {'label': 'Düşük', 'value': 1},
-                {'label': 'Bilgi', 'value': 0}
-            ],
-            multi=True,
-            placeholder="Önem Derecesi Seçin",
-            style={'backgroundColor': '#2c3e50', 'color': 'black', 'width': '200px'}
-        ),
-        dcc.Dropdown(
-            id='scan-dropdown',
-            multi=True,
-            placeholder="Tarama Adı Seçin",
-            style={'backgroundColor': '#2c3e50', 'color': 'black', 'width': '200px'}
-        ),
-        dcc.Input(
-            id='vulnerability-name-input',
-            type='text',
-            placeholder='Zafiyet Adı',
-            style={'backgroundColor': '#2c3e50', 'color': 'white', 'width': '200px'}
-        ),
-        dcc.Input(
-            id='ip-address-input',
-            type='text',
-            placeholder='IP Adresi',
-            style={'backgroundColor': '#2c3e50', 'color': 'white', 'width': '200px'}
-        ),
-        dcc.Input(
-            id='port-input',
-            type='text',
-            placeholder='Port',
-            style={'backgroundColor': '#2c3e50', 'color': 'white', 'width': '200px'}
-        ),
-        html.Button('Filtrele', id='filter-button', n_clicks=0, style={'backgroundColor': '#3498db', 'color': 'white'})
-    ], style={'display': 'flex', 'justifyContent': 'space-between', 'marginBottom': '20px'}),
-    
-    html.Div([
-        html.Div(id='severity-4'),
-        html.Div(id='severity-3'),
-        html.Div(id='severity-2'),
-        html.Div(id='severity-1'),
-        html.Div(id='severity-0')
-    ], style={'display': 'flex', 'justifyContent': 'space-between', 'marginBottom': '20px'}),
-    
-    html.Div(id='last-updated'),
-    
-    dcc.Graph(id='vulnerability-distribution'),
-    
-    html.Div([
-        dcc.Graph(id='top-vulnerabilities-graph', style={'width': '50%'}),
-        dcc.Graph(id='top-ports-graph', style={'width': '50%'})
-    ], style={'display': 'flex'}),
-    
-    dash_table.DataTable(id='summary-table'),
-    
-    html.Button("Detaylı Zafiyet Listesi", id="open-modal", n_clicks=0, style={'backgroundColor': '#3498db', 'color': 'white'}),
-    
-    html.Div(id='modal', style={'display': 'none'}, children=[
+def get_main_layout():
+    return html.Div([
+        html.H1("Nessus Zafiyet Analizi", style={'textAlign': 'center', 'color': 'white'}),
+        
         html.Div([
-            html.H2("Detaylı Zafiyet Listesi"),
-            html.Button("Kapat", id="close-modal", n_clicks=0, style={'backgroundColor': '#e74c3c', 'color': 'white'}),
-            dash_table.DataTable(id='vulnerability-table'),
-            html.Div(id='ip-ports-info')
-        ])
-    ]),
-    
-    dcc.Interval(
-        id='interval-component',
-        interval=300*1000,  # 5 dakikada bir güncelle
-        n_intervals=0
-    ),
-    
-    html.Div(id='clicked-severity', style={'display': 'none'})
-], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'color': 'white'})
+            dcc.Dropdown(
+                id='severity-dropdown',
+                options=[
+                    {'label': 'Kritik', 'value': 4},
+                    {'label': 'Yüksek', 'value': 3},
+                    {'label': 'Orta', 'value': 2},
+                    {'label': 'Düşük', 'value': 1},
+                    {'label': 'Bilgi', 'value': 0}
+                ],
+                multi=True,
+                placeholder="Önem Derecesi Seçin",
+                style={'backgroundColor': '#2c3e50', 'color': 'black', 'width': '200px'}
+            ),
+            dcc.Dropdown(
+                id='scan-dropdown',
+                multi=True,
+                placeholder="Tarama Adı Seçin",
+                style={'backgroundColor': '#2c3e50', 'color': 'black', 'width': '200px'}
+            ),
+            dcc.Input(
+                id='vulnerability-name-input',
+                type='text',
+                placeholder='Zafiyet Adı',
+                style={'backgroundColor': '#2c3e50', 'color': 'white', 'width': '200px'}
+            ),
+            dcc.Input(
+                id='ip-address-input',
+                type='text',
+                placeholder='IP Adresi',
+                style={'backgroundColor': '#2c3e50', 'color': 'white', 'width': '200px'}
+            ),
+            dcc.Input(
+                id='port-input',
+                type='text',
+                placeholder='Port',
+                style={'backgroundColor': '#2c3e50', 'color': 'white', 'width': '200px'}
+            ),
+            html.Button('Filtrele', id='filter-button', n_clicks=0, style={'backgroundColor': '#3498db', 'color': 'white'})
+        ], style={'display': 'flex', 'justifyContent': 'space-between', 'marginBottom': '20px'}),
+        
+        html.Div([
+            html.Div(id='severity-4'),
+            html.Div(id='severity-3'),
+            html.Div(id='severity-2'),
+            html.Div(id='severity-1'),
+            html.Div(id='severity-0')
+        ], style={'display': 'flex', 'justifyContent': 'space-between', 'marginBottom': '20px'}),
+        
+        html.Div(id='last-updated'),
+        
+        dcc.Graph(id='vulnerability-distribution'),
+        
+        html.Div([
+            dcc.Graph(id='top-vulnerabilities-graph', style={'width': '50%'}),
+            dcc.Graph(id='top-ports-graph', style={'width': '50%'})
+        ], style={'display': 'flex'}),
+        
+        dash_table.DataTable(id='summary-table'),
+        
+        html.Button("Detaylı Zafiyet Listesi", id="open-modal", n_clicks=0, style={'backgroundColor': '#3498db', 'color': 'white'}),
+        
+        html.Div(id='modal', style={'display': 'none'}, children=[
+            html.Div([
+                html.H2("Detaylı Zafiyet Listesi"),
+                html.Button("Kapat", id="close-modal", n_clicks=0, style={'backgroundColor': '#e74c3c', 'color': 'white'}),
+                dash_table.DataTable(id='vulnerability-table'),
+                html.Div(id='ip-ports-info')
+            ])
+        ]),
+        
+        dcc.Interval(
+            id='interval-component',
+            interval=300*1000,  # 5 dakikada bir güncelle
+            n_intervals=0
+        ),
+        
+        html.Div(id='clicked-severity', style={'display': 'none'})
+    ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'color': 'white'})
 
 # Detaylı analiz sayfası layout'u
-detailed_analysis_layout = html.Div([
-    html.H1("Detaylı Zafiyet Analizi", style={'textAlign': 'center', 'color': 'white'}),
-    dcc.Input(
-        id='search-input',
-        type='text',
-        placeholder='Ara...',
-        style={'width': '100%', 'marginBottom': '10px', 'backgroundColor': '#34495e', 'color': 'white'}
-    ),
-    dash_table.DataTable(
-        id='detailed-vulnerability-table',
-        style_table={'height': '600px', 'overflowY': 'auto'},
-        style_cell={
-            'backgroundColor': '#34495e',
-            'color': '#ecf0f1',
-            'border': '1px solid #2c3e50',
-            'textAlign': 'left',
-            'padding': '10px',
-            'whiteSpace': 'normal',
-            'height': 'auto',
-        },
-        style_header={
-            'backgroundColor': '#2c3e50',
-            'fontWeight': 'bold',
-            'border': '1px solid #34495e',
-            'color': '#3498db',
-        },
-        style_data_conditional=[
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Kritik"'},
-                'backgroundColor': 'rgba(231, 76, 60, 0.2)',
-                'color': '#e74c3c'
+def get_detailed_analysis_layout():
+    return html.Div([
+        html.H1("Detaylı Zafiyet Analizi", style={'textAlign': 'center', 'color': 'white'}),
+        dcc.Input(
+            id='search-input',
+            type='text',
+            placeholder='Ara...',
+            style={'width': '100%', 'marginBottom': '10px', 'backgroundColor': '#34495e', 'color': 'white'}
+        ),
+        dash_table.DataTable(
+            id='detailed-vulnerability-table',
+            style_table={'height': '600px', 'overflowY': 'auto'},
+            style_cell={
+                'backgroundColor': '#34495e',
+                'color': '#ecf0f1',
+                'border': '1px solid #2c3e50',
+                'textAlign': 'left',
+                'padding': '10px',
+                'whiteSpace': 'normal',
+                'height': 'auto',
             },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Yüksek"'},
-                'backgroundColor': 'rgba(230, 126, 34, 0.2)',
-                'color': '#e67e22'
+            style_header={
+                'backgroundColor': '#2c3e50',
+                'fontWeight': 'bold',
+                'border': '1px solid #34495e',
+                'color': '#3498db',
             },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Orta"'},
-                'backgroundColor': 'rgba(241, 196, 15, 0.2)',
-                'color': '#f1c40f'
-            },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Düşük"'},
-                'backgroundColor': 'rgba(46, 204, 113, 0.2)',
-                'color': '#2ecc71'
-            },
-            {
-                'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Bilgi"'},
-                'backgroundColor': 'rgba(52, 152, 219, 0.2)',
-                'color': '#3498db'
-            }
-        ],
-        filter_action="native",
-        sort_action="native",
-        sort_mode="multi",
-        page_action="native",
-        page_current= 0,
-        page_size= 20,
-    )
-], style={'backgroundColor': '#2c3e50', 'padding': '20px'})
+            style_data_conditional=[
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Kritik"'},
+                    'backgroundColor': 'rgba(231, 76, 60, 0.2)',
+                    'color': '#e74c3c'
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Yüksek"'},
+                    'backgroundColor': 'rgba(230, 126, 34, 0.2)',
+                    'color': '#e67e22'
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Orta"'},
+                    'backgroundColor': 'rgba(241, 196, 15, 0.2)',
+                    'color': '#f1c40f'
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Düşük"'},
+                    'backgroundColor': 'rgba(46, 204, 113, 0.2)',
+                    'color': '#2ecc71'
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Bilgi"'},
+                    'backgroundColor': 'rgba(52, 152, 219, 0.2)',
+                    'color': '#3498db'
+                }
+            ],
+            filter_action="native",
+            sort_action="native",
+            sort_mode="multi",
+            page_action="native",
+            page_current= 0,
+            page_size= 20,
+        )
+    ], style={'backgroundColor': '#2c3e50', 'padding': '20px'})
 
 # Ana uygulama layout'u
 app.layout = html.Div([
@@ -489,9 +491,9 @@ app.layout = html.Div([
               [Input('url', 'pathname')])
 def display_page(pathname):
     if pathname == '/detailed-analysis':
-        return detailed_analysis_layout
+        return get_detailed_analysis_layout()
     else:
-        return main_layout
+        return get_main_layout()
 
 # ... existing code ...
 
