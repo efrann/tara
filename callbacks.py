@@ -34,95 +34,106 @@ def register_callbacks(app):
         summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
 
         # Summary table data
-        summary_table_data = summary_data
+        summary_table_data = summary_data if summary_data else []
 
         # Vulnerability distribution
-        vulnerability_distribution = go.Figure(data=[go.Pie(
-            labels=['Kritik', 'Yüksek', 'Orta', 'Düşük', 'Bilgi'], 
-            values=[d['count'] for d in vulnerability_data],
-            marker=dict(colors=['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db'])
-        )])
-        vulnerability_distribution.update_layout(
-            margin=dict(l=0, r=0, t=0, b=0),
-            paper_bgcolor='#2c3e50',
-            plot_bgcolor='#34495e',
-            font=dict(color='white'),
-            height=300
-        )
+        if vulnerability_data:
+            vulnerability_distribution = go.Figure(data=[go.Pie(
+                labels=['Kritik', 'Yüksek', 'Orta', 'Düşük', 'Bilgi'], 
+                values=[d['count'] for d in vulnerability_data],
+                marker=dict(colors=['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db'])
+            )])
+            vulnerability_distribution.update_layout(
+                margin=dict(l=0, r=0, t=0, b=0),
+                paper_bgcolor='#2c3e50',
+                plot_bgcolor='#34495e',
+                font=dict(color='white'),
+                height=300
+            )
+        else:
+            vulnerability_distribution = go.Figure()
 
         # Top vulnerabilities table data
-        top_vulnerabilities_table_data = top_vulnerabilities_data
+        top_vulnerabilities_table_data = top_vulnerabilities_data if top_vulnerabilities_data else []
 
         # Top vulnerabilities graph
-        top_vulnerabilities_graph = go.Figure(data=[go.Pie(
-            labels=[row['vulnerability_name'] for row in top_vulnerabilities_data],
-            values=[row['count'] for row in top_vulnerabilities_data],
-            hole=.3,
-            marker=dict(
-                colors=[
-                    '#e74c3c' if row['severity'] == 4 else
-                    '#e67e22' if row['severity'] == 3 else
-                    '#f1c40f' if row['severity'] == 2 else
-                    '#2ecc71' if row['severity'] == 1 else
-                    '#3498db' if row['severity'] == 0 else
-                    '#95a5a6' for row in top_vulnerabilities_data
-                ]
-            ),
-            textinfo='label',
-            hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
-            insidetextorientation='radial',
-            textfont=dict(size=10, color='white'),
-            customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
-        )])
-        top_vulnerabilities_graph.update_layout(
-            margin=dict(l=0, r=0, t=0, b=0),
-            paper_bgcolor='#2c3e50',
-            plot_bgcolor='#34495e',
-            font=dict(color='white', size=14),
-            height=400,
-            title=dict(text='Most Occurent 10 Vulnerabilities', font=dict(color='white', size=16)),
-            showlegend=False,
-        )
+        if top_vulnerabilities_data:
+            top_vulnerabilities_graph = go.Figure(data=[go.Pie(
+                labels=[row['vulnerability_name'] for row in top_vulnerabilities_data],
+                values=[row['count'] for row in top_vulnerabilities_data],
+                hole=.3,
+                marker=dict(
+                    colors=[
+                        '#e74c3c' if row['severity'] == 4 else
+                        '#e67e22' if row['severity'] == 3 else
+                        '#f1c40f' if row['severity'] == 2 else
+                        '#2ecc71' if row['severity'] == 1 else
+                        '#3498db' if row['severity'] == 0 else
+                        '#95a5a6' for row in top_vulnerabilities_data
+                    ]
+                ),
+                textinfo='label',
+                hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
+                insidetextorientation='radial',
+                textfont=dict(size=10, color='white'),
+                customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
+            )])
+            top_vulnerabilities_graph.update_layout(
+                margin=dict(l=0, r=0, t=0, b=0),
+                paper_bgcolor='#2c3e50',
+                plot_bgcolor='#34495e',
+                font=dict(color='white', size=14),
+                height=400,
+                title=dict(text='Most Occurent 10 Vulnerabilities', font=dict(color='white', size=16)),
+                showlegend=False,
+            )
+        else:
+            top_vulnerabilities_graph = go.Figure()
 
         # Top ports graph
-        top_ports_graph = go.Figure(data=[go.Bar(
-            x=[str(row['port']) for row in top_ports_data],
-            y=[row['count'] for row in top_ports_data],
-            marker_color='#3498db'
-        )])
-        top_ports_graph.update_layout(
-            margin=dict(l=0, r=0, t=0, b=0),
-            paper_bgcolor='#2c3e50',
-            plot_bgcolor='#34495e',
-            font=dict(color='white', size=14),
-            height=400,
-            title=dict(text='Most Used 10 Ports', font=dict(color='white', size=16)),
-            showlegend=False,
-        )
+        if top_ports_data:
+            top_ports_graph = go.Figure(data=[go.Bar(
+                x=[str(row['port']) for row in top_ports_data],
+                y=[row['count'] for row in top_ports_data],
+                marker_color='#3498db'
+            )])
+            top_ports_graph.update_layout(
+                margin=dict(l=0, r=0, t=0, b=0),
+                paper_bgcolor='#2c3e50',
+                plot_bgcolor='#34495e',
+                font=dict(color='white', size=14),
+                height=400,
+                title=dict(text='Most Used 10 Ports', font=dict(color='white', size=16)),
+                showlegend=False,
+            )
+        else:
+            top_ports_graph = go.Figure()
 
         # Total vulnerabilities
-        total_vulnerabilities = [
-            html.Div([
-                html.H4(info['severity_text'], style={'color': info['color'], 'margin': '0'}),
-                html.P(f"{info['count']} zafiyet", style={'color': 'white', 'margin': '0'})
-            ], style={
-                'backgroundColor': info['bg_color'],
-                'padding': '10px',
-                'borderRadius': '5px',
-                'textAlign': 'center',
-                'boxShadow': '0 2px 4px rgba(0,0,0,0.1)',
-                'flex': '1',
-                'margin': '5px',
-                'minWidth': '120px'
-            })
-            for info in total_vulnerabilities_data
-        ]
+        total_vulnerabilities = [html.Div("Veri yok")] * 5  # Varsayılan değer
+        if total_vulnerabilities_data:
+            total_vulnerabilities = [
+                html.Div([
+                    html.H4(info['severity_text'], style={'color': info['color'], 'margin': '0'}),
+                    html.P(f"{info['count']} zafiyet", style={'color': 'white', 'margin': '0'})
+                ], style={
+                    'backgroundColor': info['bg_color'],
+                    'padding': '10px',
+                    'borderRadius': '5px',
+                    'textAlign': 'center',
+                    'boxShadow': '0 2px 4px rgba(0,0,0,0.1)',
+                    'flex': '1',
+                    'margin': '5px',
+                    'minWidth': '120px'
+                })
+                for info in total_vulnerabilities_data
+            ]
 
         # Last updated
         last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
         # Scan options
-        scan_options = [{'label': scan['name'], 'value': scan['name']} for scan in scan_list]
+        scan_options = [{'label': scan, 'value': scan} for scan in scan_list] if scan_list else []
 
         # If a severity was clicked, update the severity dropdown
         if clicked_severity:
