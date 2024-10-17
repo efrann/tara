@@ -276,7 +276,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             cursor.execute(scan_list_query)
             scan_list = [row['name'] for row in cursor.fetchall()]
 
-            # En çok kullanılan 10 port sorgusu
+            # En çok kullan��lan 10 port sorgusu
             top_ports_query = f"""
             SELECT 
                 vo.port,
@@ -645,7 +645,7 @@ def create_detailed_analysis_layout():
                 {"name": "CVSS3 Base Score", "id": "cvss3_base_score"},
                 {"name": "Tarama Tarihi", "id": "scan_date"}
             ],
-            style_table={'height': '400px', 'overflowY': 'auto'},
+            style_table={'height': '70vh', 'overflowY': 'auto'},
             style_cell={
                 'backgroundColor': '#34495e',
                 'color': '#ecf0f1',
@@ -661,6 +661,12 @@ def create_detailed_analysis_layout():
                 'border': '1px solid #34495e',
                 'color': '#3498db',
             },
+            filter_action="native",
+            sort_action="native",
+            sort_mode="multi",
+            page_action="native",
+            page_current=0,
+            page_size=50,  # Sayfa başına gösterilen veri sayısını artırdık
         ),
         html.Div(id='ip-ports-info', style={
             'marginTop': '20px',
@@ -669,7 +675,7 @@ def create_detailed_analysis_layout():
             'borderRadius': '5px',
             'color': '#ecf0f1',
         }),
-    ])
+    ], style={'padding': '20px', 'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
 
 app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
 
