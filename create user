@@ -1,0 +1,18 @@
+from werkzeug.security import generate_password_hash
+import pymysql
+
+connection = pymysql.connect(
+    host="localhost",
+    user="root",
+    password="Nessus_Report123*-",
+    database="nessusdb",
+    cursorclass=pymysql.cursors.DictCursor
+)
+
+try:
+    with connection.cursor() as cursor:
+        sql = "INSERT INTO users (username, password) VALUES (%s, %s)"
+        cursor.execute(sql, ('admin', generate_password_hash('password123')))
+    connection.commit()
+finally:
+    connection.close()
