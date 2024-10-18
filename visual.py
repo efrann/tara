@@ -766,7 +766,7 @@ login_layout = html.Div([
 ])
 
 # Dash uygulamasını oluştur
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], prevent_initial_callbacks='initial_duplicate')
 server = app.server
 
 # Login manager'ı ayarla
@@ -806,10 +806,11 @@ def login(n_clicks, username, password):
     
     return 'Geçersiz kullanıcı adı veya şifre', dash.no_update
 
-# Logout callback'i
+# Logout callback'ini güncelle
 @app.callback(
     Output('url', 'pathname', allow_duplicate=True),
-    [Input('logout-button', 'n_clicks')]
+    [Input('logout-button', 'n_clicks')],
+    prevent_initial_call=True
 )
 def logout(n_clicks):
     if n_clicks:
