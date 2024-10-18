@@ -10,14 +10,34 @@ from pymysql.cursors import DictCursor
 from contextlib import contextmanager
 from urllib.parse import urlencode, parse_qs, unquote
 import dash_bootstrap_components as dbc
+from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user
+from werkzeug.security import check_password_hash, generate_password_hash
 
+# Yeni User sınıfı
+class User(UserMixin):
+    def __init__(self, id, username, is_admin):
+        self.id = id
+        self.username = username
+        self.is_admin = is_admin
+
+# Kullanıcı yükleme fonksiyonu
+def load_user(user_id):
+    with get_db_connection(db_name='auth_db') as connection:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+            user = cursor.fetchone()
+            if user:
+                return User(user['id'], user['username'], user['is_admin'])
+    return None
+
+# Veritabanı bağlantı fonksiyonunu güncelle
 @contextmanager
-def get_db_connection():
+def get_db_connection(db_name='nessusdb'):
     connection = pymysql.connect(
         host="localhost",
         user="root",
         password="Nessus_Report123*-",
-        database="nessusdb",
+        database=db_name,
         cursorclass=DictCursor
     )
     try:
@@ -331,6 +351,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
 
 # Ana sayfa düzeni
 def create_main_layout():
+    if not current_user.is_authenticated:
+        return login_layout
     return html.Div([
         # Header
         html.Div([
@@ -637,6 +659,7 @@ def create_main_layout():
 
         # Hidden div for storing clicked severity
         html.Div(id='clicked-severity', style={'display': 'none'}),
+        html.Button('Çıkış Yap', id='logout-button'),
     ])
 
 # Detaylı analiz sayfası düzeni
@@ -733,7 +756,27 @@ def create_detailed_analysis_layout():
         ),
     ], style={'padding': '20px', 'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
 
-app = dash.Dash(__name__)
+# Login sayfası düzeni
+login_layout = html.Div([
+    html.H2('Giriş Yap'),
+    dcc.Input(id='username-input', type='text', placeholder='Kullanıcı Adı'),
+    dcc.Input(id='password-input', type='password', placeholder='Şifre'),
+    html.Button('Giriş', id='login-button'),
+    html.Div(id='login-output')
+])
+
+# Dash uygulamasını oluştur
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server
+
+# Login manager'ı ayarla
+login_manager = LoginManager()
+login_manager.init_app(server)
+login_manager.login_view = '/login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return load_user(user_id)
 
 # Ana layout
 app.layout = html.Div([
@@ -741,11 +784,46 @@ app.layout = html.Div([
     html.Div(id='page-content')
 ])
 
-# Sayfa yönlendirmesi için callback
+# Login callback'i
+@app.callback(
+    [Output('login-output', 'children'),
+     Output('url', 'pathname')],
+    [Input('login-button', 'n_clicks')],
+    [State('username-input', 'value'),
+     State('password-input', 'value')]
+)
+def login(n_clicks, username, password):
+    if n_clicks is None:
+        return '', dash.no_update
+    
+    with get_db_connection(db_name='auth_db') as connection:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            user = cursor.fetchone()
+            if user and check_password_hash(user['password'], password):
+                login_user(User(user['id'], user['username'], user['is_admin']))
+                return '', '/'
+    
+    return 'Geçersiz kullanıcı adı veya şifre', dash.no_update
+
+# Logout callback'i
+@app.callback(
+    Output('url', 'pathname', allow_duplicate=True),
+    [Input('logout-button', 'n_clicks')]
+)
+def logout(n_clicks):
+    if n_clicks:
+        logout_user()
+        return '/login'
+    return dash.no_update
+
+# Sayfa yönlendirmesi için callback'i güncelle
 @app.callback(Output('page-content', 'children'),
               [Input('url', 'pathname')])
 def display_page(pathname):
-    if pathname == '/detailed-analysis':
+    if pathname == '/login' or not current_user.is_authenticated:
+        return login_layout
+    elif pathname == '/detailed-analysis':
         return create_detailed_analysis_layout()
     else:
         return create_main_layout()
