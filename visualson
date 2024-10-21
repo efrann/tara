@@ -74,11 +74,11 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 f.name AS folder_name,
                 MAX(FROM_UNIXTIME(sr.scan_start)) AS last_scan_date,
                 COUNT(DISTINCT h.host_ip) AS total_hosts,
-                SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) AS total_critical,
-                SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) AS total_high,
-                SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) AS total_medium,
-                SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) AS total_low,
-                SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) AS total_info
+                COUNT(DISTINCT CASE WHEN p.severity = 4 THEN hv.host_vuln_id END) AS total_critical,
+                COUNT(DISTINCT CASE WHEN p.severity = 3 THEN hv.host_vuln_id END) AS total_high,
+                COUNT(DISTINCT CASE WHEN p.severity = 2 THEN hv.host_vuln_id END) AS total_medium,
+                COUNT(DISTINCT CASE WHEN p.severity = 1 THEN hv.host_vuln_id END) AS total_low,
+                COUNT(DISTINCT CASE WHEN p.severity = 0 THEN hv.host_vuln_id END) AS total_info
             FROM 
                 scan s
             LEFT JOIN 
