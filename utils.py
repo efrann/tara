@@ -10,6 +10,7 @@ from pymysql.cursors import DictCursor
 from contextlib import contextmanager
 from urllib.parse import urlencode, parse_qs, unquote
 import dash_bootstrap_components as dbc
+from waitress import serve
 
 @contextmanager
 def get_db_connection():
@@ -73,11 +74,11 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 f.name AS folder_name,
                 MAX(FROM_UNIXTIME(sr.scan_start)) AS last_scan_date,
                 COUNT(DISTINCT h.host_ip) AS total_hosts,
-                SUM(CASE WHEN p.severity = 4 THEN 1 ELSE 0 END) AS total_critical,
-                SUM(CASE WHEN p.severity = 3 THEN 1 ELSE 0 END) AS total_high,
-                SUM(CASE WHEN p.severity = 2 THEN 1 ELSE 0 END) AS total_medium,
-                SUM(CASE WHEN p.severity = 1 THEN 1 ELSE 0 END) AS total_low,
-                SUM(CASE WHEN p.severity = 0 THEN 1 ELSE 0 END) AS total_info
+                COUNT(DISTINCT CASE WHEN p.severity = 4 THEN hv.host_vuln_id END) AS total_critical,
+                COUNT(DISTINCT CASE WHEN p.severity = 3 THEN hv.host_vuln_id END) AS total_high,
+                COUNT(DISTINCT CASE WHEN p.severity = 2 THEN hv.host_vuln_id END) AS total_medium,
+                COUNT(DISTINCT CASE WHEN p.severity = 1 THEN hv.host_vuln_id END) AS total_low,
+                COUNT(DISTINCT CASE WHEN p.severity = 0 THEN hv.host_vuln_id END) AS total_info
             FROM 
                 scan s
             LEFT JOIN 
@@ -231,6 +232,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             # En çok görülen 10 zafiyet sorgusu
             top_vulnerabilities_query = f"""
             SELECT 
+                f.name AS folder_name,
+                s.name AS scan_name,
                 COALESCE(p.name, 'Bilinmeyen Zafiyet') AS vulnerability_name,
                 p.severity,
                 COUNT(DISTINCT hv.host_vuln_id) as count
@@ -244,6 +247,8 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 host_vuln hv ON h.nessus_host_id = hv.nessus_host_id AND h.scan_run_id = hv.scan_run_id
             LEFT JOIN 
                 plugin p ON hv.plugin_id = p.plugin_id
+            JOIN
+                folder f ON s.folder_id = f.folder_id
             LEFT JOIN
                 vuln_output vo ON hv.host_vuln_id = vo.host_vuln_id
             WHERE 
@@ -254,7 +259,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 )
             {severity_condition} {scan_name_condition} {vulnerability_name_condition} {ip_address_condition} {port_condition}
             GROUP BY 
-                p.plugin_id, p.name, p.severity
+                f.name, s.name, p.plugin_id, p.name, p.severity
             ORDER BY 
                 count DESC
             LIMIT 10
@@ -358,7 +363,7 @@ def create_main_layout():
                     style={
                         'width': '100%',
                         'backgroundColor': '#34495e',
-                        'color': 'white'
+                        'color': 'black'
                     },
                     className='dropdown-white-text'
                 ),
@@ -385,7 +390,7 @@ def create_main_layout():
                     placeholder="Zafiyet adı girin...",
                     style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
                 ),
-            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
+            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '40px', 'width': '20%'}),
             html.Div([
                 html.Label("IP Adresi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
                 dcc.Input(
@@ -872,6 +877,8 @@ def update_main_page(n_clicks, n_intervals, clicked_severity, severity, scan_nam
     }
     
     top_vulnerabilities_table_data = [{
+        'folder_name': row['folder_name'],
+        'scan_name': row['scan_name'],
         'vulnerability_name': row['vulnerability_name'],
         'severity': severity_map[row['severity']],
         'count': row['count']
@@ -1183,5 +1190,7 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     
     return f'/detailed-analysis?{urlencode(params)}'
 
+server = app.server
+
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    serve (server, host='127.0.0.1', port=8080)
