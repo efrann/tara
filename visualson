@@ -10,6 +10,7 @@ from pymysql.cursors import DictCursor
 from contextlib import contextmanager
 from urllib.parse import urlencode, parse_qs, unquote
 import dash_bootstrap_components as dbc
+from waitress import serve
 
 @contextmanager
 def get_db_connection():
@@ -362,7 +363,7 @@ def create_main_layout():
                     style={
                         'width': '100%',
                         'backgroundColor': '#34495e',
-                        'color': 'white'
+                        'color': 'black'
                     },
                     className='dropdown-white-text'
                 ),
@@ -389,7 +390,7 @@ def create_main_layout():
                     placeholder="Zafiyet adı girin...",
                     style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
                 ),
-            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
+            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '40px', 'width': '20%'}),
             html.Div([
                 html.Label("IP Adresi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
                 dcc.Input(
@@ -1189,5 +1190,7 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     
     return f'/detailed-analysis?{urlencode(params)}'
 
+server = app.server
+
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    serve (server, host='127.0.0.1', port=8080)
