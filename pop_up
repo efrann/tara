@@ -712,30 +712,8 @@ def create_detailed_analysis_layout():
             page_size=50,
             cell_selectable=True,
         ),
-        # Yeni, daha merkezi ve modern pop-up
-        html.Div(id='vulnerability-popup-container', style={
-            'display': 'none',
-            'position': 'fixed',
-            'top': 0,
-            'right': 0,  # Sağ tarafa yerleştir
-            'width': '40%',  # Genişliği azalt
-            'height': '100%',
-            'backgroundColor': 'rgba(0,0,0,0.5)',
-            'zIndex': 1000,
-            'justifyContent': 'center',
-            'alignItems': 'center'
-        }, children=[
-            html.Div(id='vulnerability-popup', style={
-                'backgroundColor': '#fff',
-                'borderRadius': '10px 0 0 10px',  # Sadece sol tarafı yuvarlak yap
-                'padding': '30px',
-                'width': '100%',
-                'height': '100%',
-                'overflowY': 'auto',
-                'boxShadow': '-4px 0 20px rgba(0,0,0,0.2)',
-                'position': 'relative'
-            })
-        ]),
+        # Yeni pencere için gizli div
+        html.Div(id='vulnerability-details-window', style={'display': 'none'}),
     ], style={'padding': '20px', 'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
 
 # Ana sayfa için callback'ler
@@ -1180,12 +1158,105 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     
     return f'/detailed-analysis?{urlencode(params)}'
 
+# Yeni pencere açma callback'i
 @app.callback(
-    [Output('vulnerability-popup', 'children'),
-     Output('vulnerability-popup-container', 'style')],
+    Output('vulnerability-details-window', 'children'),
     [Input('vulnerability-table', 'active_cell')],
     [State('vulnerability-table', 'data')]
 )
+def open_vulnerability_details(active_cell, table_data):
+    if active_cell and active_cell['column_id'] == 'vulnerability_name':
+        row = table_data[active_cell['row']]
+        
+        severity_colors = {
+            'Kritik': '#e74c3c',
+            'Yüksek': '#e67e22',
+            'Orta': '#f1c40f',
+            'Düşük': '#2ecc71',
+            'Bilgi': '#3498db'
+        }
+        
+        severity_color = severity_colors.get(row['severity_text'], '#95a5a6')
+        
+        window_content = html.Div([
+            html.H3(row['vulnerability_name'], style={'color': '#2c3e50', 'marginBottom': '10px'}),
+            html.Span(row['severity_text'], style={
+                'backgroundColor': severity_color,
+                'color': 'white',
+                'padding': '5px 10px',
+                'borderRadius': '5px',
+                'fontSize': '14px',
+                'fontWeight': 'bold',
+                'marginBottom': '20px',
+                'display': 'inline-block'
+            }),
+            dbc.Tabs([
+                dbc.Tab(label="Açıklama", children=[
+                    dcc.Markdown(row['description'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '15px', 'borderRadius': '5px', 'marginTop': '10px'})
+                ]),
+                dbc.Tab(label="Çözüm", children=[
+                    dcc.Markdown(row['solution'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '15px', 'borderRadius': '5px', 'marginTop': '10px'})
+                ]),
+                dbc.Tab(label="Detaylar", children=[
+                    html.Div([
+                        html.Div([
+                            html.H5("CVSS3 Skoru", style={'color': '#2c3e50', 'marginBottom': '5px'}),
+                            html.Span(row['cvss3_base_score'], style={
+                                'fontSize': '24px',
+                                'fontWeight': 'bold',
+                                'color': severity_color
+                            })
+                        ], style={'marginBottom': '15px'}),
+                        html.H5("CVSS3 Vektör", style={'color': '#2c3e50', 'marginBottom': '5px'}),
+                        html.Code(row['cvss3_vector'], style={"backgroundColor": "#e9ecef", "padding": "5px", "borderRadius": "3px"}),
+                        html.H5("Referanslar", style={'color': '#2c3e50', 'marginTop': '15px', 'marginBottom': '5px'}),
+                        html.Div([
+                            html.A(ref, href=ref, target="_blank", style={"display": "block", "marginBottom": "5px", "color": "#3498db"}) 
+                            for ref in row['ref'].split('\n') if ref.strip()
+                        ]),
+                        html.Div([
+                            html.Div([
+                                html.H5("Yayın Tarihi", style={'color': '#2c3e50', 'marginBottom': '5px'}),
+                                html.Span(row['pub_date'], style={"fontWeight": "bold"})
+                            ], style={'marginRight': '30px'}),
+                            html.Div([
+                                html.H5("Güncelleme Tarihi", style={'color': '#2c3e50', 'marginBottom': '5px'}),
+                                html.Span(row['mod_date'], style={"fontWeight": "bold"})
+                            ])
+                        ], style={'display': 'flex', 'marginTop': '15px'}),
+                        html.Div([
+                            html.H5("Plugin ID", style={'color': '#2c3e50', 'marginBottom': '5px'}),
+                            html.Span(row['plugin_id'], style={"fontWeight": "bold"})
+                        ], style={'marginTop': '15px'})
+                    ])
+                ]),
+            ], style={'marginTop': '20px'})
+        ])
+
+        # JavaScript kodu ile yeni pencere açma
+        new_window_script = f"""
+            var w = window.open('', '_blank', 'width=800,height=600');
+            w.document.write('<html><head><title>{row['vulnerability_name']}</title>');
+            w.document.write('<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">');
+            w.document.write('</head><body style="padding: 20px;">');
+            w.document.write(document.getElementById('vulnerability-details-window').innerHTML);
+            w.document.write('</body></html>');
+            w.document.close();
+        """
+
+        return html.Div([
+            window_content,
+            html.Script(new_window_script)
+        ])
+    
+    return dash.no_update
+
+# Server'ı başlat
+if 'server' not in globals():
+    server = app.server
+
+if __name__ == '__main__':
+    serve(server, host='127.0.0.1', port=8080)
 def show_vulnerability_details(active_cell, table_data):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
