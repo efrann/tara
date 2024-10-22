@@ -594,6 +594,11 @@ def create_main_layout():
 
         # Hidden div for storing clicked severity
         html.Div(id='clicked-severity', style={'display': 'none'}),
+
+        # Popup container'ı ekle
+        html.Div(id='vulnerability-popup-container', style={'display': 'none'}, children=[
+            html.Div(id='vulnerability-popup')
+        ])
     ])
 
 # Eğer app nesnesi daha önce tanımlanmamışsa, burada tanımlayın
