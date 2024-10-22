@@ -1210,14 +1210,17 @@ def show_vulnerability_details(active_cell, table_data):
 
         # CVSS skoru için renk belirleme
         cvss_color = "#2ecc71"  # Varsayılan yeşil (düşük risk)
-        if cvss3_base_score != 'N/A':
-            score = float(cvss3_base_score)
-            if score >= 9.0:
-                cvss_color = "#e74c3c"  # Kırmızı (kritik)
-            elif score >= 7.0:
-                cvss_color = "#e67e22"  # Turuncu (yüksek)
-            elif score >= 4.0:
-                cvss_color = "#f1c40f"  # Sarı (orta)
+        if cvss3_base_score != 'N/A' and cvss3_base_score is not None:
+            try:
+                score = float(cvss3_base_score)
+                if score >= 9.0:
+                    cvss_color = "#e74c3c"  # Kırmızı (kritik)
+                elif score >= 7.0:
+                    cvss_color = "#e67e22"  # Turuncu (yüksek)
+                elif score >= 4.0:
+                    cvss_color = "#f1c40f"  # Sarı (orta)
+            except ValueError:
+                cvss3_base_score = 'N/A'
 
         popup_content = html.Div([
             html.Button("×", id="close-popup", style={
