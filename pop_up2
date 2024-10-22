@@ -1245,25 +1245,41 @@ def show_vulnerability_details(active_cell, table_data):
                 cvss_color = "#f1c40f"  # Sarı (orta)
 
         popup_content = html.Div([
-            html.Div([  # İç container
+            # Kapatma butonu için ayrı bir üst çubuk
+            html.Div([
+                html.H3(row['vulnerability_name'], style={
+                    'color': '#2c3e50',
+                    'margin': '0',
+                    'padding': '10px',
+                    'paddingRight': '40px',  # Kapatma butonu için yer bırak
+                    'whiteSpace': 'nowrap',
+                    'overflow': 'hidden',
+                    'textOverflow': 'ellipsis'
+                }),
                 html.Button("×", id="close-popup", style={
                     'position': 'absolute',
-                    'top': '15px',
-                    'right': '15px',
+                    'top': '5px',
+                    'right': '10px',
                     'fontSize': '24px',
                     'border': 'none',
                     'background': 'none',
                     'cursor': 'pointer',
                     'color': '#2c3e50',
-                    'zIndex': 1000  # Diğer içeriklerin üzerinde olmasını sağlar
-                }),
-                html.H3(row['vulnerability_name'], style={
-                    'color': '#2c3e50',
-                    'marginBottom': '20px',
-                    'paddingRight': '30px',
-                    'borderBottom': '2px solid #3498db',
-                    'paddingBottom': '10px'
-                }),
+                })
+            ], style={
+                'position': 'sticky',
+                'top': '0',
+                'backgroundColor': '#fff',
+                'borderBottom': '2px solid #3498db',
+                'zIndex': 1000,
+                'padding': '10px',
+                'display': 'flex',
+                'justifyContent': 'space-between',
+                'alignItems': 'center'
+            }),
+            
+            # İçerik bölümü
+            html.Div([
                 html.Div([
                     html.Span("CVSS3 Skoru: ", style={'fontWeight': 'bold'}),
                     html.Span(cvss3_base_score, style={
@@ -1322,23 +1338,17 @@ def show_vulnerability_details(active_cell, table_data):
                         ])
                     ]),
                 ], style={"marginTop": "20px"}),
-            ], style={
-                'position': 'relative',
-                'padding': '30px',
-                'backgroundColor': '#fff',
-                'borderRadius': '10px',
-                'boxShadow': '0 4px 20px rgba(0,0,0,0.2)',
-                'width': '100%',
-                'maxWidth': '800px',
-                'maxHeight': '80vh',
-                'overflowY': 'auto'
-            })
+            ], style={'padding': '20px'})
         ], style={
+            'backgroundColor': '#fff',
+            'borderRadius': '10px',
+            'boxShadow': '0 4px 20px rgba(0,0,0,0.2)',
+            'width': '100%',
+            'maxWidth': '800px',
+            'maxHeight': '80vh',
+            'overflowY': 'auto',
             'display': 'flex',
-            'justifyContent': 'center',
-            'alignItems': 'center',
-            'height': '100%',
-            'width': '100%'
+            'flexDirection': 'column'
         })
 
         return popup_content, {
@@ -1354,6 +1364,36 @@ def show_vulnerability_details(active_cell, table_data):
             'zIndex': 1000
         }
     return dash.no_update, {'display': 'none'}
+
+@app.callback(
+    Output('vulnerability-popup-container', 'style', allow_duplicate=True),
+    [Input('close-popup', 'n_clicks')],
+    prevent_initial_call=True
+)
+def close_popup(n_clicks):
+    if n_clicks:
+        return {'display': 'none'}
+    return dash.no_update
+
+# Server'ı başlat
+if 'server' not in globals():
+    server = app.server
+
+if __name__ == '__main__':
+    serve(server, host='127.0.0.1', port=8080)
+
+        return popup_content, {
+            'display': 'flex',
+            'justifyContent': 'center',
+            'alignItems': 'center',
+            'position': 'fixed',
+            'top': 0,
+            'left': 0,
+            'right': 0,
+            'bottom': 0,
+            'backgroundColor': 'rgba(0,0,0,0.5)',
+            'zIndex': 1000
+        }
     return dash.no_update, {'display': 'none'}
 
 @app.callback(
