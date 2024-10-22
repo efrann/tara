@@ -353,151 +353,107 @@ def create_main_layout():
         ], style={'backgroundColor': '#34495e', 'padding': '10px', 'borderRadius': '0 0 10px 10px'}),
 
         # Filters
-        html.Div([
-            html.Div([
-                html.Label("Önem Derecesi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
-                dcc.Dropdown(
-                    id='severity-dropdown',
-                    options=[
-                        {'label': 'Kritik', 'value': 4},
-                        {'label': 'Yüksek', 'value': 3},
-                        {'label': 'Orta', 'value': 2},
-                        {'label': 'Düşük', 'value': 1},
-                        {'label': 'Bilgi', 'value': 0}
-                    ],
-                    multi=True,
-                    placeholder="Seçiniz...",
-                    style={
-                        'width': '100%',
-                        'backgroundColor': '#34495e',
-                        'color': 'black'
-                    },
-                    className='dropdown-white-text'
-                ),
-            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
-            html.Div([
-                html.Label("Tarama Seç:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
-                dcc.Dropdown(
-                    id='scan-dropdown',
-                    options=[],
-                    placeholder="Seçiniz...",
-                    style={
-                        'width': '100%',
-                        'backgroundColor': '#34495e',
-                        'color': 'black'
-                    },
-                    className='dropdown-white-text'
-                ),
-            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
-            html.Div([
-                html.Label("Zafiyet Adı:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
-                dcc.Input(
-                    id='vulnerability-name-input',
-                    type='text',
-                    placeholder="Zafiyet adı girin...",
-                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
-                ),
-            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '40px', 'width': '20%'}),
-            html.Div([
-                html.Label("IP Adresi:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
-                dcc.Input(
-                    id='ip-address-input',
-                    type='text',
-                    placeholder="IP adresi girin...",
-                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
-                ),
-            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
-            html.Div([
-                html.Label("Port:", style={'color': 'white', 'marginBottom': '5px', 'display': 'block'}),
-                dcc.Input(
-                    id='port-input',
-                    type='text',
-                    placeholder="Port numarası girin...",
-                    style={'width': '100%', 'backgroundColor': '#34495e', 'color': 'white', 'border': '1px solid #3498db', 'borderRadius': '5px', 'padding': '8px'}
-                ),
-            ], style={'display': 'inline-block', 'verticalAlign': 'top', 'marginRight': '20px', 'width': '20%'}),
-            html.Div([
-                html.Div([
-                    html.Button('Filtrele', id='filter-button', n_clicks=0, style={
-                        'backgroundColor': '#3498db',
-                        'color': 'white',
-                        'border': 'none',
-                        'padding': '10px 20px',
-                        'borderRadius': '5px',
-                        'cursor': 'pointer',
-                        'transition': 'background-color 0.3s',
-                        'marginRight': '10px',
-                        'marginTop': '25px',
-                    }),
-                    html.Span("Seçili filtreleri uygula", style={'color': 'white', 'marginLeft': '5px'}),
-                ], style={'display': 'inline-block', 'verticalAlign': 'bottom', 'marginRight': '20px'}),
-                html.Div([
-                    html.A(
-                        html.Button('Detaylı Zafiyet Listesi', style={
-                            'backgroundColor': '#2ecc71',
-                            'color': 'white',
-                            'border': 'none',
-                            'padding': '10px 20px',
-                            'borderRadius': '5px',
-                            'cursor': 'pointer',
-                            'transition': 'background-color 0.3s',
-                            'marginTop': '25px',
-                        }),
-                        id='open-new-tab',
-                        href='',
-                        target='_blank'
-                    ),
-                    html.Span("Yeni sekmede aç", style={'color': 'white', 'marginLeft': '5px'}),
-                ], style={'display': 'inline-block', 'verticalAlign': 'bottom'}),
-            ], style={'marginTop': '20px'}),
-        ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'marginTop': '20px', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
+        dbc.Card(
+            dbc.CardBody([
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Önem Derecesi:", style={'color': 'white', 'marginBottom': '5px'}),
+                        dcc.Dropdown(
+                            id='severity-dropdown',
+                            options=[
+                                {'label': 'Kritik', 'value': 4},
+                                {'label': 'Yüksek', 'value': 3},
+                                {'label': 'Orta', 'value': 2},
+                                {'label': 'Düşük', 'value': 1},
+                                {'label': 'Bilgi', 'value': 0}
+                            ],
+                            multi=True,
+                            placeholder="Seçiniz...",
+                            style={'color': 'black', 'width': '100%'},
+                            className='dropdown-white-text'
+                        ),
+                    ], width=3),
+                    dbc.Col([
+                        html.Label("Tarama Seç:", style={'color': 'white', 'marginBottom': '5px'}),
+                        dcc.Dropdown(
+                            id='scan-dropdown',
+                            options=[],
+                            placeholder="Seçiniz...",
+                            style={'color': 'black', 'width': '100%'},
+                            className='dropdown-white-text'
+                        ),
+                    ], width=3),
+                    dbc.Col([
+                        html.Label("Zafiyet Adı:", style={'color': 'white', 'marginBottom': '5px'}),
+                        dbc.Input(
+                            id='vulnerability-name-input',
+                            type='text',
+                            placeholder="Zafiyet adı girin...",
+                            style={'width': '100%'}
+                        ),
+                    ], width=2),
+                    dbc.Col([
+                        html.Label("IP Adresi:", style={'color': 'white', 'marginBottom': '5px'}),
+                        dbc.Input(
+                            id='ip-address-input',
+                            type='text',
+                            placeholder="IP adresi girin...",
+                            style={'width': '100%'}
+                        ),
+                    ], width=2),
+                    dbc.Col([
+                        html.Label("Port:", style={'color': 'white', 'marginBottom': '5px'}),
+                        dbc.Input(
+                            id='port-input',
+                            type='text',
+                            placeholder="Port numarası girin...",
+                            style={'width': '100%'}
+                        ),
+                    ], width=2),
+                ]),
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Button('Filtrele', id='filter-button', color="primary", className="mt-3"),
+                        html.A(
+                            dbc.Button('Detaylı Zafiyet Listesi', color="success", className="mt-3 ml-2"),
+                            id='open-new-tab',
+                            target="_blank",  # Yeni sekmede açılmasını sağlar
+                            href="/detailed-analysis",  # Başlangıç URL'si
+                        ),
+                    ], width=12)
+                ], justify="end")
+            ]),
+            style={
+                'backgroundColor': '#34495e',  # Koyu mavi arka plan
+                'color': 'white',  # Beyaz metin
+                'border': 'none',  # Kenarlığı kaldır
+                'marginBottom': '20px',  # Alt boşluk ekle
+            }
+        ),
 
         # Total Vulnerabilities
         html.Div([
             html.H3("Toplam Zafiyet Sayıları", style={'textAlign': 'center', 'color': 'white', 'marginBottom': '20px'}),
-            html.Div([
-                html.Div(id='severity-4', n_clicks=0),
-                html.Div(id='severity-3', n_clicks=0),
-                html.Div(id='severity-2', n_clicks=0),
-                html.Div(id='severity-1', n_clicks=0),
-                html.Div(id='severity-0', n_clicks=0),
-            ], id='total-vulnerabilities', style={'display': 'flex', 'justifyContent': 'space-around', 'flexWrap': 'wrap'}),
+            dbc.Row([
+                dbc.Col(html.Div(id='severity-4', n_clicks=0), width=2),
+                dbc.Col(html.Div(id='severity-3', n_clicks=0), width=2),
+                dbc.Col(html.Div(id='severity-2', n_clicks=0), width=2),
+                dbc.Col(html.Div(id='severity-1', n_clicks=0), width=2),
+                dbc.Col(html.Div(id='severity-0', n_clicks=0), width=2),
+            ], id='total-vulnerabilities', justify="center"),
         ], style={'backgroundColor': '#34495e', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
         # Graphs
-        html.Div([
-            html.Div([
-                dcc.Graph(id='vulnerability-distribution', style={'height': '400px'})
-            ], style={'width': '32%', 'display': 'inline-block', 'verticalAlign': 'top'}),
-
-            html.Div([
-                dcc.Graph(id='top-vulnerabilities-graph', style={'height': '400px'})
-            ], style={'width': '32%', 'display': 'inline-block', 'verticalAlign': 'top'}),
-
-            html.Div([
-                dcc.Graph(id='top-ports-graph', style={'height': '400px'})
-            ], style={'width': '32%', 'display': 'inline-block', 'verticalAlign': 'top'}),
-        ], style={
-            'backgroundColor': '#2c3e50', 
-            'padding': '20px', 
-            'margin': '20px 0', 
-            'borderRadius': '10px', 
-            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
-            'whiteSpace': 'nowrap',
-            'overflowX': 'auto'
-        }),
+        dbc.Row([
+            dbc.Col(dcc.Graph(id='vulnerability-distribution', style={'height': '400px'}), width=4),
+            dbc.Col(dcc.Graph(id='top-vulnerabilities-graph', style={'height': '400px'}), width=4),
+            dbc.Col(dcc.Graph(id='top-ports-graph', style={'height': '400px'}), width=4),
+        ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
         # Tables
-        html.Div([
-            html.Div([
-                html.H3("Özet Bilgiler", style={
-                    'textAlign': 'center', 
-                    'color': '#ecf0f1', 
-                    'backgroundColor': '#34495e', 
-                    'padding': '10px', 
-                    'marginBottom': '20px',
-                    'borderRadius': '5px',
-                }),
+        dbc.Row([
+            dbc.Col([
+                html.H3("Özet Bilgiler", style={'textAlign': 'center', 'color': '#ecf0f1', 'backgroundColor': '#34495e', 'padding': '10px', 'marginBottom': '20px', 'borderRadius': '5px'}),
                 dash_table.DataTable(
                     id='summary-table',
                     columns=[
@@ -565,17 +521,10 @@ def create_main_layout():
                         }
                     ],
                 ),
-            ], className="six columns"),
+            ], width=6),
 
-            html.Div([
-                html.H3("En Çok Görülen 10 Zafiyet", style={
-                    'textAlign': 'center', 
-                    'color': '#ecf0f1', 
-                    'backgroundColor': '#34495e', 
-                    'padding': '10px', 
-                    'marginBottom': '20px',
-                    'borderRadius': '5px',
-                }),
+            dbc.Col([
+                html.H3("En Çok Görülen 10 Zafiyet", style={'textAlign': 'center', 'color': '#ecf0f1', 'backgroundColor': '#34495e', 'padding': '10px', 'marginBottom': '20px', 'borderRadius': '5px'}),
                 dash_table.DataTable(
                     id='top-vulnerabilities-table',
                     columns=[
@@ -634,8 +583,8 @@ def create_main_layout():
                         }
                     ],
                 ),
-            ], className="six columns"),
-        ], className="row", style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
+            ], width=6),
+        ], style={'backgroundColor': '#2c3e50', 'padding': '20px', 'margin': '20px 0', 'borderRadius': '10px', 'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)'}),
 
         dcc.Interval(
             id='interval-component',
@@ -646,6 +595,25 @@ def create_main_layout():
         # Hidden div for storing clicked severity
         html.Div(id='clicked-severity', style={'display': 'none'}),
     ])
+
+# Eğer app nesnesi daha önce tanımlanmamışsa, burada tanımlayın
+if 'app' not in globals():
+    app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+# Ana layout
+app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
+    html.Div(id='page-content')
+])
+
+# Sayfa yönlendirmesi için callback
+@app.callback(Output('page-content', 'children'),
+              [Input('url', 'pathname')])
+def display_page(pathname):
+    if pathname == '/detailed-analysis':
+        return create_detailed_analysis_layout()
+    else:
+        return create_main_layout()
 
 # Detaylı analiz sayfası düzeni
 def create_detailed_analysis_layout():
@@ -671,52 +639,6 @@ def create_detailed_analysis_layout():
             type='text',
             placeholder='Ara...',
             style={'marginBottom': '20px', 'width': '100%', 'padding': '10px'}
-        ),
-        dbc.Modal(
-            [
-                dbc.ModalHeader(dbc.ModalTitle("Zafiyet Detayları"), close_button=True),
-                dbc.ModalBody([
-                    dbc.Row([
-                        dbc.Col([
-                            html.H5("Açıklama", className="text-primary"),
-                            html.Div(id="vulnerability-description", style={"maxHeight": "200px", "overflowY": "auto"}),
-                        ], width=12),
-                    ], className="mb-3"),
-                    dbc.Row([
-                        dbc.Col([
-                            html.H5("Çözüm", className="text-success"),
-                            html.Div(id="vulnerability-solution", style={"maxHeight": "200px", "overflowY": "auto"}),
-                        ], width=12),
-                    ], className="mb-3"),
-                    dbc.Row([
-                        dbc.Col([
-                            html.H5("CVSS3 Vektör", className="text-info"),
-                            html.P(id="vulnerability-cvss3-vector"),
-                        ], width=6),
-                        dbc.Col([
-                            html.H5("Referanslar", className="text-warning"),
-                            html.Div(id="vulnerability-ref", style={"maxHeight": "100px", "overflowY": "auto"}),
-                        ], width=6),
-                    ], className="mb-3"),
-                    dbc.Row([
-                        dbc.Col([
-                            html.H5("Yayın Tarihi", className="text-secondary"),
-                            html.P(id="vulnerability-pub-date"),
-                        ], width=6),
-                        dbc.Col([
-                            html.H5("Güncelleme Tarihi", className="text-secondary"),
-                            html.P(id="vulnerability-mod-date"),
-                        ], width=6),
-                    ]),
-                ]),
-                dbc.ModalFooter(
-                    dbc.Button("Kapat", id="close-modal", className="ms-auto", n_clicks=0)
-                ),
-            ],
-            id="vulnerability-modal",
-            is_open=False,
-            size="lg",
-            scrollable=True,
         ),
         dash_table.DataTable(
             id='vulnerability-table',
@@ -790,24 +712,32 @@ def create_detailed_analysis_layout():
             page_size=50,
             cell_selectable=True,
         ),
+        # Yeni, daha merkezi ve modern pop-up
+        html.Div(id='vulnerability-popup-container', style={
+            'display': 'none',
+            'position': 'fixed',
+            'top': 0,
+            'left': 0,
+            'width': '100%',
+            'height': '100%',
+            'backgroundColor': 'rgba(0,0,0,0.5)',
+            'zIndex': 1000,
+            'justifyContent': 'center',
+            'alignItems': 'center'
+        }, children=[
+            html.Div(id='vulnerability-popup', style={
+                'backgroundColor': '#fff',
+                'borderRadius': '10px',
+                'padding': '30px',
+                'width': '80%',
+                'maxWidth': '800px',
+                'maxHeight': '80vh',
+                'overflowY': 'auto',
+                'boxShadow': '0 4px 20px rgba(0,0,0,0.2)',
+                'position': 'relative'
+            })
+        ]),
     ], style={'padding': '20px', 'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
-
-app = dash.Dash(__name__)
-
-# Ana layout
-app.layout = html.Div([
-    dcc.Location(id='url', refresh=False),
-    html.Div(id='page-content')
-])
-
-# Sayfa yönlendirmesi için callback
-@app.callback(Output('page-content', 'children'),
-              [Input('url', 'pathname')])
-def display_page(pathname):
-    if pathname == '/detailed-analysis':
-        return create_detailed_analysis_layout()
-    else:
-        return create_main_layout()
 
 # Ana sayfa için callback'ler
 @app.callback(
@@ -1252,43 +1182,105 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     return f'/detailed-analysis?{urlencode(params)}'
 
 @app.callback(
-    [Output("vulnerability-modal", "is_open"),
-     Output("vulnerability-description", "children"),
-     Output("vulnerability-solution", "children"),
-     Output("vulnerability-cvss3-vector", "children"),
-     Output("vulnerability-ref", "children"),
-     Output("vulnerability-pub-date", "children"),
-     Output("vulnerability-mod-date", "children")],
+    [Output('vulnerability-popup', 'children'),
+     Output('vulnerability-popup-container', 'style')],
     [Input('vulnerability-table', 'active_cell')],
-    [State('vulnerability-table', 'data'),
-     State("vulnerability-modal", "is_open")]
+    [State('vulnerability-table', 'data')]
 )
-def toggle_modal(active_cell, table_data, is_open):
+def show_vulnerability_details(active_cell, table_data):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
-        return (
-            not is_open,
-            dcc.Markdown(row['description']),
-            dcc.Markdown(row['solution']),
-            row['cvss3_vector'],
-            [html.A(ref, href=ref, target="_blank") for ref in row['ref'].split('\n') if ref.strip()],
-            row['pub_date'],
-            row['mod_date']
-        )
-    return is_open, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        
+        severity_colors = {
+            'Kritik': '#e74c3c',
+            'Yüksek': '#e67e22',
+            'Orta': '#f1c40f',
+            'Düşük': '#2ecc71',
+            'Bilgi': '#3498db'
+        }
+        
+        severity_color = severity_colors.get(row['severity_text'], '#95a5a6')
+        
+        popup_content = html.Div([
+            html.Button("×", id="close-popup", style={
+                'position': 'absolute',
+                'top': '10px',
+                'right': '10px',
+                'fontSize': '24px',
+                'border': 'none',
+                'background': 'none',
+                'cursor': 'pointer',
+                'color': '#2c3e50'
+            }),
+            html.Div([
+                html.H3(row['vulnerability_name'], style={'color': '#2c3e50', 'marginBottom': '10px', 'paddingRight': '30px'}),
+                html.Span(row['severity_text'], style={
+                    'backgroundColor': severity_color,
+                    'color': 'white',
+                    'padding': '5px 10px',
+                    'borderRadius': '5px',
+                    'fontSize': '14px',
+                    'fontWeight': 'bold'
+                })
+            ], style={'display': 'flex', 'alignItems': 'center', 'justifyContent': 'space-between', 'marginBottom': '20px'}),
+            dbc.Tabs([
+                dbc.Tab(label="Açıklama", children=[
+                    dcc.Markdown(row['description'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '15px', 'borderRadius': '5px', 'marginTop': '10px'})
+                ]),
+                dbc.Tab(label="Çözüm", children=[
+                    dcc.Markdown(row['solution'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '15px', 'borderRadius': '5px', 'marginTop': '10px'})
+                ]),
+                dbc.Tab(label="Detaylar", children=[
+                    html.Div([
+                        html.Div([
+                            html.H5("CVSS3 Skoru", style={'color': '#2c3e50', 'marginBottom': '5px'}),
+                            html.Span(row['cvss3_base_score'], style={
+                                'fontSize': '24px',
+                                'fontWeight': 'bold',
+                                'color': severity_color
+                            })
+                        ], style={'marginBottom': '15px'}),
+                        html.H5("CVSS3 Vektör", style={'color': '#2c3e50', 'marginBottom': '5px'}),
+                        html.Code(row['cvss3_vector'], style={"backgroundColor": "#e9ecef", "padding": "5px", "borderRadius": "3px"}),
+                        html.H5("Referanslar", style={'color': '#2c3e50', 'marginTop': '15px', 'marginBottom': '5px'}),
+                        html.Div([
+                            html.A(ref, href=ref, target="_blank", style={"display": "block", "marginBottom": "5px", "color": "#3498db"}) 
+                            for ref in row['ref'].split('\n') if ref.strip()
+                        ]),
+                        html.Div([
+                            html.Div([
+                                html.H5("Yayın Tarihi", style={'color': '#2c3e50', 'marginBottom': '5px'}),
+                                html.Span(row['pub_date'], style={"fontWeight": "bold"})
+                            ], style={'marginRight': '30px'}),
+                            html.Div([
+                                html.H5("Güncelleme Tarihi", style={'color': '#2c3e50', 'marginBottom': '5px'}),
+                                html.Span(row['mod_date'], style={"fontWeight": "bold"})
+                            ])
+                        ], style={'display': 'flex', 'marginTop': '15px'}),
+                        html.Div([
+                            html.H5("Plugin ID", style={'color': '#2c3e50', 'marginBottom': '5px'}),
+                            html.Span(row['plugin_id'], style={"fontWeight": "bold"})
+                        ], style={'marginTop': '15px'})
+                    ])
+                ]),
+            ], style={'marginTop': '20px'})
+        ])
+        return popup_content, {'display': 'flex'}
+    return dash.no_update, {'display': 'none'}
 
 @app.callback(
-    Output("vulnerability-modal", "is_open", allow_duplicate=True),
-    [Input("close-modal", "n_clicks")],
-    [State("vulnerability-modal", "is_open")],
+    Output('vulnerability-popup-container', 'style', allow_duplicate=True),
+    [Input('close-popup', 'n_clicks')],
     prevent_initial_call=True
 )
-def close_modal(n_clicks, is_open):
+def close_popup(n_clicks):
     if n_clicks:
-        return False
-    return is_open
+        return {'display': 'none'}
+    return dash.no_update
 
-server = app.server
+# Server'ı başlat
+if 'server' not in globals():
+    server = app.server
 
 if __name__ == '__main__':
-    serve (server, host='127.0.0.1', port=8080)
+    serve(server, host='127.0.0.1', port=8080)
