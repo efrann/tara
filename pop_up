@@ -335,7 +335,75 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 cursor.execute(ip_ports_query, (ip_address,))
                 ip_ports_data = cursor.fetchall()
 
-    return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data
+            # En çok görülen 10 zafiyet daire grafiği
+            top_vulnerabilities_graph = go.Figure(
+                go.Sunburst(
+                    ids=['Most Occurent 10 Vulnerabilities'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
+                    labels=['Most Occurent 10 Vulnerabilities'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
+                    parents=[''] + ['Most Occurent 10 Vulnerabilities'] * len(top_vulnerabilities_data),
+                    values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
+                    branchvalues="total",
+                    marker=dict(
+                        colors=['#2c3e50'] + [
+                            '#e74c3c' if row['severity'] == 4 else
+                            '#e67e22' if row['severity'] == 3 else
+                            '#f1c40f' if row['severity'] == 2 else
+                            '#2ecc71' if row['severity'] == 1 else
+                            '#3498db' if row['severity'] == 0 else
+                            '#95a5a6' for row in top_vulnerabilities_data
+                        ]
+                    ),
+                    textinfo='label',
+                    hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
+                    insidetextorientation='radial',
+                    textfont=dict(size=10, color='white'),
+                    customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
+                )
+            )
+
+            top_vulnerabilities_graph.update_layout(
+                margin=dict(l=0, r=0, t=0, b=0),
+                paper_bgcolor='#2c3e50',
+                plot_bgcolor='#34495e',
+                font=dict(color='white', size=14),
+                height=400,
+                showlegend=False,
+            )
+
+            # En çok kullanılan 10 port daire grafiği
+            top_ports_graph = go.Figure(
+                go.Sunburst(
+                    ids=['Most Used 10 Ports'] + [f"port_{row['port']}" for row in top_ports_data],
+                    labels=['Most Used 10 Ports'] + [f"Port {row['port']}" for row in top_ports_data],
+                    parents=[''] + ['Most Used 10 Ports'] * len(top_ports_data),
+                    values=[sum(row['count'] for row in top_ports_data)] + [row['count'] for row in top_ports_data],
+                    branchvalues="total",
+                    marker=dict(
+                        colors=['#2c3e50'] + [
+                            f'rgb({hash(row["port"]) % 256}, {(hash(row["port"]) // 256) % 256}, {(hash(row["port"]) // 65536) % 256})'
+                            for row in top_ports_data
+                        ]
+                    ),
+                    textinfo='label+value',
+                    hovertemplate='<b>%{label}</b><br>Count: %{value}<br><extra></extra>',
+                    insidetextorientation='radial',
+                    textfont=dict(size=10, color='white'),
+                )
+            )
+
+            top_ports_graph.update_layout(
+                margin=dict(l=0, r=0, t=0, b=0),
+                paper_bgcolor='#2c3e50',
+                plot_bgcolor='#34495e',
+                font=dict(color='white', size=14),
+                height=400,
+                title=dict(text='Most Used 10 Ports', font=dict(color='white', size=16)),
+                showlegend=False,
+            )
+
+            return (summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, 
+                    total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data, 
+                    top_vulnerabilities_graph, top_ports_graph)
 
 # Ana sayfa düzeni
 def create_main_layout():
@@ -647,76 +715,6 @@ def create_main_layout():
         html.Div(id='clicked-severity', style={'display': 'none'}),
     ])
 
-    # En çok görülen 10 zafiyet daire grafiği
-    top_vulnerabilities_graph = go.Figure(
-        go.Sunburst(
-            ids=['Most Occurent 10 Vulnerabilities'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
-            labels=['Most Occurent 10 Vulnerabilities'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
-            parents=[''] + ['Most Occurent 10 Vulnerabilities'] * len(top_vulnerabilities_data),
-            values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
-            branchvalues="total",
-            marker=dict(
-                colors=['#2c3e50'] + [
-                    '#e74c3c' if row['severity'] == 4 else
-                    '#e67e22' if row['severity'] == 3 else
-                    '#f1c40f' if row['severity'] == 2 else
-                    '#2ecc71' if row['severity'] == 1 else
-                    '#3498db' if row['severity'] == 0 else
-                    '#95a5a6' for row in top_vulnerabilities_data
-                ]
-            ),
-            textinfo='label',
-            hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
-            insidetextorientation='radial',
-            textfont=dict(size=10, color='white'),
-            customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
-        )
-    )
-
-    top_vulnerabilities_graph.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#34495e',
-        font=dict(color='white', size=14),
-        height=400,
-        showlegend=False,
-    )
-
-    # En çok kullanılan 10 port daire grafiği
-    top_ports_graph = go.Figure(
-        go.Sunburst(
-            ids=['Most Used 10 Ports'] + [f"port_{row['port']}" for row in top_ports_data],
-            labels=['Most Used 10 Ports'] + [f"Port {row['port']}" for row in top_ports_data],
-            parents=[''] + ['Most Used 10 Ports'] * len(top_ports_data),
-            values=[sum(row['count'] for row in top_ports_data)] + [row['count'] for row in top_ports_data],
-            branchvalues="total",
-            marker=dict(
-                colors=['#2c3e50'] + [
-                    f'rgb({hash(row["port"]) % 256}, {(hash(row["port"]) // 256) % 256}, {(hash(row["port"]) // 65536) % 256})'
-                    for row in top_ports_data
-                ]
-            ),
-            textinfo='label+value',
-            hovertemplate='<b>%{label}</b><br>Count: %{value}<br><extra></extra>',
-            insidetextorientation='radial',
-            textfont=dict(size=10, color='white'),
-        )
-    )
-
-    top_ports_graph.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#34495e',
-        font=dict(color='white', size=14),
-        height=400,
-        title=dict(text='Most Used 10 Ports', font=dict(color='white', size=16)),
-        showlegend=False,
-    )
-
-    return (summary_table_data, vulnerability_distribution, top_vulnerabilities_table_data, top_vulnerabilities_graph, top_ports_graph,
-            total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], 
-            last_updated, scan_options, severity)
-
 # Combine the two callbacks into one
 @app.callback(
     Output('clicked-severity', 'children'),
@@ -791,6 +789,7 @@ def update_button_style(n_clicks):
     [Input('url', 'search'),
      Input('search-input', 'value')]
 )
+
 def update_detailed_analysis(search, search_value):
     params = parse_qs(search[1:])
     
@@ -953,151 +952,6 @@ server = app.server
 
 if __name__ == '__main__':
     serve (server, host='127.0.0.1', port=8080)
-
-    # En çok görülen 10 zafiyet daire grafiği
-    top_vulnerabilities_graph = go.Figure(
-        go.Sunburst(
-            ids=['Most Occurent 10 Vulnerabilities'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
-            labels=['Most Occurent 10 Vulnerabilities'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
-            parents=[''] + ['Most Occurent 10 Vulnerabilities'] * len(top_vulnerabilities_data),
-            values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
-            branchvalues="total",
-            marker=dict(
-                colors=['#2c3e50'] + [
-                    '#e74c3c' if row['severity'] == 4 else
-                    '#e67e22' if row['severity'] == 3 else
-                    '#f1c40f' if row['severity'] == 2 else
-                    '#2ecc71' if row['severity'] == 1 else
-                    '#3498db' if row['severity'] == 0 else
-                    '#95a5a6' for row in top_vulnerabilities_data
-                ]
-            ),
-            textinfo='label',
-            hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
-            insidetextorientation='radial',
-            textfont=dict(size=10, color='white'),
-            customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
-        )
-    )
-
-    top_vulnerabilities_graph.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#34495e',
-        font=dict(color='white', size=14),
-        height=400,
-        showlegend=False,
-    )
-
-    # En çok kullanılan 10 port daire grafiği
-    top_ports_graph = go.Figure(
-        go.Sunburst(
-            ids=['Most Used 10 Ports'] + [f"port_{row['port']}" for row in top_ports_data],
-            labels=['Most Used 10 Ports'] + [f"Port {row['port']}" for row in top_ports_data],
-            parents=[''] + ['Most Used 10 Ports'] * len(top_ports_data),
-            values=[sum(row['count'] for row in top_ports_data)] + [row['count'] for row in top_ports_data],
-            branchvalues="total",
-            marker=dict(
-                colors=['#2c3e50'] + [
-                    f'rgb({hash(row["port"]) % 256}, {(hash(row["port"]) // 256) % 256}, {(hash(row["port"]) // 65536) % 256})'
-                    for row in top_ports_data
-                ]
-            ),
-            textinfo='label+value',
-            hovertemplate='<b>%{label}</b><br>Count: %{value}<br><extra></extra>',
-            insidetextorientation='radial',
-            textfont=dict(size=10, color='white'),
-        )
-    )
-
-    top_ports_graph.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor='#2c3e50',
-        plot_bgcolor='#34495e',
-        font=dict(color='white', size=14),
-        height=400,
-        title=dict(text='Most Used 10 Ports', font=dict(color='white', size=16)),
-        showlegend=False,
-    )
-
-    return (summary_table_data, vulnerability_distribution, top_vulnerabilities_table_data, top_vulnerabilities_graph, top_ports_graph,
-            total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], 
-            last_updated, scan_options, severity)
-
-# Combine the two callbacks into one
-@app.callback(
-    Output('clicked-severity', 'children'),
-    [Input(f'severity-{i}', 'n_clicks') for i in range(5)] +
-    [Input('vulnerability-distribution', 'clickData')],
-    [State('severity-dropdown', 'value')]
-)
-def update_clicked_severity(*args):
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        return dash.no_update
-    
-    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    current_severity = args[-1]
-
-    if 'severity-' in triggered_id:
-        clicked_severity = triggered_id.split('-')[1]
-        if current_severity and int(clicked_severity) in current_severity:
-            return None
-        return clicked_severity
-    elif triggered_id == 'vulnerability-distribution':
-        clickData = args[-2]  # clickData is the second to last argument
-        if not clickData:
-            return dash.no_update
-        
-        clicked_label = clickData['points'][0]['label']
-        severity_map = {'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1}
-        
-        if clicked_label in severity_map:
-            clicked_severity = severity_map[clicked_label]
-            if current_severity and clicked_severity in current_severity:
-                return None
-            return str(clicked_severity)
-    
-    return dash.no_update
-
-# Add a new callback for button hover effect
-@app.callback(
-    Output('filter-button', 'style'),
-    [Input('filter-button', 'n_clicks')]
-)
-def update_button_style(n_clicks):
-    changed_id = [p['prop_id'] for p in callback_context.triggered][0]
-    if 'filter-button' in changed_id:
-        return {
-            'marginTop': '25px',
-            'backgroundColor': '#2980b9',
-            'color': 'white',
-            'border': 'none',
-            'padding': '10px 20px',
-            'borderRadius': '5px',
-            'cursor': 'pointer',
-            'transition': 'background-color 0.3s',
-        }
-    else:
-        return {
-            'marginTop': '25px',
-            'backgroundColor': '#3498db',
-            'color': 'white',
-            'border': 'none',
-            'padding': '10px 20px',
-            'borderRadius': '5px',
-            'cursor': 'pointer',
-            'transition': 'background-color 0.3s',
-        }
-
-# Detaylı analiz sayfası için callback
-@app.callback(
-    [Output('vulnerability-table', 'data'),
-     Output('ip-ports-info', 'children'),
-     Output('applied-filters', 'children')],
-    [Input('url', 'search'),
-     Input('search-input', 'value')]
-)
 def update_detailed_analysis(search, search_value):
     params = parse_qs(search[1:])
     
