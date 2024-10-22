@@ -733,7 +733,7 @@ def create_detailed_analysis_layout():
             page_action="native",
             page_current=0,
             page_size=50,
-            cell_selectable=False,
+            cell_selectable=True,
             markdown_options={'link_target': '_blank'},
         ),
     ], style={'padding': '20px', 'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
@@ -743,7 +743,8 @@ app = dash.Dash(__name__)
 # Ana layout
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
-    html.Div(id='page-content')
+    html.Div(id='page-content'),
+    html.Div(id='modal-container')
 ])
 
 # Sayfa yönlendirmesi için callback
@@ -1203,6 +1204,8 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
 def store_vulnerability_details(active_cell, table_data):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         vulnerability_name = table_data[active_cell['row']]['vulnerability_name']
+        # Markdown bağlantısını kaldır
+        vulnerability_name = vulnerability_name.replace('[', '').replace('](#)', '')
         with get_db_connection() as connection:
             with connection.cursor() as cursor:
                 cursor.execute("""
