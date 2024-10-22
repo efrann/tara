@@ -728,14 +728,19 @@ def create_detailed_analysis_layout():
                     'color': '#3498db',
                     'fontWeight': 'bold',
                 },
+                {
+                    'if': {'column_id': 'vulnerability_name'},
+                    'cursor': 'pointer',
+                    'textDecoration': 'underline',
+                    'color': '#3498db'
+                }
             ],
-            sort_action="native",
-            sort_mode="multi",
-            page_action="native",
-            page_current=0,
-            page_size=50,
-            row_selectable='single',
-            selected_rows=[],
+            tooltip_data=[
+                {
+                    'vulnerability_name': {'value': 'Detaylar için tıklayın', 'type': 'markdown'}
+                } for _ in range(len(detailed_vulnerability_data))
+            ],
+            tooltip_duration=None
         ),
         dbc.Modal(
             [
@@ -1215,12 +1220,12 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     [Output("vulnerability-modal", "is_open"),
      Output("vulnerability-description", "children"),
      Output("vulnerability-solution", "children")],
-    [Input('vulnerability-table', 'selected_rows'),
+    [Input('vulnerability-table', 'active_cell'),
      Input("close-modal", "n_clicks")],
     [State('vulnerability-table', 'data'),
      State("vulnerability-modal", "is_open")]
 )
-def toggle_modal(selected_rows, n_clicks, table_data, is_open):
+def toggle_modal(active_cell, n_clicks, table_data, is_open):
     ctx = dash.callback_context
     if not ctx.triggered:
         return False, "", ""
@@ -1229,9 +1234,9 @@ def toggle_modal(selected_rows, n_clicks, table_data, is_open):
     
     if button_id == "close-modal":
         return not is_open, "", ""
-    elif selected_rows:
-        selected_row = table_data[selected_rows[0]]
-        return True, selected_row['description'], selected_row['solution']
+    elif active_cell and active_cell['column_id'] == 'vulnerability_name':
+        row = table_data[active_cell['row']]
+        return True, row['description'], row['solution']
     return False, "", ""
 
 server = app.server
