@@ -11,7 +11,6 @@ from contextlib import contextmanager
 from urllib.parse import urlencode, parse_qs, unquote
 import dash_bootstrap_components as dbc
 from waitress import serve
-from dash import html, dcc, Input, Output, State, ClientsideFunction
 
 @contextmanager
 def get_db_connection():
@@ -606,11 +605,10 @@ def create_main_layout():
 if 'app' not in globals():
     app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-# Ana layout'a bir div ekleyelim (eğer yoksa)
+# Ana layout
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
-    html.Div(id='page-content'),
-    html.Div(id='keyboard-listener')  # Klavye olaylarını dinlemek için
+    html.Div(id='page-content')
 ])
 
 # Sayfa yönlendirmesi için callback
@@ -1205,6 +1203,7 @@ def show_vulnerability_details(active_cell, table_data):
         description = row.get('description', 'Açıklama mevcut değil.')
         solution = row.get('solution', 'Çözüm önerisi mevcut değil.')
         cvss3_vector = row.get('cvss3_vector', 'CVSS3 vektörü mevcut değil.')
+        cvss3_base_score = row.get('cvss3_base_score', 'N/A')
         ref = row.get('ref', 'Referans mevcut değil.')
         pub_date = row.get('pub_date', 'Yayın tarihi belirtilmemiş.')
         mod_date = row.get('mod_date', 'Güncelleme tarihi belirtilmemiş.')
@@ -1234,6 +1233,17 @@ def show_vulnerability_details(active_cell, table_data):
         if not ref_items:
             ref_items = [html.P("Referans mevcut değil.", style={"color": "#7f8c8d"})]
 
+        # CVSS skoru için renk belirleme
+        cvss_color = "#2ecc71"  # Varsayılan yeşil (düşük risk)
+        if cvss3_base_score != 'N/A':
+            score = float(cvss3_base_score)
+            if score >= 9.0:
+                cvss_color = "#e74c3c"  # Kırmızı (kritik)
+            elif score >= 7.0:
+                cvss_color = "#e67e22"  # Turuncu (yüksek)
+            elif score >= 4.0:
+                cvss_color = "#f1c40f"  # Sarı (orta)
+
         popup_content = html.Div([
             html.Button("×", id="close-popup", style={
                 'position': 'absolute',
@@ -1252,6 +1262,16 @@ def show_vulnerability_details(active_cell, table_data):
                 'borderBottom': '2px solid #3498db',
                 'paddingBottom': '10px'
             }),
+            html.Div([
+                html.Span("CVSS3 Skoru: ", style={'fontWeight': 'bold'}),
+                html.Span(cvss3_base_score, style={
+                    'backgroundColor': cvss_color,
+                    'color': 'white',
+                    'padding': '5px 10px',
+                    'borderRadius': '15px',
+                    'fontWeight': 'bold'
+                })
+            ], style={'marginBottom': '20px'}),
             dbc.Tabs([
                 dbc.Tab(label="Açıklama", children=[
                     dcc.Markdown(description, style={
@@ -1299,7 +1319,26 @@ def show_vulnerability_details(active_cell, table_data):
                         ]),
                     ])
                 ]),
-            ], style={"marginTop": "20px"})
+            ], style={"marginTop": "20px"}),
+            html.Div([
+                html.Button("Kopyala", id="copy-button", n_clicks=0, style={
+                    'backgroundColor': '#3498db',
+                    'color': 'white',
+                    'border': 'none',
+                    'padding': '10px 20px',
+                    'borderRadius': '5px',
+                    'cursor': 'pointer',
+                    'marginRight': '10px'
+                }),
+                html.Button("Paylaş", id="share-button", n_clicks=0, style={
+                    'backgroundColor': '#2ecc71',
+                    'color': 'white',
+                    'border': 'none',
+                    'padding': '10px 20px',
+                    'borderRadius': '5px',
+                    'cursor': 'pointer'
+                }),
+            ], style={'marginTop': '20px', 'textAlign': 'right'})
         ], style={
             'position': 'relative',
             'padding': '30px',
@@ -1325,25 +1364,15 @@ def show_vulnerability_details(active_cell, table_data):
         }
     return dash.no_update, {'display': 'none'}
 
-# JavaScript fonksiyonunu ekleyelim
-app.clientside_callback(
-    ClientsideFunction(
-        namespace='clientside',
-        function_name='listenForEscKey'
-    ),
-    Output('keyboard-listener', 'n_clicks'),
-    Input('vulnerability-popup-container', 'style')
-)
-
-# Popup'ı kapatmak için callback'i güncelleyelim
 @app.callback(
     Output('vulnerability-popup-container', 'style', allow_duplicate=True),
-    [Input('close-popup', 'n_clicks'),
-     Input('keyboard-listener', 'n_clicks')],
+    [Input('close-popup', 'n_clicks')],
     prevent_initial_call=True
 )
-def close_popup(close_clicks, key_clicks):
-    return {'display': 'none'}
+def close_popup(n_clicks):
+    if n_clicks:
+        return {'display': 'none'}
+    return dash.no_update
 
 # Server'ı başlat
 if 'server' not in globals():
