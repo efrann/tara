@@ -1096,7 +1096,9 @@ def update_button_style(n_clicks):
 
 # Detaylı analiz sayfası için callback
 @app.callback(
-    Output('vulnerability-table', 'data'),
+    [Output('vulnerability-table', 'data'),
+     Output('applied-filters', 'children'),
+     Output('ip-ports-info', 'children')],
     [Input('url', 'search'),
      Input('search-input', 'value')]
 )
@@ -1154,7 +1156,27 @@ def update_detailed_analysis(search, search_value):
             }
         }
     
-    return detailed_vulnerability_data
+    # Uygulanan filtreleri göster
+    applied_filters = []
+    if severity:
+        applied_filters.append(f"Önem Derecesi: {', '.join(map(str, severity))}")
+    if scan_name:
+        applied_filters.append(f"Tarama Adı: {scan_name}")
+    if vulnerability_name:
+        applied_filters.append(f"Zafiyet Adı: {vulnerability_name}")
+    if ip_address:
+        applied_filters.append(f"IP Adresi: {ip_address}")
+    if port:
+        applied_filters.append(f"Port: {port}")
+    
+    applied_filters_text = "Uygulanan Filtreler: " + " | ".join(applied_filters) if applied_filters else "Filtre Uygulanmadı"
+    
+    # IP'ye özgü port bilgilerini göster
+    ip_ports_info = ""
+    if ip_address and ip_ports_data:
+        ip_ports_info = f"IP {ip_address} için açık portlar: {', '.join(str(port['port']) for port in ip_ports_data)}"
+    
+    return detailed_vulnerability_data, applied_filters_text, ip_ports_info
 
 # Ana sayfadaki 'Detaylı Zafiyet Listesi' butonunun href'ini güncelleyen callback
 @app.callback(
