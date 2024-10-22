@@ -603,8 +603,8 @@ def create_main_layout():
         # ESC tuşu için gizli bir div ekle
         html.Div(id='keydown-listener', style={'display': 'none'}),
 
-        # Clientside callback için gerekli JavaScript'i ekle
-        dcc.Store(id='close-trigger', data=False),
+        # Interval component ekle
+        dcc.Interval(id='interval-component', interval=100, n_intervals=0),
     ])
     return layout
 
@@ -1321,12 +1321,13 @@ def show_vulnerability_details(active_cell, table_data):
             'justifyContent': 'center',
             'alignItems': 'center',
             'position': 'fixed',
-            'top': 0,
-            'left': 0,
-            'right': 0,
-            'bottom': 0,
+            'top': '0',
+            'left': '0',
+            'right': '0',
+            'bottom': '0',
             'backgroundColor': 'rgba(0,0,0,0.5)',
-            'zIndex': 1000
+            'zIndex': 1000,
+            'overflow': 'auto'
         }
     return dash.no_update, {'display': 'none'}
 
@@ -1347,7 +1348,10 @@ clientside_callback(
     function(n_intervals) {
         document.addEventListener('keydown', function(event) {
             if (event.key === "Escape") {
-                document.getElementById('vulnerability-popup-container').style.display = 'none';
+                var popup = document.getElementById('vulnerability-popup-container');
+                if (popup) {
+                    popup.style.display = 'none';
+                }
             }
         });
         return window.dash_clientside.no_update;
