@@ -928,7 +928,7 @@ def toggle_modal(active_cell, table_data, is_open):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
         return (
-            True,  # Modal'ı açık duruma getir
+            not is_open,
             dcc.Markdown(row['description']),
             dcc.Markdown(row['solution']),
             row['cvss3_vector'],
@@ -936,18 +936,18 @@ def toggle_modal(active_cell, table_data, is_open):
             row['pub_date'],
             row['mod_date']
         )
-    return False, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    return is_open, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
-# Modalı kapatmak için ek bir callback
 @app.callback(
     Output("vulnerability-modal", "is_open", allow_duplicate=True),
     [Input("close-modal", "n_clicks")],
+    [State("vulnerability-modal", "is_open")],
     prevent_initial_call=True
 )
-def close_modal(n_clicks):
+def close_modal(n_clicks, is_open):
     if n_clicks:
         return False
-    return dash.no_update
+    return is_open
 
 server = app.server
 
