@@ -1192,17 +1192,10 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
 @app.callback(
     [Output('vulnerability-popup', 'children'),
      Output('vulnerability-popup-container', 'style')],
-    [Input('vulnerability-table', 'active_cell'),
-     Input('vulnerability-popup-container', 'n_clicks')],  # Yeni input ekledik
+    [Input('vulnerability-table', 'active_cell')],
     [State('vulnerability-table', 'data')]
 )
-def show_vulnerability_details(active_cell, container_clicks, table_data):
-    ctx = dash.callback_context
-    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
-
-    if triggered_id == 'vulnerability-popup-container':
-        return dash.no_update, {'display': 'none'}
-
+def show_vulnerability_details(active_cell, table_data):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
         
@@ -1240,7 +1233,7 @@ def show_vulnerability_details(active_cell, container_clicks, table_data):
             ref_items = [html.P("Referans mevcut değil.", style={"color": "#7f8c8d"})]
 
         popup_content = html.Div([
-            html.Button("×", id="close-popup", style={
+            html.Button("×", id="close-popup", n_clicks=0, style={
                 'position': 'absolute',
                 'top': '10px',
                 'right': '10px',
@@ -1316,37 +1309,40 @@ def show_vulnerability_details(active_cell, container_clicks, table_data):
             'maxHeight': '80vh',
             'overflowY': 'auto'
         })
-        return popup_content, {
-            'display': 'flex',
-            'justifyContent': 'center',
-            'alignItems': 'center',
-            'position': 'fixed',
-            'top': 0,
-            'left': 0,
-            'right': 0,
-            'bottom': 0,
-            'backgroundColor': 'rgba(0,0,0,0.5)',
-            'zIndex': 1000
-        }
+
+        return popup_content, {'display': 'block'}
     return dash.no_update, {'display': 'none'}
 
-# Yeni callback ekleyin
+# Yeni clientside callback
 app.clientside_callback(
     """
     function(n_clicks) {
-        if (n_clicks) {
-            var outerDiv = document.getElementById('vulnerability-popup-container');
-            var innerDiv = document.getElementById('popup-inner-content');
+        if (!window.popupInitialized) {
+            window.popupInitialized = true;
             
-            outerDiv.onclick = function(event) {
-                if (event.target === outerDiv) {
-                    outerDiv.style.display = 'none';
+            var container = document.getElementById('vulnerability-popup-container');
+            var content = document.getElementById('popup-inner-content');
+            var closeBtn = document.getElementById('close-popup');
+
+            function closePopup() {
+                container.style.display = 'none';
+            }
+
+            container.addEventListener('click', function(event) {
+                if (event.target === container) {
+                    closePopup();
                 }
-            };
-            
-            innerDiv.onclick = function(event) {
-                event.stopPropagation();
-            };
+            });
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closePopup);
+            }
+
+            if (content) {
+                content.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                });
+            }
         }
         return window.dash_clientside.no_update;
     }
