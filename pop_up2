@@ -1230,7 +1230,7 @@ def show_vulnerability_details(active_cell, table_data):
             ]
         
         if not ref_items:
-            ref_items = [html.P("Referans mevcut değil.")]
+            ref_items = [html.P("Referans mevcut değil.", style={"color": "#7f8c8d"})]
 
         popup_content = html.Div([
             html.Button("×", id="close-popup", style={
