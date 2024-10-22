@@ -1,5 +1,5 @@
 import dash
-from dash import dcc, html, dash_table, callback_context
+from dash import dcc, html, dash_table, callback_context, clientside_callback
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import pandas as pd
@@ -337,9 +337,9 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
 
     return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data
 
-# Ana sayfa düzeni
+# Ana sayfa düzenine popup container'ı ve clientside callback için gerekli bileşenleri ekleyin
 def create_main_layout():
-    return html.Div([
+    layout = html.Div([
         # Header
         html.Div([
             html.H1("Nessus Tarama Sonuçları Gösterge Paneli", style={'textAlign': 'center', 'color': 'white', 'marginBottom': '0'}),
@@ -598,8 +598,15 @@ def create_main_layout():
         # Popup container'ı ekle
         html.Div(id='vulnerability-popup-container', style={'display': 'none'}, children=[
             html.Div(id='vulnerability-popup')
-        ])
+        ]),
+
+        # ESC tuşu için gizli bir div ekle
+        html.Div(id='keydown-listener', style={'display': 'none'}),
+
+        # Clientside callback için gerekli JavaScript'i ekle
+        dcc.Store(id='close-trigger', data=False),
     ])
+    return layout
 
 # Eğer app nesnesi daha önce tanımlanmamışsa, burada tanımlayın
 if 'app' not in globals():
@@ -1323,6 +1330,7 @@ def show_vulnerability_details(active_cell, table_data):
         }
     return dash.no_update, {'display': 'none'}
 
+# Popup'ı kapatmak için callback'i güncelle
 @app.callback(
     Output('vulnerability-popup-container', 'style', allow_duplicate=True),
     [Input('close-popup', 'n_clicks')],
@@ -1332,6 +1340,22 @@ def close_popup(n_clicks):
     if n_clicks:
         return {'display': 'none'}
     return dash.no_update
+
+# ESC tuşu için clientside callback ekle
+clientside_callback(
+    """
+    function(n_intervals) {
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape") {
+                document.getElementById('vulnerability-popup-container').style.display = 'none';
+            }
+        });
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('keydown-listener', 'children'),
+    Input('interval-component', 'n_intervals')
+)
 
 # Server'ı başlat
 if 'server' not in globals():
