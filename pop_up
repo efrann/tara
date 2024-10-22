@@ -196,6 +196,10 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
                 FROM_UNIXTIME(sr.scan_start) AS scan_date,
                 p.description,
                 p.solution,
+                p.cvss3_vector,
+                p.ref,
+                p.pub_date,
+                p.mod_date,
                 p.plugin_id
             FROM 
                 scan s
@@ -676,6 +680,14 @@ def create_detailed_analysis_layout():
                     html.P(id="vulnerability-description"),
                     html.H5("Çözüm"),
                     html.P(id="vulnerability-solution"),
+                    html.H5("CVSS3 Vektör"),
+                    html.P(id="vulnerability-cvss3-vector"),
+                    html.H5("Referanslar"),
+                    html.P(id="vulnerability-ref"),
+                    html.H5("Yayın Tarihi"),
+                    html.P(id="vulnerability-pub-date"),
+                    html.H5("Güncelleme Tarihi"),
+                    html.P(id="vulnerability-mod-date"),
                 ]),
                 dbc.ModalFooter(
                     dbc.Button("Kapat", id="close-modal", className="ms-auto", n_clicks=0)
@@ -683,6 +695,7 @@ def create_detailed_analysis_layout():
             ],
             id="vulnerability-modal",
             is_open=False,
+            size="lg",  # Modal boyutunu büyüttük
         ),
         dash_table.DataTable(
             id='vulnerability-table',
@@ -1220,7 +1233,11 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
 @app.callback(
     [Output("vulnerability-modal", "is_open"),
      Output("vulnerability-description", "children"),
-     Output("vulnerability-solution", "children")],
+     Output("vulnerability-solution", "children"),
+     Output("vulnerability-cvss3-vector", "children"),
+     Output("vulnerability-ref", "children"),
+     Output("vulnerability-pub-date", "children"),
+     Output("vulnerability-mod-date", "children")],
     [Input('vulnerability-table', 'active_cell')],
     [State('vulnerability-table', 'data'),
      State("vulnerability-modal", "is_open")]
@@ -1228,8 +1245,16 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
 def toggle_modal(active_cell, table_data, is_open):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
-        return not is_open, row['description'], row['solution']
-    return is_open, dash.no_update, dash.no_update
+        return (
+            not is_open,
+            row['description'],
+            row['solution'],
+            row['cvss3_vector'],
+            row['ref'],
+            row['pub_date'],
+            row['mod_date']
+        )
+    return is_open, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 @app.callback(
     Output("vulnerability-modal", "is_open", allow_duplicate=True),
