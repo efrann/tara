@@ -673,7 +673,7 @@ def create_detailed_analysis_layout():
                 {"name": "Tarama Adı", "id": "scan_name"},
                 {"name": "Host IP", "id": "host_ip"},
                 {"name": "Host FQDN", "id": "host_fqdn"},
-                {"name": "Zafiyet Adı", "id": "vulnerability_name"},
+                {"name": "Zafiyet Adı", "id": "vulnerability_name", "presentation": "markdown"},
                 {"name": "Önem Derecesi", "id": "severity_text"},
                 {"name": "Plugin Ailesi", "id": "plugin_family"},
                 {"name": "Port", "id": "port"},
@@ -808,7 +808,7 @@ def update_main_page(n_clicks, n_intervals, clicked_severity, severity, scan_nam
             item['severity_text'] = 'Bilgi'
         else:
             item['severity_text'] = 'Bilinmeyen'
-        item['details'] = "[Detaylar](#)"
+        item['vulnerability_name'] = f"{item['vulnerability_name']} [Detaylar](#)"
     
     #print("Summary Data:", summary_data)  # Debug için eklendi
     
@@ -1114,7 +1114,7 @@ def update_detailed_analysis(search, search_value):
             item['severity_text'] = 'Bilgi'
         else:
             item['severity_text'] = 'Bilinmeyen'
-        item['details'] = "[Detaylar](#)"
+        item['vulnerability_name'] = f"{item['vulnerability_name']} [Detaylar](#)"
     
     # Arama değeri varsa filtreleme yap
     if search_value:
@@ -1204,8 +1204,10 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     State('vulnerability-table', 'data')
 )
 def store_vulnerability_details(active_cell, table_data):
-    if active_cell and active_cell['column_id'] == 'details':
+    if active_cell and active_cell['column_id'] == 'vulnerability_name':
         vulnerability_name = table_data[active_cell['row']]['vulnerability_name']
+        # Markdown bağlantısını ve butonu kaldır
+        vulnerability_name = vulnerability_name.split(' [')[0]
         with get_db_connection() as connection:
             with connection.cursor() as cursor:
                 cursor.execute("""
@@ -1231,20 +1233,21 @@ def show_vulnerability_details(data):
     if data:
         return dbc.Modal(
             [
-                dbc.ModalHeader(data['name']),
+                dbc.ModalHeader(dbc.ModalTitle(data['name'])),
                 dbc.ModalBody([
-                    html.H5("Description"),
+                    html.H5("Açıklama", className="mt-3"),
                     html.P(data['description']),
-                    html.H5("Solution"),
+                    html.H5("Çözüm", className="mt-4"),
                     html.P(data['solution']),
                 ]),
                 dbc.ModalFooter(
-                    dbc.Button("Close", id="close-modal", className="ml-auto")
+                    dbc.Button("Kapat", id="close-modal", className="ms-auto")
                 ),
             ],
             id="vulnerability-modal",
             is_open=True,
             size="lg",
+            scrollable=True,
         )
     return None
 
