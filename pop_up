@@ -1204,32 +1204,93 @@ def show_vulnerability_details(active_cell, table_data):
                 'cursor': 'pointer',
                 'color': '#2c3e50'
             }),
-            html.H3(row['vulnerability_name'], style={'color': '#2c3e50', 'marginBottom': '20px', 'paddingRight': '30px'}),
+            html.H3(row['vulnerability_name'], style={
+                'color': '#2c3e50',
+                'marginBottom': '20px',
+                'paddingRight': '30px',
+                'borderBottom': '2px solid #3498db',
+                'paddingBottom': '10px'
+            }),
             dbc.Tabs([
                 dbc.Tab(label="Açıklama", children=[
-                    dcc.Markdown(row['description'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '15px', 'borderRadius': '5px', 'marginTop': '10px'})
+                    dcc.Markdown(row['description'], style={
+                        "whiteSpace": "pre-wrap",
+                        'backgroundColor': '#f8f9fa',
+                        'padding': '15px',
+                        'borderRadius': '5px',
+                        'marginTop': '10px',
+                        'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+                    })
                 ]),
                 dbc.Tab(label="Çözüm", children=[
-                    dcc.Markdown(row['solution'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '15px', 'borderRadius': '5px', 'marginTop': '10px'})
+                    dcc.Markdown(row['solution'], style={
+                        "whiteSpace": "pre-wrap",
+                        'backgroundColor': '#f8f9fa',
+                        'padding': '15px',
+                        'borderRadius': '5px',
+                        'marginTop': '10px',
+                        'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+                    })
                 ]),
                 dbc.Tab(label="Detaylar", children=[
                     html.Div([
-                        html.H5("CVSS3 Vektör", style={'color': '#e74c3c', 'marginTop': '15px'}),
-                        html.Code(row['cvss3_vector'], style={"backgroundColor": "#e9ecef", "padding": "5px", "borderRadius": "3px"}),
-                        html.H5("Referanslar", style={'color': '#f39c12', 'marginTop': '15px'}),
                         html.Div([
-                            html.A(ref, href=ref, target="_blank", style={"display": "block", "marginBottom": "5px", "color": "#3498db"}) 
-                            for ref in row['ref'].split('\n') if ref.strip()
+                            html.H5("CVSS3 Vektör", style={'color': '#e74c3c', 'marginTop': '15px'}),
+                            html.Code(row['cvss3_vector'], style={
+                                "backgroundColor": "#e9ecef",
+                                "padding": "5px",
+                                "borderRadius": "3px",
+                                "display": "inline-block",
+                                "marginBottom": "10px"
+                            }),
+                        ], style={'marginBottom': '20px'}),
+                        html.Div([
+                            html.H5("Referanslar", style={'color': '#f39c12', 'marginTop': '15px'}),
+                            html.Div([
+                                html.A(ref, href=ref, target="_blank", style={
+                                    "display": "block",
+                                    "marginBottom": "5px",
+                                    "color": "#3498db",
+                                    "textDecoration": "none",
+                                    "transition": "color 0.3s"
+                                }) 
+                                for ref in row['ref'].split('\n') if ref.strip()
+                            ], style={'maxHeight': '150px', 'overflowY': 'auto', 'padding': '10px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px'}),
+                        ], style={'marginBottom': '20px'}),
+                        html.Div([
+                            html.H5("Yayın Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
+                            html.Span(row['pub_date'], style={"fontWeight": "bold", "color": "#34495e"}),
+                        ], style={'marginBottom': '10px'}),
+                        html.Div([
+                            html.H5("Güncelleme Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
+                            html.Span(row['mod_date'], style={"fontWeight": "bold", "color": "#34495e"}),
                         ]),
-                        html.H5("Yayın Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
-                        html.Span(row['pub_date'], style={"fontWeight": "bold"}),
-                        html.H5("Güncelleme Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
-                        html.Span(row['mod_date'], style={"fontWeight": "bold"}),
                     ])
                 ]),
-            ])
-        ])
-        return popup_content, {'display': 'grid', 'placeItems': 'center'}
+            ], style={"marginTop": "20px"})
+        ], style={
+            'position': 'relative',
+            'padding': '30px',
+            'backgroundColor': '#fff',
+            'borderRadius': '10px',
+            'boxShadow': '0 4px 20px rgba(0,0,0,0.2)',
+            'maxWidth': '800px',
+            'width': '90%',
+            'maxHeight': '80vh',
+            'overflowY': 'auto'
+        })
+        return popup_content, {
+            'display': 'flex',
+            'justifyContent': 'center',
+            'alignItems': 'center',
+            'position': 'fixed',
+            'top': 0,
+            'left': 0,
+            'right': 0,
+            'bottom': 0,
+            'backgroundColor': 'rgba(0,0,0,0.5)',
+            'zIndex': 1000
+        }
     return dash.no_update, {'display': 'none'}
 
 @app.callback(
