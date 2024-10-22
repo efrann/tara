@@ -595,7 +595,7 @@ def create_main_layout():
         # Hidden div for storing clicked severity
         html.Div(id='clicked-severity', style={'display': 'none'}),
 
-        # Popup container'ı ekle
+        # Popup container'ı güncelleyelim
         html.Div(id='vulnerability-popup-container', style={'display': 'none'}, children=[
             html.Div(id='vulnerability-popup', style={
                 'backgroundColor': '#fff',
@@ -608,7 +608,7 @@ def create_main_layout():
                 'boxShadow': '0 4px 20px rgba(0,0,0,0.2)',
                 'position': 'relative',
             })
-        ], n_clicks=0),  # n_clicks özelliğini ekledik
+        ]),
 
         # ESC tuşu için yeni bir div ekleyelim
         html.Div(id='esc-listener', style={'display': 'none'}),
@@ -1202,13 +1202,27 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     
     return f'/detailed-analysis?{urlencode(params)}'
 
+# Popup'ı açmak ve kapatmak için callback'i güncelleyelim
 @app.callback(
     [Output('vulnerability-popup', 'children'),
      Output('vulnerability-popup-container', 'style')],
-    [Input('vulnerability-table', 'active_cell')],
-    [State('vulnerability-table', 'data')]
+    [Input('vulnerability-table', 'active_cell'),
+     Input('close-popup', 'n_clicks'),
+     Input('vulnerability-popup-container', 'n_clicks'),
+     Input('esc-listener', 'n_clicks')],
+    [State('vulnerability-table', 'data'),
+     State('vulnerability-popup-container', 'style')]
 )
-def show_vulnerability_details(active_cell, table_data):
+def update_popup(active_cell, close_clicks, container_clicks, esc_clicks, table_data, current_style):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return dash.no_update, dash.no_update
+
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if trigger_id in ['close-popup', 'vulnerability-popup-container', 'esc-listener']:
+        return dash.no_update, {'display': 'none'}
+
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
         
@@ -1322,6 +1336,7 @@ def show_vulnerability_details(active_cell, table_data):
             'maxHeight': '80vh',
             'overflowY': 'auto'
         })
+
         return popup_content, {
             'display': 'flex',
             'justifyContent': 'center',
@@ -1334,32 +1349,13 @@ def show_vulnerability_details(active_cell, table_data):
             'backgroundColor': 'rgba(0,0,0,0.5)',
             'zIndex': 1000
         }
-    return dash.no_update, {'display': 'none'}
 
-@app.callback(
-    Output('vulnerability-popup-container', 'style', allow_duplicate=True),
-    [Input('close-popup', 'n_clicks'),
-     Input('vulnerability-popup-container', 'n_clicks'),
-     Input('esc-listener', 'n_clicks')],
-    [State('vulnerability-popup-container', 'style')],
-    prevent_initial_call=True
-)
-def close_popup(close_clicks, container_clicks, esc_clicks, current_style):
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        return dash.no_update
-    
-    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    
-    if trigger_id in ['close-popup', 'vulnerability-popup-container', 'esc-listener']:
-        return {'display': 'none'}
-    
-    return dash.no_update
+    return dash.no_update, dash.no_update
 
 # ESC tuşu için JavaScript kodu ekleyelim
 app.clientside_callback(
     """
-    function(n_clicks) {
+    function(n_intervals) {
         document.addEventListener('keydown', function(event) {
             if (event.key === "Escape") {
                 document.getElementById('esc-listener').click();
@@ -1369,7 +1365,30 @@ app.clientside_callback(
     }
     """,
     Output('esc-listener', 'n_clicks'),
-    Input('esc-listener', 'id')
+    Input('interval-component', 'n_intervals')
+)
+
+# Server'ı başlat
+if 'server' not in globals():
+    server = app.server
+
+if __name__ == '__main__':
+    serve(server, host='127.0.0.1', port=8080)
+
+# ESC tuşu için JavaScript kodu ekleyelim
+app.clientside_callback(
+    """
+    function(n_intervals) {
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape") {
+                document.getElementById('esc-listener').click();
+            }
+        });
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('esc-listener', 'n_clicks'),
+    Input('interval-component', 'n_intervals')
 )
 
 # Server'ı başlat
