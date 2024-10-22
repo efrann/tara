@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from urllib.parse import urlencode, parse_qs, unquote
 import dash_bootstrap_components as dbc
 from waitress import serve
+from dash import html, dcc, Input, Output, State, ClientsideFunction
 
 @contextmanager
 def get_db_connection():
@@ -605,10 +606,11 @@ def create_main_layout():
 if 'app' not in globals():
     app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-# Ana layout
+# Ana layout'a bir div ekleyelim (eğer yoksa)
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
-    html.Div(id='page-content')
+    html.Div(id='page-content'),
+    html.Div(id='keyboard-listener')  # Klavye olaylarını dinlemek için
 ])
 
 # Sayfa yönlendirmesi için callback
@@ -1233,7 +1235,7 @@ def show_vulnerability_details(active_cell, table_data):
             ref_items = [html.P("Referans mevcut değil.", style={"color": "#7f8c8d"})]
 
         popup_content = html.Div([
-            html.Button("×", id="close-popup", n_clicks=0, style={
+            html.Button("×", id="close-popup", style={
                 'position': 'absolute',
                 'top': '10px',
                 'right': '10px',
@@ -1298,7 +1300,7 @@ def show_vulnerability_details(active_cell, table_data):
                     ])
                 ]),
             ], style={"marginTop": "20px"})
-        ], id='popup-inner-content', style={
+        ], style={
             'position': 'relative',
             'padding': '30px',
             'backgroundColor': '#fff',
@@ -1309,47 +1311,39 @@ def show_vulnerability_details(active_cell, table_data):
             'maxHeight': '80vh',
             'overflowY': 'auto'
         })
-
-        return popup_content, {'display': 'block'}
+        return popup_content, {
+            'display': 'flex',
+            'justifyContent': 'center',
+            'alignItems': 'center',
+            'position': 'fixed',
+            'top': 0,
+            'left': 0,
+            'right': 0,
+            'bottom': 0,
+            'backgroundColor': 'rgba(0,0,0,0.5)',
+            'zIndex': 1000
+        }
     return dash.no_update, {'display': 'none'}
 
-# Yeni clientside callback
+# JavaScript fonksiyonunu ekleyelim
 app.clientside_callback(
-    """
-    function(n_clicks) {
-        if (!window.popupInitialized) {
-            window.popupInitialized = true;
-            
-            var container = document.getElementById('vulnerability-popup-container');
-            var content = document.getElementById('popup-inner-content');
-            var closeBtn = document.getElementById('close-popup');
-
-            function closePopup() {
-                container.style.display = 'none';
-            }
-
-            container.addEventListener('click', function(event) {
-                if (event.target === container) {
-                    closePopup();
-                }
-            });
-
-            if (closeBtn) {
-                closeBtn.addEventListener('click', closePopup);
-            }
-
-            if (content) {
-                content.addEventListener('click', function(event) {
-                    event.stopPropagation();
-                });
-            }
-        }
-        return window.dash_clientside.no_update;
-    }
-    """,
-    Output('vulnerability-popup-container', 'children'),
-    Input('vulnerability-popup-container', 'children')
+    ClientsideFunction(
+        namespace='clientside',
+        function_name='listenForEscKey'
+    ),
+    Output('keyboard-listener', 'n_clicks'),
+    Input('vulnerability-popup-container', 'style')
 )
+
+# Popup'ı kapatmak için callback'i güncelleyelim
+@app.callback(
+    Output('vulnerability-popup-container', 'style', allow_duplicate=True),
+    [Input('close-popup', 'n_clicks'),
+     Input('keyboard-listener', 'n_clicks')],
+    prevent_initial_call=True
+)
+def close_popup(close_clicks, key_clicks):
+    return {'display': 'none'}
 
 # Server'ı başlat
 if 'server' not in globals():
