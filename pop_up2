@@ -1305,7 +1305,7 @@ def show_vulnerability_details(active_cell, container_clicks, table_data):
                     ])
                 ]),
             ], style={"marginTop": "20px"})
-        ], style={
+        ], id='popup-inner-content', style={
             'position': 'relative',
             'padding': '30px',
             'backgroundColor': '#fff',
@@ -1329,6 +1329,31 @@ def show_vulnerability_details(active_cell, container_clicks, table_data):
             'zIndex': 1000
         }
     return dash.no_update, {'display': 'none'}
+
+# Yeni callback ekleyin
+app.clientside_callback(
+    """
+    function(n_clicks) {
+        if (n_clicks) {
+            var outerDiv = document.getElementById('vulnerability-popup-container');
+            var innerDiv = document.getElementById('popup-inner-content');
+            
+            outerDiv.onclick = function(event) {
+                if (event.target === outerDiv) {
+                    outerDiv.style.display = 'none';
+                }
+            };
+            
+            innerDiv.onclick = function(event) {
+                event.stopPropagation();
+            };
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('vulnerability-popup-container', 'children'),
+    Input('vulnerability-popup-container', 'children')
+)
 
 # Server'ı başlat
 if 'server' not in globals():
