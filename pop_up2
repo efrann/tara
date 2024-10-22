@@ -415,10 +415,20 @@ def create_main_layout():
                     dbc.Row([
                         dbc.Col([
                             dbc.Button('Filtrele', id='filter-button', color="primary", className="mt-3"),
-                            dbc.Button('Detaylı Zafiyet Listesi', id='open-new-tab', color="success", className="mt-3 ml-2"),
+                            html.A(
+                                dbc.Button('Detaylı Zafiyet Listesi', color="success", className="mt-3 ml-2"),
+                                id='open-new-tab',
+                                target="_blank",  # Yeni sekmede açılmasını sağlar
+                                href="/detailed-analysis",  # Başlangıç URL'si
+                            ),
                         ], width=12)
                     ], justify="end")
-                ])
+                ]),
+                style={
+                    'backgroundColor': '#34495e',  # Koyu mavi arka plan
+                    'color': 'white',  # Beyaz metin
+                    'border': 'none',  # Kenarlığı kaldır
+                }
             ),
             id="filter-collapse",
             is_open=True,
