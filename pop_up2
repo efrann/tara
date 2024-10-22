@@ -320,7 +320,7 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
             cursor.execute(top_ports_query)
             top_ports_data = cursor.fetchall()
 
-            # IP'ye özgü port bilgilerini çeken yeni sorgu
+            # IP'ye özg port bilgilerini çeken yeni sorgu
             ip_ports_query = f"""
             SELECT DISTINCT vo.port
             FROM host h
@@ -427,7 +427,7 @@ def create_main_layout():
                 'backgroundColor': '#34495e',  # Koyu mavi arka plan
                 'color': 'white',  # Beyaz metin
                 'border': 'none',  # Kenarlığı kaldır
-                'marginBottom': '20px',  # Alt boşluk ekle
+                'marginBottom': '20px',  # Alt boluk ekle
             }
         ),
 
