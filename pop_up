@@ -724,9 +724,8 @@ def create_detailed_analysis_layout():
             'height': '100%',
             'backgroundColor': 'rgba(0,0,0,0.5)',
             'zIndex': 1000,
-            'display': 'flex',
-            'justifyContent': 'center',
-            'alignItems': 'center'
+            'display': 'grid',
+            'placeItems': 'center'
         }, children=[
             html.Div(id='vulnerability-popup', style={
                 'backgroundColor': '#fff',
@@ -1230,7 +1229,7 @@ def show_vulnerability_details(active_cell, table_data):
                 ]),
             ])
         ])
-        return popup_content, {'display': 'flex'}
+        return popup_content, {'display': 'grid', 'placeItems': 'center'}
     return dash.no_update, {'display': 'none'}
 
 @app.callback(
