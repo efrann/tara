@@ -1199,7 +1199,7 @@ def show_vulnerability_details(active_cell, table_data):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
         
-        # Null veya N/A değerler için kontrol ve varsayılan değerler
+        # Veri kontrolü ve varsayılan değerler
         description = row.get('description', 'Açıklama mevcut değil.')
         solution = row.get('solution', 'Çözüm önerisi mevcut değil.')
         cvss3_vector = row.get('cvss3_vector', 'CVSS3 vektörü mevcut değil.')
@@ -1208,157 +1208,91 @@ def show_vulnerability_details(active_cell, table_data):
         pub_date = row.get('pub_date', 'Yayın tarihi belirtilmemiş.')
         mod_date = row.get('mod_date', 'Güncelleme tarihi belirtilmemiş.')
 
-        # N/A değerlerini kontrol et ve uygun şekilde değiştir
-        description = 'Açıklama mevcut değil.' if description in ['N/A', 'NA', 'null', '', None] else description
-        solution = 'Çözüm önerisi mevcut değil.' if solution in ['N/A', 'NA', 'null', '', None] else solution
-        cvss3_vector = 'CVSS3 vektörü mevcut değil.' if cvss3_vector in ['N/A', 'NA', 'null', '', None] else cvss3_vector
-        ref = 'Referans mevcut değil.' if ref in ['N/A', 'NA', 'null', '', None] else ref
-        pub_date = 'Yayın tarihi belirtilmemiş.' if pub_date in ['N/A', 'NA', 'null', '', None] else pub_date
-        mod_date = 'Güncelleme tarihi belirtilmemiş.' if mod_date in ['N/A', 'NA', 'null', '', None] else mod_date
-
-        # Referansları işle
-        ref_items = []
-        if isinstance(ref, str) and ref not in ['N/A', 'NA', 'null', '', 'Referans mevcut değil.']:
-            ref_items = [
-                html.A(ref_item, href=ref_item, target="_blank", style={
-                    "display": "block",
-                    "marginBottom": "5px",
-                    "color": "#3498db",
-                    "textDecoration": "none",
-                    "transition": "color 0.3s"
-                }) 
-                for ref_item in ref.split('\n') if ref_item.strip()
-            ]
-        
-        if not ref_items:
-            ref_items = [html.P("Referans mevcut değil.", style={"color": "#7f8c8d"})]
-
         # CVSS skoru için renk belirleme
         cvss_color = "#2ecc71"  # Varsayılan yeşil (düşük risk)
-        if cvss3_base_score != 'N/A' and cvss3_base_score is not None:
-            try:
-                score = float(cvss3_base_score)
-                if score >= 9.0:
-                    cvss_color = "#e74c3c"  # Kırmızı (kritik)
-                elif score >= 7.0:
-                    cvss_color = "#e67e22"  # Turuncu (yüksek)
-                elif score >= 4.0:
-                    cvss_color = "#f1c40f"  # Sarı (orta)
-            except ValueError:
-                cvss3_base_score = 'N/A'
+        if cvss3_base_score != 'N/A':
+            score = float(cvss3_base_score)
+            if score >= 9.0:
+                cvss_color = "#e74c3c"  # Kırmızı (kritik)
+            elif score >= 7.0:
+                cvss_color = "#e67e22"  # Turuncu (yüksek)
+            elif score >= 4.0:
+                cvss_color = "#f1c40f"  # Sarı (orta)
 
         popup_content = html.Div([
             html.Button("×", id="close-popup", style={
                 'position': 'absolute',
-                'top': '15px',
-                'right': '20px',
-                'fontSize': '28px',
+                'top': '10px',
+                'right': '15px',
+                'fontSize': '24px',
                 'border': 'none',
                 'background': 'none',
                 'cursor': 'pointer',
-                'color': '#34495e',
-                'transition': 'color 0.3s',
-                ':hover': {'color': '#e74c3c'}
+                'color': '#34495e'
+            }),
+            html.H3(row['vulnerability_name'], style={
+                'color': '#2c3e50',
+                'marginBottom': '20px',
+                'borderBottom': '2px solid #3498db',
+                'paddingBottom': '10px'
             }),
             html.Div([
-                html.H3(row['vulnerability_name'], style={
-                    'color': '#2c3e50',
-                    'marginBottom': '25px',
-                    'paddingBottom': '15px',
-                    'borderBottom': '2px solid #3498db',
-                    'fontWeight': '600',
-                    'fontSize': '24px'
-                }),
                 html.Div([
-                    html.Div([
-                        html.Span("CVSS3 Skoru: ", style={'fontWeight': '600', 'marginRight': '10px'}),
-                        html.Span(cvss3_base_score, style={
-                            'backgroundColor': cvss_color,
-                            'color': 'white',
-                            'padding': '6px 12px',
-                            'borderRadius': '20px',
-                            'fontWeight': '600',
-                            'fontSize': '16px'
-                        })
-                    ], style={'marginBottom': '20px'}),
-                    html.Div([
-                        html.H5("CVSS3 Vektör", style={'color': '#2980b9', 'marginBottom': '10px', 'fontWeight': '600'}),
-                        html.Code(cvss3_vector, style={
-                            "backgroundColor": "#f0f3f4",
-                            "padding": "8px 12px",
-                            "borderRadius": "6px",
-                            "display": "inline-block",
-                            "fontFamily": "monospace",
-                            "fontSize": "14px",
-                            "color": "#34495e"
-                        }),
-                    ], style={'marginBottom': '25px'}),
-                    html.Div([
-                        html.H5("Referanslar", style={'color': '#2980b9', 'marginBottom': '10px', 'fontWeight': '600'}),
-                        html.Div(ref_items, style={
-                            'maxHeight': '120px',
-                            'overflowY': 'auto',
-                            'padding': '12px',
-                            'backgroundColor': '#f0f3f4',
-                            'borderRadius': '6px'
-                        }),
-                    ], style={'marginBottom': '25px'}),
-                    html.Div([
-                        html.Span("Yayın Tarihi: ", style={'fontWeight': '600', 'marginRight': '10px'}),
-                        html.Span(pub_date, style={"color": "#34495e"}),
-                    ], style={'marginBottom': '10px'}),
-                    html.Div([
-                        html.Span("Güncelleme Tarihi: ", style={'fontWeight': '600', 'marginRight': '10px'}),
-                        html.Span(mod_date, style={"color": "#34495e"}),
-                    ]),
-                ], style={'flex': '1', 'marginRight': '30px'}),
+                    html.Span("CVSS3 Skoru: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
+                    html.Span(cvss3_base_score, style={
+                        'backgroundColor': cvss_color,
+                        'color': 'white',
+                        'padding': '5px 10px',
+                        'borderRadius': '5px',
+                        'fontWeight': 'bold'
+                    })
+                ], style={'marginBottom': '10px'}),
                 html.Div([
-                    dbc.Tabs([
-                        dbc.Tab(label="Açıklama", children=[
-                            dcc.Markdown(description, style={
-                                "whiteSpace": "pre-wrap",
-                                'backgroundColor': '#f0f3f4',
-                                'padding': '20px',
-                                'borderRadius': '6px',
-                                'marginTop': '15px',
-                                'boxShadow': '0 2px 10px rgba(0,0,0,0.05)',
-                                'maxHeight': '350px',
-                                'overflowY': 'auto',
-                                'fontSize': '14px',
-                                'lineHeight': '1.6'
-                            })
-                        ], style={"marginBottom": "20px"}),
-                        dbc.Tab(label="Çözüm", children=[
-                            dcc.Markdown(solution, style={
-                                "whiteSpace": "pre-wrap",
-                                'backgroundColor': '#f0f3f4',
-                                'padding': '20px',
-                                'borderRadius': '6px',
-                                'marginTop': '15px',
-                                'boxShadow': '0 2px 10px rgba(0,0,0,0.05)',
-                                'maxHeight': '350px',
-                                'overflowY': 'auto',
-                                'fontSize': '14px',
-                                'lineHeight': '1.6'
-                            })
-                        ]),
-                    ], style={"marginTop": "20px"}),
-                ], style={'flex': '2'}),
-            ], style={
-                'display': 'flex',
-                'flexDirection': 'row',
-            }),
+                    html.Span("CVSS3 Vektör: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
+                    html.Span(cvss3_vector)
+                ], style={'marginBottom': '10px'}),
+                html.Div([
+                    html.Span("Referanslar: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
+                    html.Span(ref)
+                ], style={'marginBottom': '10px'}),
+                html.Div([
+                    html.Span("Yayın Tarihi: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
+                    html.Span(pub_date)
+                ], style={'marginBottom': '10px'}),
+                html.Div([
+                    html.Span("Güncelleme Tarihi: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
+                    html.Span(mod_date)
+                ]),
+            ], style={'marginBottom': '20px'}),
+            dbc.Tabs([
+                dbc.Tab(label="Açıklama", children=[
+                    dcc.Markdown(description, style={
+                        "whiteSpace": "pre-wrap",
+                        'backgroundColor': '#f8f9fa',
+                        'padding': '15px',
+                        'borderRadius': '5px',
+                        'marginTop': '10px'
+                    })
+                ]),
+                dbc.Tab(label="Çözüm", children=[
+                    dcc.Markdown(solution, style={
+                        "whiteSpace": "pre-wrap",
+                        'backgroundColor': '#f8f9fa',
+                        'padding': '15px',
+                        'borderRadius': '5px',
+                        'marginTop': '10px'
+                    })
+                ]),
+            ]),
         ], style={
-            'display': 'flex',
-            'flexDirection': 'column',
             'position': 'relative',
-            'padding': '30px 40px',
+            'padding': '20px',
             'backgroundColor': '#fff',
-            'borderRadius': '12px',
-            'boxShadow': '0 10px 30px rgba(0,0,0,0.1)',
-            'maxWidth': '1000px',
-            'width': '95%',
-            'maxHeight': '85vh',
+            'borderRadius': '10px',
+            'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)',
+            'maxWidth': '800px',
+            'width': '90%',
+            'maxHeight': '80vh',
             'overflowY': 'auto'
         })
 
@@ -1372,8 +1306,55 @@ def show_vulnerability_details(active_cell, table_data):
             'right': 0,
             'bottom': 0,
             'backgroundColor': 'rgba(0,0,0,0.5)',
-            'zIndex': 1000,
-            'backdropFilter': 'blur(5px)'
+            'zIndex': 1000
+        }
+    return dash.no_update, {'display': 'none'}
+
+@app.callback(
+    Output('vulnerability-popup-container', 'style', allow_duplicate=True),
+    [Input('close-popup', 'n_clicks')],
+    prevent_initial_call=True
+)
+def close_popup(n_clicks):
+    if n_clicks:
+        return {'display': 'none'}
+    return dash.no_update
+
+# Server'ı başlat
+if 'server' not in globals():
+    server = app.server
+
+if __name__ == '__main__':
+    serve(server, host='127.0.0.1', port=8080)
+            ], style={
+                'display': 'flex',
+                'flexDirection': 'row',
+            }),
+        ], style={
+            'display': 'flex',
+            'flexDirection': 'column',
+            'position': 'relative',
+            'padding': '20px',
+            'backgroundColor': '#fff',
+            'borderRadius': '10px',
+            'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)',
+            'maxWidth': '800px',
+            'width': '90%',
+            'maxHeight': '80vh',
+            'overflowY': 'auto'
+        })
+
+        return popup_content, {
+            'display': 'flex',
+            'justifyContent': 'center',
+            'alignItems': 'center',
+            'position': 'fixed',
+            'top': 0,
+            'left': 0,
+            'right': 0,
+            'bottom': 0,
+            'backgroundColor': 'rgba(0,0,0,0.5)',
+            'zIndex': 1000
         }
     return dash.no_update, {'display': 'none'}
 
