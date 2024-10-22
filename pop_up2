@@ -602,6 +602,21 @@ if 'app' not in globals():
 
 # Ana layout
 app.layout = html.Div([
+    html.Style('''
+        .sidebar-container {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+            padding: 15px;
+        }
+
+        .sidebar-content {
+            padding: 15px;
+        }
+    '''),
     dcc.Location(id='url', refresh=False),
     html.Div(id='page-content')
 ])
