@@ -1166,32 +1166,44 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
 def show_vulnerability_details(active_cell, table_data):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
-        window_content = html.Div([
-            html.H3(row['vulnerability_name'], style={'color': '#2c3e50', 'marginBottom': '20px'}),
-            dbc.Tabs([
-                dbc.Tab(label="Açıklama", children=[
-                    dcc.Markdown(row['description'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '15px', 'borderRadius': '5px', 'marginTop': '10px'})
-                ]),
-                dbc.Tab(label="Çözüm", children=[
-                    dcc.Markdown(row['solution'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '15px', 'borderRadius': '5px', 'marginTop': '10px'})
-                ]),
-                dbc.Tab(label="Detaylar", children=[
-                    html.Div([
-                        html.H5("CVSS3 Vektör", style={'color': '#e74c3c', 'marginTop': '15px'}),
-                        html.Code(row['cvss3_vector'], style={"backgroundColor": "#e9ecef", "padding": "5px", "borderRadius": "3px"}),
-                        html.H5("Referanslar", style={'color': '#f39c12', 'marginTop': '15px'}),
-                        html.Div([
-                            html.A(ref, href=ref, target="_blank", style={"display": "block", "marginBottom": "5px", "color": "#3498db"}) 
-                            for ref in row['ref'].split('\n') if ref.strip()
-                        ]),
-                        html.H5("Yayın Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
-                        html.Span(row['pub_date'], style={"fontWeight": "bold"}),
-                        html.H5("Güncelleme Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
-                        html.Span(row['mod_date'], style={"fontWeight": "bold"}),
-                    ])
-                ]),
-            ])
-        ])
+        window_content = f"""
+            <h3 style="color: #2c3e50; margin-bottom: 20px;">{row['vulnerability_name']}</h3>
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link active" id="description-tab" data-toggle="tab" href="#description" role="tab">Açıklama</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" id="solution-tab" data-toggle="tab" href="#solution" role="tab">Çözüm</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" id="details-tab" data-toggle="tab" href="#details" role="tab">Detaylar</a>
+                </li>
+            </ul>
+            <div class="tab-content" id="myTabContent">
+                <div class="tab-pane fade show active" id="description" role="tabpanel">
+                    <div style="white-space: pre-wrap; background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        {row['description']}
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="solution" role="tabpanel">
+                    <div style="white-space: pre-wrap; background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        {row['solution']}
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="details" role="tabpanel">
+                    <h5 style="color: #e74c3c; margin-top: 15px;">CVSS3 Vektör</h5>
+                    <code style="background-color: #e9ecef; padding: 5px; border-radius: 3px;">{row['cvss3_vector']}</code>
+                    <h5 style="color: #f39c12; margin-top: 15px;">Referanslar</h5>
+                    <div>
+                        {''.join(f'<a href="{ref}" target="_blank" style="display: block; margin-bottom: 5px; color: #3498db;">{ref}</a>' for ref in row['ref'].split('\n') if ref.strip())}
+                    </div>
+                    <h5 style="color: #95a5a6; margin-top: 15px;">Yayın Tarihi</h5>
+                    <span style="font-weight: bold;">{row['pub_date']}</span>
+                    <h5 style="color: #95a5a6; margin-top: 15px;">Güncelleme Tarihi</h5>
+                    <span style="font-weight: bold;">{row['mod_date']}</span>
+                </div>
+            </div>
+        """
         
         # JavaScript kodu ile yeni pencere açma
         return html.Script(f"""
@@ -1206,7 +1218,7 @@ def show_vulnerability_details(active_cell, table_data):
                         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
                     </head>
                     <body style="background-color: #f8f9fa; padding: 20px;">
-                        {window_content.to_html()}
+                        {window_content}
                     </body>
                 </html>
             `);
