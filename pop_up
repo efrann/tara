@@ -744,6 +744,10 @@ def create_detailed_analysis_layout():
                     'color': '#3498db',
                     'fontWeight': 'bold',
                 },
+                {
+                    'if': {'column_id': 'vulnerability_name'},
+                    'cursor': 'pointer'
+                }
             ],
             sort_action="native",
             sort_mode="multi",
@@ -751,10 +755,6 @@ def create_detailed_analysis_layout():
             page_current=0,
             page_size=50,
             cell_selectable=True,
-            style_data_conditional=[{
-                'if': {'column_id': 'vulnerability_name'},
-                'cursor': 'pointer'
-            }],
         ),
     ], style={'padding': '20px', 'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
 
