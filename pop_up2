@@ -1217,7 +1217,7 @@ def show_vulnerability_details(active_cell, table_data):
 
         # Referansları işle
         ref_items = []
-        if isinstance(ref, str) and ref not in ['N/A', 'NA', 'null', '']:
+        if isinstance(ref, str) and ref not in ['N/A', 'NA', 'null', '', 'Referans mevcut değil.']:
             ref_items = [
                 html.A(ref_item, href=ref_item, target="_blank", style={
                     "display": "block",
