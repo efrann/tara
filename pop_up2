@@ -1198,6 +1198,23 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
 def show_vulnerability_details(active_cell, table_data):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
+        
+        # Null veya N/A değerler için kontrol ve varsayılan değerler
+        description = row.get('description', 'Açıklama mevcut değil.')
+        solution = row.get('solution', 'Çözüm önerisi mevcut değil.')
+        cvss3_vector = row.get('cvss3_vector', 'CVSS3 vektörü mevcut değil.')
+        ref = row.get('ref', 'Referans mevcut değil.')
+        pub_date = row.get('pub_date', 'Yayın tarihi belirtilmemiş.')
+        mod_date = row.get('mod_date', 'Güncelleme tarihi belirtilmemiş.')
+
+        # N/A değerlerini kontrol et ve uygun şekilde değiştir
+        description = 'Açıklama mevcut değil.' if description in ['N/A', 'NA', 'null', ''] else description
+        solution = 'Çözüm önerisi mevcut değil.' if solution in ['N/A', 'NA', 'null', ''] else solution
+        cvss3_vector = 'CVSS3 vektörü mevcut değil.' if cvss3_vector in ['N/A', 'NA', 'null', ''] else cvss3_vector
+        ref = 'Referans mevcut değil.' if ref in ['N/A', 'NA', 'null', ''] else ref
+        pub_date = 'Yayın tarihi belirtilmemiş.' if pub_date in ['N/A', 'NA', 'null', ''] else pub_date
+        mod_date = 'Güncelleme tarihi belirtilmemiş.' if mod_date in ['N/A', 'NA', 'null', ''] else mod_date
+
         popup_content = html.Div([
             html.Button("×", id="close-popup", style={
                 'position': 'absolute',
@@ -1218,7 +1235,7 @@ def show_vulnerability_details(active_cell, table_data):
             }),
             dbc.Tabs([
                 dbc.Tab(label="Açıklama", children=[
-                    dcc.Markdown(row['description'], style={
+                    dcc.Markdown(description, style={
                         "whiteSpace": "pre-wrap",
                         'backgroundColor': '#f8f9fa',
                         'padding': '15px',
@@ -1228,7 +1245,7 @@ def show_vulnerability_details(active_cell, table_data):
                     })
                 ]),
                 dbc.Tab(label="Çözüm", children=[
-                    dcc.Markdown(row['solution'], style={
+                    dcc.Markdown(solution, style={
                         "whiteSpace": "pre-wrap",
                         'backgroundColor': '#f8f9fa',
                         'padding': '15px',
@@ -1241,7 +1258,7 @@ def show_vulnerability_details(active_cell, table_data):
                     html.Div([
                         html.Div([
                             html.H5("CVSS3 Vektör", style={'color': '#e74c3c', 'marginTop': '15px'}),
-                            html.Code(row['cvss3_vector'], style={
+                            html.Code(cvss3_vector, style={
                                 "backgroundColor": "#e9ecef",
                                 "padding": "5px",
                                 "borderRadius": "3px",
@@ -1252,23 +1269,24 @@ def show_vulnerability_details(active_cell, table_data):
                         html.Div([
                             html.H5("Referanslar", style={'color': '#f39c12', 'marginTop': '15px'}),
                             html.Div([
-                                html.A(ref, href=ref, target="_blank", style={
+                                html.A(ref_item, href=ref_item, target="_blank", style={
                                     "display": "block",
                                     "marginBottom": "5px",
                                     "color": "#3498db",
                                     "textDecoration": "none",
                                     "transition": "color 0.3s"
                                 }) 
-                                for ref in row['ref'].split('\n') if ref.strip()
-                            ], style={'maxHeight': '150px', 'overflowY': 'auto', 'padding': '10px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px'}),
+                                for ref_item in ref.split('\n') if ref_item.strip() and ref_item not in ['N/A', 'NA', 'null', '']
+                            ] if ref not in ['N/A', 'NA', 'null', ''] else [html.P("Referans mevcut değil.")], 
+                            style={'maxHeight': '150px', 'overflowY': 'auto', 'padding': '10px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px'}),
                         ], style={'marginBottom': '20px'}),
                         html.Div([
                             html.H5("Yayın Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
-                            html.Span(row['pub_date'], style={"fontWeight": "bold", "color": "#34495e"}),
+                            html.Span(pub_date, style={"fontWeight": "bold", "color": "#34495e"}),
                         ], style={'marginBottom': '10px'}),
                         html.Div([
                             html.H5("Güncelleme Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
-                            html.Span(row['mod_date'], style={"fontWeight": "bold", "color": "#34495e"}),
+                            html.Span(mod_date, style={"fontWeight": "bold", "color": "#34495e"}),
                         ]),
                     ])
                 ]),
