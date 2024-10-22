@@ -672,53 +672,6 @@ def create_detailed_analysis_layout():
             placeholder='Ara...',
             style={'marginBottom': '20px', 'width': '100%', 'padding': '10px'}
         ),
-        dbc.Modal(
-            [
-                dbc.ModalHeader(dbc.ModalTitle("Zafiyet Detayları"), close_button=True, style={'backgroundColor': '#34495e', 'color': 'white'}),
-                dbc.ModalBody([
-                    dbc.Row([
-                        dbc.Col([
-                            html.H5("Açıklama", className="text-primary mb-2"),
-                            html.Div(id="vulnerability-description", style={"maxHeight": "200px", "overflowY": "auto", "backgroundColor": "#f8f9fa", "padding": "10px", "borderRadius": "5px"}),
-                        ], width=12),
-                    ], className="mb-4"),
-                    dbc.Row([
-                        dbc.Col([
-                            html.H5("Çözüm", className="text-success mb-2"),
-                            html.Div(id="vulnerability-solution", style={"maxHeight": "200px", "overflowY": "auto", "backgroundColor": "#f8f9fa", "padding": "10px", "borderRadius": "5px"}),
-                        ], width=12),
-                    ], className="mb-4"),
-                    dbc.Row([
-                        dbc.Col([
-                            html.H5("CVSS3 Vektör", className="text-info mb-2"),
-                            html.Div(id="vulnerability-cvss3-vector", style={"backgroundColor": "#f8f9fa", "padding": "10px", "borderRadius": "5px"}),
-                        ], width=6),
-                        dbc.Col([
-                            html.H5("Referanslar", className="text-warning mb-2"),
-                            html.Div(id="vulnerability-ref", style={"maxHeight": "100px", "overflowY": "auto", "backgroundColor": "#f8f9fa", "padding": "10px", "borderRadius": "5px"}),
-                        ], width=6),
-                    ], className="mb-4"),
-                    dbc.Row([
-                        dbc.Col([
-                            html.H5("Yayın Tarihi", className="text-secondary mb-2"),
-                            html.Div(id="vulnerability-pub-date", style={"backgroundColor": "#f8f9fa", "padding": "10px", "borderRadius": "5px"}),
-                        ], width=6),
-                        dbc.Col([
-                            html.H5("Güncelleme Tarihi", className="text-secondary mb-2"),
-                            html.Div(id="vulnerability-mod-date", style={"backgroundColor": "#f8f9fa", "padding": "10px", "borderRadius": "5px"}),
-                        ], width=6),
-                    ]),
-                ], style={"backgroundColor": "#ffffff", "borderRadius": "10px", "padding": "20px"}),
-                dbc.ModalFooter(
-                    dbc.Button("Kapat", id="close-modal", className="ms-auto", color="secondary", n_clicks=0)
-                ),
-            ],
-            id="vulnerability-modal",
-            is_open=False,
-            size="lg",
-            scrollable=True,
-            style={"backgroundColor": "#f0f3f6"}
-        ),
         dash_table.DataTable(
             id='vulnerability-table',
             columns=[
@@ -791,6 +744,23 @@ def create_detailed_analysis_layout():
             page_size=50,
             cell_selectable=True,
         ),
+        # Pop-up için yeni bir div ekleyelim
+        html.Div(id='vulnerability-popup', style={
+            'display': 'none',
+            'position': 'fixed',
+            'z-index': '1000',
+            'left': '50%',
+            'top': '50%',
+            'transform': 'translate(-50%, -50%)',
+            'width': '80%',
+            'maxWidth': '800px',
+            'backgroundColor': '#fff',
+            'boxShadow': '0 4px 8px rgba(0,0,0,0.1)',
+            'borderRadius': '8px',
+            'padding': '20px',
+            'maxHeight': '80vh',
+            'overflowY': 'auto'
+        }),
     ], style={'padding': '20px', 'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
 
 app = dash.Dash(__name__)
@@ -1253,44 +1223,64 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     return f'/detailed-analysis?{urlencode(params)}'
 
 @app.callback(
-    [Output("vulnerability-modal", "is_open"),
-     Output("vulnerability-description", "children"),
-     Output("vulnerability-solution", "children"),
-     Output("vulnerability-cvss3-vector", "children"),
-     Output("vulnerability-ref", "children"),
-     Output("vulnerability-pub-date", "children"),
-     Output("vulnerability-mod-date", "children")],
+    [Output('vulnerability-popup', 'children'),
+     Output('vulnerability-popup', 'style')],
     [Input('vulnerability-table', 'active_cell')],
-    [State('vulnerability-table', 'data'),
-     State("vulnerability-modal", "is_open")]
+    [State('vulnerability-table', 'data')]
 )
-def toggle_modal(active_cell, table_data, is_open):
+def show_vulnerability_details(active_cell, table_data):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
-        return (
-            not is_open,
-            dcc.Markdown(row['description'], style={"whiteSpace": "pre-wrap"}),
-            dcc.Markdown(row['solution'], style={"whiteSpace": "pre-wrap"}),
-            html.Code(row['cvss3_vector'], style={"backgroundColor": "#e9ecef", "padding": "5px", "borderRadius": "3px"}),
+        popup_content = html.Div([
+            html.H3(row['vulnerability_name'], style={'color': '#2c3e50', 'marginBottom': '20px'}),
             html.Div([
-                html.A(ref, href=ref, target="_blank", style={"display": "block", "marginBottom": "5px", "color": "#007bff"}) 
-                for ref in row['ref'].split('\n') if ref.strip()
-            ]),
-            html.Span(row['pub_date'], style={"fontWeight": "bold"}),
-            html.Span(row['mod_date'], style={"fontWeight": "bold"})
-        )
-    return is_open, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+                html.H5("Açıklama", style={'color': '#3498db'}),
+                dcc.Markdown(row['description'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '10px', 'borderRadius': '5px'}),
+            ], style={'marginBottom': '20px'}),
+            html.Div([
+                html.H5("Çözüm", style={'color': '#2ecc71'}),
+                dcc.Markdown(row['solution'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '10px', 'borderRadius': '5px'}),
+            ], style={'marginBottom': '20px'}),
+            html.Div([
+                html.H5("CVSS3 Vektör", style={'color': '#e74c3c'}),
+                html.Code(row['cvss3_vector'], style={"backgroundColor": "#e9ecef", "padding": "5px", "borderRadius": "3px"}),
+            ], style={'marginBottom': '20px'}),
+            html.Div([
+                html.H5("Referanslar", style={'color': '#f39c12'}),
+                html.Div([
+                    html.A(ref, href=ref, target="_blank", style={"display": "block", "marginBottom": "5px", "color": "#3498db"}) 
+                    for ref in row['ref'].split('\n') if ref.strip()
+                ]),
+            ], style={'marginBottom': '20px'}),
+            html.Div([
+                html.H5("Yayın Tarihi", style={'color': '#95a5a6'}),
+                html.Span(row['pub_date'], style={"fontWeight": "bold"}),
+            ], style={'marginBottom': '10px'}),
+            html.Div([
+                html.H5("Güncelleme Tarihi", style={'color': '#95a5a6'}),
+                html.Span(row['mod_date'], style={"fontWeight": "bold"}),
+            ], style={'marginBottom': '20px'}),
+            html.Button("Kapat", id="close-popup", style={
+                'backgroundColor': '#3498db',
+                'color': 'white',
+                'border': 'none',
+                'padding': '10px 20px',
+                'borderRadius': '5px',
+                'cursor': 'pointer'
+            })
+        ])
+        return popup_content, {'display': 'block'}
+    return dash.no_update, {'display': 'none'}
 
 @app.callback(
-    Output("vulnerability-modal", "is_open", allow_duplicate=True),
-    [Input("close-modal", "n_clicks")],
-    [State("vulnerability-modal", "is_open")],
+    Output('vulnerability-popup', 'style', allow_duplicate=True),
+    [Input('close-popup', 'n_clicks')],
     prevent_initial_call=True
 )
-def close_modal(n_clicks, is_open):
+def close_popup(n_clicks):
     if n_clicks:
-        return False
-    return is_open
+        return {'display': 'none'}
+    return dash.no_update
 
 server = app.server
 
