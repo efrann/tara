@@ -674,20 +674,40 @@ def create_detailed_analysis_layout():
         ),
         dbc.Modal(
             [
-                dbc.ModalHeader(dbc.ModalTitle("Zafiyet Detayları")),
+                dbc.ModalHeader(dbc.ModalTitle("Zafiyet Detayları"), close_button=True),
                 dbc.ModalBody([
-                    html.H5("Açıklama"),
-                    html.P(id="vulnerability-description"),
-                    html.H5("Çözüm"),
-                    html.P(id="vulnerability-solution"),
-                    html.H5("CVSS3 Vektör"),
-                    html.P(id="vulnerability-cvss3-vector"),
-                    html.H5("Referanslar"),
-                    html.P(id="vulnerability-ref"),
-                    html.H5("Yayın Tarihi"),
-                    html.P(id="vulnerability-pub-date"),
-                    html.H5("Güncelleme Tarihi"),
-                    html.P(id="vulnerability-mod-date"),
+                    dbc.Row([
+                        dbc.Col([
+                            html.H5("Açıklama", className="text-primary"),
+                            html.Div(id="vulnerability-description", style={"maxHeight": "200px", "overflowY": "auto"}),
+                        ], width=12),
+                    ], className="mb-3"),
+                    dbc.Row([
+                        dbc.Col([
+                            html.H5("Çözüm", className="text-success"),
+                            html.Div(id="vulnerability-solution", style={"maxHeight": "200px", "overflowY": "auto"}),
+                        ], width=12),
+                    ], className="mb-3"),
+                    dbc.Row([
+                        dbc.Col([
+                            html.H5("CVSS3 Vektör", className="text-info"),
+                            html.P(id="vulnerability-cvss3-vector"),
+                        ], width=6),
+                        dbc.Col([
+                            html.H5("Referanslar", className="text-warning"),
+                            html.Div(id="vulnerability-ref", style={"maxHeight": "100px", "overflowY": "auto"}),
+                        ], width=6),
+                    ], className="mb-3"),
+                    dbc.Row([
+                        dbc.Col([
+                            html.H5("Yayın Tarihi", className="text-secondary"),
+                            html.P(id="vulnerability-pub-date"),
+                        ], width=6),
+                        dbc.Col([
+                            html.H5("Güncelleme Tarihi", className="text-secondary"),
+                            html.P(id="vulnerability-mod-date"),
+                        ], width=6),
+                    ]),
                 ]),
                 dbc.ModalFooter(
                     dbc.Button("Kapat", id="close-modal", className="ms-auto", n_clicks=0)
@@ -695,7 +715,8 @@ def create_detailed_analysis_layout():
             ],
             id="vulnerability-modal",
             is_open=False,
-            size="lg",  # Modal boyutunu büyüttük
+            size="lg",
+            scrollable=True,
         ),
         dash_table.DataTable(
             id='vulnerability-table',
@@ -1247,10 +1268,10 @@ def toggle_modal(active_cell, table_data, is_open):
         row = table_data[active_cell['row']]
         return (
             not is_open,
-            row['description'],
-            row['solution'],
+            dcc.Markdown(row['description']),
+            dcc.Markdown(row['solution']),
             row['cvss3_vector'],
-            row['ref'],
+            [html.A(ref, href=ref, target="_blank") for ref in row['ref'].split('\n') if ref.strip()],
             row['pub_date'],
             row['mod_date']
         )
