@@ -1208,12 +1208,29 @@ def show_vulnerability_details(active_cell, table_data):
         mod_date = row.get('mod_date', 'Güncelleme tarihi belirtilmemiş.')
 
         # N/A değerlerini kontrol et ve uygun şekilde değiştir
-        description = 'Açıklama mevcut değil.' if description in ['N/A', 'NA', 'null', ''] else description
-        solution = 'Çözüm önerisi mevcut değil.' if solution in ['N/A', 'NA', 'null', ''] else solution
-        cvss3_vector = 'CVSS3 vektörü mevcut değil.' if cvss3_vector in ['N/A', 'NA', 'null', ''] else cvss3_vector
-        ref = 'Referans mevcut değil.' if ref in ['N/A', 'NA', 'null', ''] else ref
-        pub_date = 'Yayın tarihi belirtilmemiş.' if pub_date in ['N/A', 'NA', 'null', ''] else pub_date
-        mod_date = 'Güncelleme tarihi belirtilmemiş.' if mod_date in ['N/A', 'NA', 'null', ''] else mod_date
+        description = 'Açıklama mevcut değil.' if description in ['N/A', 'NA', 'null', '', None] else description
+        solution = 'Çözüm önerisi mevcut değil.' if solution in ['N/A', 'NA', 'null', '', None] else solution
+        cvss3_vector = 'CVSS3 vektörü mevcut değil.' if cvss3_vector in ['N/A', 'NA', 'null', '', None] else cvss3_vector
+        ref = 'Referans mevcut değil.' if ref in ['N/A', 'NA', 'null', '', None] else ref
+        pub_date = 'Yayın tarihi belirtilmemiş.' if pub_date in ['N/A', 'NA', 'null', '', None] else pub_date
+        mod_date = 'Güncelleme tarihi belirtilmemiş.' if mod_date in ['N/A', 'NA', 'null', '', None] else mod_date
+
+        # Referansları işle
+        ref_items = []
+        if isinstance(ref, str) and ref not in ['N/A', 'NA', 'null', '']:
+            ref_items = [
+                html.A(ref_item, href=ref_item, target="_blank", style={
+                    "display": "block",
+                    "marginBottom": "5px",
+                    "color": "#3498db",
+                    "textDecoration": "none",
+                    "transition": "color 0.3s"
+                }) 
+                for ref_item in ref.split('\n') if ref_item.strip()
+            ]
+        
+        if not ref_items:
+            ref_items = [html.P("Referans mevcut değil.")]
 
         popup_content = html.Div([
             html.Button("×", id="close-popup", style={
@@ -1268,17 +1285,7 @@ def show_vulnerability_details(active_cell, table_data):
                         ], style={'marginBottom': '20px'}),
                         html.Div([
                             html.H5("Referanslar", style={'color': '#f39c12', 'marginTop': '15px'}),
-                            html.Div([
-                                html.A(ref_item, href=ref_item, target="_blank", style={
-                                    "display": "block",
-                                    "marginBottom": "5px",
-                                    "color": "#3498db",
-                                    "textDecoration": "none",
-                                    "transition": "color 0.3s"
-                                }) 
-                                for ref_item in ref.split('\n') if ref_item.strip() and ref_item not in ['N/A', 'NA', 'null', '']
-                            ] if ref not in ['N/A', 'NA', 'null', ''] else [html.P("Referans mevcut değil.")], 
-                            style={'maxHeight': '150px', 'overflowY': 'auto', 'padding': '10px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px'}),
+                            html.Div(ref_items, style={'maxHeight': '150px', 'overflowY': 'auto', 'padding': '10px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px'}),
                         ], style={'marginBottom': '20px'}),
                         html.Div([
                             html.H5("Yayın Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
