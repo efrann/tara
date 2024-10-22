@@ -712,31 +712,73 @@ def create_detailed_analysis_layout():
             page_size=50,
             cell_selectable=True,
         ),
-        # Yeni, daha merkezi ve modern pop-up
-        html.Div(id='vulnerability-popup-container', style={
-            'display': 'none',
-            'position': 'fixed',
-            'top': 0,
-            'left': 0,
-            'width': '100%',
-            'height': '100%',
-            'backgroundColor': 'rgba(0,0,0,0.5)',
-            'zIndex': 1000,
-            'justifyContent': 'center',
-            'alignItems': 'center'
-        }, children=[
-            html.Div(id='vulnerability-popup', style={
-                'backgroundColor': '#fff',
-                'borderRadius': '10px',
-                'padding': '30px',
-                'width': '80%',
-                'maxWidth': '800px',
-                'maxHeight': '80vh',
-                'overflowY': 'auto',
-                'boxShadow': '0 4px 20px rgba(0,0,0,0.2)',
-                'position': 'relative'
-            })
-        ]),
+        # Yeni pencere açmak için JavaScript kodu
+        html.Div([
+            html.Script('''
+                function openVulnerabilityDetails(vulnerabilityData) {
+                    var newWindow = window.open("", "_blank", "width=800,height=600");
+                    newWindow.document.write(`
+                        <html>
+                        <head>
+                            <title>${vulnerabilityData.vulnerability_name}</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; }
+                                h1 { color: #2c3e50; }
+                                .tab { overflow: hidden; border: 1px solid #ccc; background-color: #f1f1f1; }
+                                .tab button { background-color: inherit; float: left; border: none; outline: none; cursor: pointer; padding: 14px 16px; transition: 0.3s; }
+                                .tab button:hover { background-color: #ddd; }
+                                .tab button.active { background-color: #ccc; }
+                                .tabcontent { display: none; padding: 6px 12px; border: 1px solid #ccc; border-top: none; }
+                                pre { white-space: pre-wrap; background-color: #f8f9fa; padding: 15px; border-radius: 5px; }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>${vulnerabilityData.vulnerability_name}</h1>
+                            <div class="tab">
+                                <button class="tablinks" onclick="openTab(event, 'Description')">Açıklama</button>
+                                <button class="tablinks" onclick="openTab(event, 'Solution')">Çözüm</button>
+                                <button class="tablinks" onclick="openTab(event, 'Details')">Detaylar</button>
+                            </div>
+                            <div id="Description" class="tabcontent">
+                                <pre>${vulnerabilityData.description}</pre>
+                            </div>
+                            <div id="Solution" class="tabcontent">
+                                <pre>${vulnerabilityData.solution}</pre>
+                            </div>
+                            <div id="Details" class="tabcontent">
+                                <h3>CVSS3 Vektör</h3>
+                                <code>${vulnerabilityData.cvss3_vector}</code>
+                                <h3>Referanslar</h3>
+                                <div>${vulnerabilityData.ref.split('\\n').map(ref => `<a href="${ref}" target="_blank">${ref}</a><br>`).join('')}</div>
+                                <h3>Yayın Tarihi</h3>
+                                <span>${vulnerabilityData.pub_date}</span>
+                                <h3>Güncelleme Tarihi</h3>
+                                <span>${vulnerabilityData.mod_date}</span>
+                            </div>
+                            <script>
+                                function openTab(evt, tabName) {
+                                    var i, tabcontent, tablinks;
+                                    tabcontent = document.getElementsByClassName("tabcontent");
+                                    for (i = 0; i < tabcontent.length; i++) {
+                                        tabcontent[i].style.display = "none";
+                                    }
+                                    tablinks = document.getElementsByClassName("tablinks");
+                                    for (i = 0; i < tablinks.length; i++) {
+                                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                                    }
+                                    document.getElementById(tabName).style.display = "block";
+                                    evt.currentTarget.className += " active";
+                                }
+                                // Açıklama sekmesini varsayılan olarak aç
+                                document.getElementsByClassName("tablinks")[0].click();
+                            </script>
+                        </body>
+                        </html>
+                    `);
+                    newWindow.document.close();
+                }
+            ''')
+        ], style={'display': 'none'}),
     ], style={'padding': '20px', 'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
 
 # Ana sayfa için callback'ler
@@ -1054,9 +1096,7 @@ def update_button_style(n_clicks):
 
 # Detaylı analiz sayfası için callback
 @app.callback(
-    [Output('vulnerability-table', 'data'),
-     Output('ip-ports-info', 'children'),
-     Output('applied-filters', 'children')],
+    Output('vulnerability-table', 'data'),
     [Input('url', 'search'),
      Input('search-input', 'value')]
 )
@@ -1104,58 +1144,17 @@ def update_detailed_analysis(search, search_value):
             if any(search_value in str(value).lower() for value in item.values())
         ]
     
-    # IP portları bilgisini al ve geçersiz portları filtrele
-    ip_ports_info = html.Div()
-    if ip_address:
-        if ip_ports_data:
-            valid_ports = [
-                str(port['port']) for port in ip_ports_data 
-                if port['port'] not in [None, 0, '0', 'null', ''] and 
-                not str(port['port']).startswith('0')
-            ]
-            if valid_ports:
-                ip_ports_info = html.Div([
-                    html.H4(f"{ip_address} IP adresi için açık portlar:", style={'color': '#3498db', 'marginBottom': '10px'}),
-                    html.Div([
-                        html.Span(port, style={
-                            'backgroundColor': '#34495e',
-                            'color': '#ecf0f1',
-                            'padding': '5px 10px',
-                            'margin': '2px',
-                            'borderRadius': '5px',
-                            'display': 'inline-block'
-                        }) for port in valid_ports
-                    ], style={'maxHeight': '150px', 'overflowY': 'auto'})
-                ], style={'marginBottom': '20px', 'backgroundColor': '#2c3e50', 'padding': '15px', 'borderRadius': '10px'})
-            else:
-                ip_ports_info = html.Div(f"{ip_address} IP adresi için geçerli açık port bulunamadı.", 
-                                         style={'color': '#e74c3c', 'marginBottom': '20px'})
-
-    # Uygulanan filtreleri göster
-    applied_filters = []
-    if severity:
-        severity_map = {4: 'Kritik', 3: 'Yüksek', 2: 'Orta', 1: 'Düşük', 0: 'Bilgi'}
-        applied_filters.append(f"Önem Derecesi: {', '.join(severity_map[s] for s in severity if s in severity_map)}")
-    if scan_name:
-        applied_filters.append(f"Tarama Adı: {scan_name}")
-    if vulnerability_name:
-        applied_filters.append(f"Zafiyet Adı: {vulnerability_name}")
-    if ip_address:
-        applied_filters.append(f"IP Adresi: {ip_address}")
-    if port:
-        applied_filters.append(f"Port: {port}")
-    if search_value:
-        applied_filters.append(f"Arama: {search_value}")
-    
-    applied_filters_div = html.Div([
-        html.H4("Uygulanan Filtreler:"),
-        html.Ul([html.Li(filter_text) for filter_text in applied_filters]) if applied_filters else html.P("Filtre uygulanmadı.")
-    ])
-    
     for item in detailed_vulnerability_data:
         item['vulnerability_name'] = f"{item['vulnerability_name']} ℹ️"
+        # JavaScript fonksiyonunu çağıracak olan onClick özelliğini ekle
+        item['vulnerability_name'] = {
+            'value': item['vulnerability_name'],
+            'props': {
+                'onClick': f"openVulnerabilityDetails({item})"
+            }
+        }
     
-    return detailed_vulnerability_data, ip_ports_info, applied_filters_div
+    return detailed_vulnerability_data
 
 # Ana sayfadaki 'Detaylı Zafiyet Listesi' butonunun href'ini güncelleyen callback
 @app.callback(
@@ -1180,64 +1179,6 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
         params['port'] = port
     
     return f'/detailed-analysis?{urlencode(params)}'
-
-@app.callback(
-    [Output('vulnerability-popup', 'children'),
-     Output('vulnerability-popup-container', 'style')],
-    [Input('vulnerability-table', 'active_cell')],
-    [State('vulnerability-table', 'data')]
-)
-def show_vulnerability_details(active_cell, table_data):
-    if active_cell and active_cell['column_id'] == 'vulnerability_name':
-        row = table_data[active_cell['row']]
-        popup_content = html.Div([
-            html.Button("×", id="close-popup", style={
-                'position': 'absolute',
-                'top': '10px',
-                'right': '10px',
-                'fontSize': '24px',
-                'border': 'none',
-                'background': 'none',
-                'cursor': 'pointer',
-                'color': '#2c3e50'
-            }),
-            html.H3(row['vulnerability_name'], style={'color': '#2c3e50', 'marginBottom': '20px', 'paddingRight': '30px'}),
-            dbc.Tabs([
-                dbc.Tab(label="Açıklama", children=[
-                    dcc.Markdown(row['description'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '15px', 'borderRadius': '5px', 'marginTop': '10px'})
-                ]),
-                dbc.Tab(label="Çözüm", children=[
-                    dcc.Markdown(row['solution'], style={"whiteSpace": "pre-wrap", 'backgroundColor': '#f8f9fa', 'padding': '15px', 'borderRadius': '5px', 'marginTop': '10px'})
-                ]),
-                dbc.Tab(label="Detaylar", children=[
-                    html.Div([
-                        html.H5("CVSS3 Vektör", style={'color': '#e74c3c', 'marginTop': '15px'}),
-                        html.Code(row['cvss3_vector'], style={"backgroundColor": "#e9ecef", "padding": "5px", "borderRadius": "3px"}),
-                        html.H5("Referanslar", style={'color': '#f39c12', 'marginTop': '15px'}),
-                        html.Div([
-                            html.A(ref, href=ref, target="_blank", style={"display": "block", "marginBottom": "5px", "color": "#3498db"}) 
-                            for ref in row['ref'].split('\n') if ref.strip()
-                        ]),
-                        html.H5("Yayın Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
-                        html.Span(row['pub_date'], style={"fontWeight": "bold"}),
-                        html.H5("Güncelleme Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
-                        html.Span(row['mod_date'], style={"fontWeight": "bold"}),
-                    ])
-                ]),
-            ])
-        ])
-        return popup_content, {'display': 'flex'}
-    return dash.no_update, {'display': 'none'}
-
-@app.callback(
-    Output('vulnerability-popup-container', 'style', allow_duplicate=True),
-    [Input('close-popup', 'n_clicks')],
-    prevent_initial_call=True
-)
-def close_popup(n_clicks):
-    if n_clicks:
-        return {'display': 'none'}
-    return dash.no_update
 
 # Server'ı başlat
 if 'server' not in globals():
