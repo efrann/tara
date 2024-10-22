@@ -1275,6 +1275,28 @@ def show_vulnerability_details(active_cell, table_data):
                         'fontWeight': 'bold'
                     })
                 ], style={'marginBottom': '20px'}),
+                html.Div([
+                    html.H5("CVSS3 Vektör", style={'color': '#e74c3c', 'marginTop': '15px'}),
+                    html.Code(cvss3_vector, style={
+                        "backgroundColor": "#e9ecef",
+                        "padding": "5px",
+                        "borderRadius": "3px",
+                        "display": "inline-block",
+                        "marginBottom": "10px"
+                    }),
+                ], style={'marginBottom': '20px'}),
+                html.Div([
+                    html.H5("Referanslar", style={'color': '#f39c12', 'marginTop': '15px'}),
+                    html.Div(ref_items, style={'maxHeight': '100px', 'overflowY': 'auto', 'padding': '10px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px'}),
+                ], style={'marginBottom': '20px'}),
+                html.Div([
+                    html.Span("Yayın Tarihi: ", style={'fontWeight': 'bold'}),
+                    html.Span(pub_date, style={"color": "#34495e"}),
+                ], style={'marginBottom': '10px'}),
+                html.Div([
+                    html.Span("Güncelleme Tarihi: ", style={'fontWeight': 'bold'}),
+                    html.Span(mod_date, style={"color": "#34495e"}),
+                ]),
             ], style={'flex': '1', 'marginRight': '20px'}),
             html.Div([
                 dbc.Tabs([
@@ -1302,32 +1324,6 @@ def show_vulnerability_details(active_cell, table_data):
                             'overflowY': 'auto'
                         })
                     ]),
-                    dbc.Tab(label="Detaylar", children=[
-                        html.Div([
-                            html.Div([
-                                html.H5("CVSS3 Vektör", style={'color': '#e74c3c', 'marginTop': '15px'}),
-                                html.Code(cvss3_vector, style={
-                                    "backgroundColor": "#e9ecef",
-                                    "padding": "5px",
-                                    "borderRadius": "3px",
-                                    "display": "inline-block",
-                                    "marginBottom": "10px"
-                                }),
-                            ], style={'marginBottom': '20px'}),
-                            html.Div([
-                                html.H5("Referanslar", style={'color': '#f39c12', 'marginTop': '15px'}),
-                                html.Div(ref_items, style={'maxHeight': '150px', 'overflowY': 'auto', 'padding': '10px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px'}),
-                            ], style={'marginBottom': '20px'}),
-                            html.Div([
-                                html.H5("Yayın Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
-                                html.Span(pub_date, style={"fontWeight": "bold", "color": "#34495e"}),
-                            ], style={'marginBottom': '10px'}),
-                            html.Div([
-                                html.H5("Güncelleme Tarihi", style={'color': '#95a5a6', 'marginTop': '15px'}),
-                                html.Span(mod_date, style={"fontWeight": "bold", "color": "#34495e"}),
-                            ]),
-                        ])
-                    ]),
                 ], style={"marginTop": "20px"}),
             ], style={'flex': '2'}),
         ], style={
@@ -1343,6 +1339,36 @@ def show_vulnerability_details(active_cell, table_data):
             'maxHeight': '80vh',
             'overflowY': 'auto'
         })
+        return popup_content, {
+            'display': 'flex',
+            'justifyContent': 'center',
+            'alignItems': 'center',
+            'position': 'fixed',
+            'top': 0,
+            'left': 0,
+            'right': 0,
+            'bottom': 0,
+            'backgroundColor': 'rgba(0,0,0,0.5)',
+            'zIndex': 1000
+        }
+    return dash.no_update, {'display': 'none'}
+
+@app.callback(
+    Output('vulnerability-popup-container', 'style', allow_duplicate=True),
+    [Input('close-popup', 'n_clicks')],
+    prevent_initial_call=True
+)
+def close_popup(n_clicks):
+    if n_clicks:
+        return {'display': 'none'}
+    return dash.no_update
+
+# Server'ı başlat
+if 'server' not in globals():
+    server = app.server
+
+if __name__ == '__main__':
+    serve(server, host='127.0.0.1', port=8080)
         return popup_content, {
             'display': 'flex',
             'justifyContent': 'center',
