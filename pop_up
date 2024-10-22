@@ -717,8 +717,8 @@ def create_detailed_analysis_layout():
             'display': 'none',
             'position': 'fixed',
             'top': 0,
-            'left': 0,
-            'width': '100%',
+            'right': 0,  # Sağ tarafa yerleştir
+            'width': '40%',  # Genişliği azalt
             'height': '100%',
             'backgroundColor': 'rgba(0,0,0,0.5)',
             'zIndex': 1000,
@@ -727,13 +727,12 @@ def create_detailed_analysis_layout():
         }, children=[
             html.Div(id='vulnerability-popup', style={
                 'backgroundColor': '#fff',
-                'borderRadius': '10px',
+                'borderRadius': '10px 0 0 10px',  # Sadece sol tarafı yuvarlak yap
                 'padding': '30px',
-                'width': '80%',
-                'maxWidth': '800px',
-                'maxHeight': '80vh',
+                'width': '100%',
+                'height': '100%',
                 'overflowY': 'auto',
-                'boxShadow': '0 4px 20px rgba(0,0,0,0.2)',
+                'boxShadow': '-4px 0 20px rgba(0,0,0,0.2)',
                 'position': 'relative'
             })
         ]),
@@ -1265,7 +1264,7 @@ def show_vulnerability_details(active_cell, table_data):
                 ]),
             ], style={'marginTop': '20px'})
         ])
-        return popup_content, {'display': 'flex'}
+        return popup_content, {'display': 'block'}
     return dash.no_update, {'display': 'none'}
 
 @app.callback(
