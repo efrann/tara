@@ -369,7 +369,7 @@ def create_main_layout():
                             ],
                             multi=True,
                             placeholder="Seçiniz...",
-                            style={'width': '100%'},
+                            style={'color': 'black', 'width': '100%'},
                             className='dropdown-white-text'
                         ),
                     ], width=3),
@@ -379,7 +379,7 @@ def create_main_layout():
                             id='scan-dropdown',
                             options=[],
                             placeholder="Seçiniz...",
-                            style={'width': '100%'},
+                            style={'color': 'black', 'width': '100%'},
                             className='dropdown-white-text'
                         ),
                     ], width=3),
