@@ -1,5 +1,5 @@
 import dash
-from dash import dcc, html, dash_table, callback_context, clientside_callback
+from dash import dcc, html, dash_table, callback_context
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import pandas as pd
@@ -337,9 +337,9 @@ def get_data(severity=None, scan_name=None, vulnerability_name=None, ip_address=
 
     return summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data
 
-# Ana sayfa düzenine popup container'ı ve clientside callback için gerekli bileşenleri ekleyin
+# Ana sayfa düzeni
 def create_main_layout():
-    layout = html.Div([
+    return html.Div([
         # Header
         html.Div([
             html.H1("Nessus Tarama Sonuçları Gösterge Paneli", style={'textAlign': 'center', 'color': 'white', 'marginBottom': '0'}),
@@ -597,16 +597,22 @@ def create_main_layout():
 
         # Popup container'ı ekle
         html.Div(id='vulnerability-popup-container', style={'display': 'none'}, children=[
-            html.Div(id='vulnerability-popup')
-        ]),
+            html.Div(id='vulnerability-popup', style={
+                'backgroundColor': '#fff',
+                'borderRadius': '10px',
+                'padding': '30px',
+                'width': '80%',
+                'maxWidth': '800px',
+                'maxHeight': '80vh',
+                'overflowY': 'auto',
+                'boxShadow': '0 4px 20px rgba(0,0,0,0.2)',
+                'position': 'relative',
+            })
+        ], n_clicks=0),  # n_clicks özelliğini ekledik
 
-        # ESC tuşu için gizli bir div ekle
-        html.Div(id='keydown-listener', style={'display': 'none'}),
-
-        # Interval component ekle
-        dcc.Interval(id='interval-component', interval=100, n_intervals=0),
+        # ESC tuşu için yeni bir div ekleyelim
+        html.Div(id='esc-listener', style={'display': 'none'}),
     ])
-    return layout
 
 # Eğer app nesnesi daha önce tanımlanmamışsa, burada tanımlayın
 if 'app' not in globals():
@@ -1321,44 +1327,49 @@ def show_vulnerability_details(active_cell, table_data):
             'justifyContent': 'center',
             'alignItems': 'center',
             'position': 'fixed',
-            'top': '0',
-            'left': '0',
-            'right': '0',
-            'bottom': '0',
+            'top': 0,
+            'left': 0,
+            'right': 0,
+            'bottom': 0,
             'backgroundColor': 'rgba(0,0,0,0.5)',
-            'zIndex': 1000,
-            'overflow': 'auto'
+            'zIndex': 1000
         }
     return dash.no_update, {'display': 'none'}
 
-# Popup'ı kapatmak için callback'i güncelle
 @app.callback(
     Output('vulnerability-popup-container', 'style', allow_duplicate=True),
-    [Input('close-popup', 'n_clicks')],
+    [Input('close-popup', 'n_clicks'),
+     Input('vulnerability-popup-container', 'n_clicks'),
+     Input('esc-listener', 'n_clicks')],
+    [State('vulnerability-popup-container', 'style')],
     prevent_initial_call=True
 )
-def close_popup(n_clicks):
-    if n_clicks:
+def close_popup(close_clicks, container_clicks, esc_clicks, current_style):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return dash.no_update
+    
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if trigger_id in ['close-popup', 'vulnerability-popup-container', 'esc-listener']:
         return {'display': 'none'}
+    
     return dash.no_update
 
-# ESC tuşu için clientside callback ekle
-clientside_callback(
+# ESC tuşu için JavaScript kodu ekleyelim
+app.clientside_callback(
     """
-    function(n_intervals) {
+    function(n_clicks) {
         document.addEventListener('keydown', function(event) {
             if (event.key === "Escape") {
-                var popup = document.getElementById('vulnerability-popup-container');
-                if (popup) {
-                    popup.style.display = 'none';
-                }
+                document.getElementById('esc-listener').click();
             }
         });
         return window.dash_clientside.no_update;
     }
     """,
-    Output('keydown-listener', 'children'),
-    Input('interval-component', 'n_intervals')
+    Output('esc-listener', 'n_clicks'),
+    Input('esc-listener', 'id')
 )
 
 # Server'ı başlat
