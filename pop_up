@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from urllib.parse import urlencode, parse_qs, unquote
 import dash_bootstrap_components as dbc
 from waitress import serve
+from dash.exceptions import PreventUpdate
 
 @contextmanager
 def get_db_connection():
@@ -659,27 +660,20 @@ def create_detailed_analysis_layout():
             'borderRadius': '5px',
         }),
         html.Div(id='ip-ports-info'),  # IP portları bilgisini buraya taşıdık
-        dcc.Store(id='vulnerability-details-store'),
-        html.Div(id='modal-container'),
-        dbc.Input(
-            id='search-input',
-            type='text',
-            placeholder='Ara...',
-            style={'marginBottom': '20px', 'width': '100%', 'padding': '10px'}
-        ),
+        html.Div(id='vulnerability-details-container'),
         dash_table.DataTable(
             id='vulnerability-table',
             columns=[
                 {"name": "Tarama Adı", "id": "scan_name"},
                 {"name": "Host IP", "id": "host_ip"},
                 {"name": "Host FQDN", "id": "host_fqdn"},
-                {"name": "Zafiyet Adı", "id": "vulnerability_name", "presentation": "markdown"},
+                {"name": "Zafiyet Adı", "id": "vulnerability_name"},
                 {"name": "Önem Derecesi", "id": "severity_text"},
                 {"name": "Plugin Ailesi", "id": "plugin_family"},
                 {"name": "Port", "id": "port"},
                 {"name": "CVSS3 Base Score", "id": "cvss3_base_score"},
                 {"name": "Tarama Tarihi", "id": "scan_date"},
-                {"name": "", "id": "details", "presentation": "markdown"}
+                {"name": "", "id": "details", "presentation": "markdown"},
             ],
             style_table={'height': '70vh', 'overflowY': 'auto'},
             style_cell={
@@ -1114,7 +1108,7 @@ def update_detailed_analysis(search, search_value):
             item['severity_text'] = 'Bilgi'
         else:
             item['severity_text'] = 'Bilinmeyen'
-        item['vulnerability_name'] = f"{item['vulnerability_name']} [Detaylar](#)"
+        item['details'] = "[Detaylar](#)"
     
     # Arama değeri varsa filtreleme yap
     if search_value:
@@ -1199,15 +1193,13 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     return f'/detailed-analysis?{urlencode(params)}'
 
 @app.callback(
-    Output('vulnerability-details-store', 'data'),
+    Output('vulnerability-details-container', 'children'),
     Input('vulnerability-table', 'active_cell'),
     State('vulnerability-table', 'data')
 )
-def store_vulnerability_details(active_cell, table_data):
-    if active_cell and active_cell['column_id'] == 'vulnerability_name':
+def show_vulnerability_details(active_cell, table_data):
+    if active_cell and active_cell['column_id'] == 'details':
         vulnerability_name = table_data[active_cell['row']]['vulnerability_name']
-        # Markdown bağlantısını ve butonu kaldır
-        vulnerability_name = vulnerability_name.split(' [')[0]
         with get_db_connection() as connection:
             with connection.cursor() as cursor:
                 cursor.execute("""
@@ -1218,48 +1210,20 @@ def store_vulnerability_details(active_cell, table_data):
                 """, (vulnerability_name,))
                 result = cursor.fetchone()
                 if result:
-                    return {
-                        'name': result['name'],
-                        'solution': result['solution'],
-                        'description': result['description']
-                    }
-    return None
-
-@app.callback(
-    Output('modal-container', 'children'),
-    Input('vulnerability-details-store', 'data'),
-)
-def show_vulnerability_details(data):
-    if data:
-        return dbc.Modal(
-            [
-                dbc.ModalHeader(dbc.ModalTitle(data['name'])),
-                dbc.ModalBody([
-                    html.H5("Açıklama", className="mt-3"),
-                    html.P(data['description']),
-                    html.H5("Çözüm", className="mt-4"),
-                    html.P(data['solution']),
-                ]),
-                dbc.ModalFooter(
-                    dbc.Button("Kapat", id="close-modal", className="ms-auto")
-                ),
-            ],
-            id="vulnerability-modal",
-            is_open=True,
-            size="lg",
-            scrollable=True,
-        )
-    return None
-
-@app.callback(
-    Output("vulnerability-modal", "is_open"),
-    [Input("close-modal", "n_clicks")],
-    [State("vulnerability-modal", "is_open")],
-)
-def toggle_modal(n, is_open):
-    if n:
-        return not is_open
-    return is_open
+                    return dbc.Collapse(
+                        dbc.Card(
+                            dbc.CardBody([
+                                html.H4(result['name'], className="card-title"),
+                                html.H5("Açıklama", className="mt-3"),
+                                html.P(result['description']),
+                                html.H5("Çözüm", className="mt-4"),
+                                html.P(result['solution']),
+                            ])
+                        ),
+                        id=f"collapse-{active_cell['row']}",
+                        is_open=True,
+                    )
+    raise PreventUpdate
 
 server = app.server
 
