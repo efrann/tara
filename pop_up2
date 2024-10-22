@@ -647,6 +647,350 @@ def create_main_layout():
         html.Div(id='clicked-severity', style={'display': 'none'}),
     ])
 
+# Detaylı analiz sayfası düzeni
+def create_detailed_analysis_layout():
+    return html.Div([
+        html.H3("Detaylı Zafiyet Listesi", style={
+            'textAlign': 'center', 
+            'color': '#ecf0f1', 
+            'backgroundColor': '#34495e', 
+            'padding': '10px', 
+            'marginBottom': '20px',
+            'borderRadius': '5px',
+        }),
+        html.Div(id='applied-filters', style={
+            'marginBottom': '20px',
+            'padding': '10px',
+            'backgroundColor': '#2c3e50',
+            'color': '#ecf0f1',
+            'borderRadius': '5px',
+        }),
+        html.Div(id='ip-ports-info'),  # IP portları bilgisini buraya taşıdık
+        dbc.Input(
+            id='search-input',
+            type='text',
+            placeholder='Ara...',
+            style={'marginBottom': '20px', 'width': '100%', 'padding': '10px'}
+        ),
+        dash_table.DataTable(
+            id='vulnerability-table',
+            columns=[
+                {"name": "Tarama Adı", "id": "scan_name"},
+                {"name": "Host IP", "id": "host_ip"},
+                {"name": "Host FQDN", "id": "host_fqdn"},
+                {"name": "Zafiyet Adı", "id": "vulnerability_name"},
+                {"name": "Önem Derecesi", "id": "severity_text"},
+                {"name": "Plugin Ailesi", "id": "plugin_family"},
+                {"name": "Port", "id": "port"},
+                {"name": "CVSS3 Base Score", "id": "cvss3_base_score"},
+                {"name": "Tarama Tarihi", "id": "scan_date"}
+            ],
+            style_table={'height': '70vh', 'overflowY': 'auto'},
+            style_cell={
+                'backgroundColor': '#34495e',
+                'color': '#ecf0f1',
+                'border': '1px solid #2c3e50',
+                'textAlign': 'left',
+                'padding': '10px',
+                'whiteSpace': 'normal',
+                'height': 'auto',
+            },
+            style_header={
+                'backgroundColor': '#2c3e50',
+                'fontWeight': 'bold',
+                'border': '1px solid #34495e',
+                'color': '#3498db',
+            },
+            style_data_conditional=[
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Kritik"'},
+                    'backgroundColor': 'rgba(231, 76, 60, 0.1)',
+                    'color': '#e74c3c',
+                    'fontWeight': 'bold',
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Yüksek"'},
+                    'backgroundColor': 'rgba(230, 126, 34, 0.1)',
+                    'color': '#e67e22',
+                    'fontWeight': 'bold',
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Orta"'},
+                    'backgroundColor': 'rgba(241, 196, 15, 0.1)',
+                    'color': '#f1c40f',
+                    'fontWeight': 'bold',
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Düşük"'},
+                    'backgroundColor': 'rgba(46, 204, 113, 0.1)',
+                    'color': '#2ecc71',
+                    'fontWeight': 'bold',
+                },
+                {
+                    'if': {'column_id': 'severity_text', 'filter_query': '{severity_text} eq "Bilgi"'},
+                    'backgroundColor': 'rgba(52, 152, 219, 0.1)',
+                    'color': '#3498db',
+                    'fontWeight': 'bold',
+                },
+                {
+                    'if': {'column_id': 'vulnerability_name'},
+                    'cursor': 'pointer'
+                }
+            ],
+            sort_action="native",
+            sort_mode="multi",
+            page_action="native",
+            page_current=0,
+            page_size=50,
+            cell_selectable=True,
+        ),
+        # Yeni, daha merkezi ve modern pop-up
+        html.Div(id='vulnerability-popup-container', style={
+            'display': 'none',
+            'position': 'fixed',
+            'top': 0,
+            'left': 0,
+            'width': '100%',
+            'height': '100%',
+            'backgroundColor': 'rgba(0,0,0,0.5)',
+            'zIndex': 1000,
+            'justifyContent': 'center',
+            'alignItems': 'center'
+        }, children=[
+            html.Div(id='vulnerability-popup', style={
+                'backgroundColor': '#fff',
+                'borderRadius': '10px',
+                'padding': '30px',
+                'width': '80%',
+                'maxWidth': '800px',
+                'maxHeight': '80vh',
+                'overflowY': 'auto',
+                'boxShadow': '0 4px 20px rgba(0,0,0,0.2)',
+                'position': 'relative'
+            })
+        ]),
+    ], style={'padding': '20px', 'backgroundColor': '#2c3e50', 'minHeight': '100vh'})
+
+app = dash.Dash(__name__)
+
+# Ana layout
+app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
+    html.Div(id='page-content')
+])
+
+# Sayfa yönlendirmesi için callback
+@app.callback(Output('page-content', 'children'),
+              [Input('url', 'pathname')])
+def display_page(pathname):
+    if pathname == '/detailed-analysis':
+        return create_detailed_analysis_layout()
+    else:
+        return create_main_layout()
+
+# Ana sayfa için callback'ler
+@app.callback(
+    [Output('summary-table', 'data'),
+     Output('vulnerability-distribution', 'figure'),
+     Output('top-vulnerabilities-table', 'data'),
+     Output('top-vulnerabilities-graph', 'figure'),
+     Output('top-ports-graph', 'figure'),
+     Output('severity-4', 'children'),
+     Output('severity-3', 'children'),
+     Output('severity-2', 'children'),
+     Output('severity-1', 'children'),
+     Output('severity-0', 'children'),
+     Output('last-updated', 'children'),
+     Output('scan-dropdown', 'options'),
+     Output('severity-dropdown', 'value')],
+    [Input('filter-button', 'n_clicks'),
+     Input('interval-component', 'n_intervals'),
+     Input('clicked-severity', 'children')],
+    [State('severity-dropdown', 'value'),
+     State('scan-dropdown', 'value'),
+     State('vulnerability-name-input', 'value'),
+     State('ip-address-input', 'value'),
+     State('port-input', 'value')]
+)
+def update_main_page(n_clicks, n_intervals, clicked_severity, severity, scan_name, vulnerability_name, ip_address, port):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        button_id = 'No clicks yet'
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if button_id == 'clicked-severity' and clicked_severity:
+        severity = [int(clicked_severity)]
+
+    summary_data, vulnerability_data, detailed_vulnerability_data, top_vulnerabilities_data, total_vulnerabilities_data, scan_list, top_ports_data, ip_ports_data = get_data(severity, scan_name, vulnerability_name, ip_address, port)
+    
+    # Detaylı zafiyet listesini severity'ye göre sırala ve severity_text'i ekle
+    detailed_vulnerability_data = sorted(detailed_vulnerability_data, key=lambda x: x['severity'], reverse=True)
+    for item in detailed_vulnerability_data:
+        if item['severity'] == 4:
+            item['severity_text'] = 'Kritik'
+        elif item['severity'] == 3:
+            item['severity_text'] = 'Yüksek'
+        elif item['severity'] == 2:
+            item['severity_text'] = 'Orta'
+        elif item['severity'] == 1:
+            item['severity_text'] = 'Düşük'
+        elif item['severity'] == 0:
+            item['severity_text'] = 'Bilgi'
+        else:
+            item['severity_text'] = 'Bilinmeyen'
+    
+    #print("Summary Data:", summary_data)  # Debug için eklendi
+    
+    # Özet tablo verisi
+    summary_table_data = [{
+        'folder_name': row['folder_name'],
+        'scan_name': row['scan_name'],
+        'last_scan_date': row['last_scan_date'],
+        'total_hosts': row['total_hosts'],
+        'total_critical': row['total_critical'],
+        'total_high': row['total_high'],
+        'total_medium': row['total_medium'],
+        'total_low': row['total_low'],
+        'total_info': row['total_info']
+    } for row in summary_data]
+    
+    # Severity seçimine göre sıralama
+    if severity:
+        if 4 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_critical'], reverse=True)
+        elif 3 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_high'], reverse=True)
+        elif 2 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_medium'], reverse=True)
+        elif 1 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_low'], reverse=True)
+        elif 0 in severity:
+            summary_table_data = sorted(summary_table_data, key=lambda x: x['total_info'], reverse=True)
+    
+    # Zafiyet dağılımı grafiği
+    labels = ['Total', 'Critical', 'High', 'Medium', 'Low']
+    parents = ['', 'Total', 'Total', 'Total', 'Total']
+    values = [
+        sum(item['count'] for item in vulnerability_data if item['severity'] in [1, 2, 3, 4]),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 4),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 3),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 2),
+        sum(item['count'] for item in vulnerability_data if item['severity'] == 1)
+    ]
+    colors = ['#2c3e50', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71']
+
+    vulnerability_distribution = {
+        'data': [go.Sunburst(
+            labels=labels,
+            parents=parents,
+            values=values,
+            branchvalues="total",
+            marker=dict(colors=colors),
+            textinfo='label+value',
+            insidetextorientation='radial',
+            hoverinfo='label+value+percent parent'
+        )],
+        'layout': go.Layout(
+            paper_bgcolor='#2c3e50',
+            plot_bgcolor='#2c3e50',
+            font=dict(color='white', size=14),
+            margin=dict(t=0, l=0, r=0, b=0),
+            height=400,
+            showlegend=False
+        )
+    }
+
+    # Detaylı zafiyet listesi
+    vulnerability_table_data = detailed_vulnerability_data
+    
+    # En çok görülen 10 zafiyet
+    severity_map = {
+        4: 'Kritik',
+        3: 'Yüksek',
+        2: 'Orta',
+        1: 'Düşük',
+        0: 'Bilgi'
+    }
+    
+    top_vulnerabilities_table_data = [{
+        'folder_name': row['folder_name'],
+        'scan_name': row['scan_name'],
+        'vulnerability_name': row['vulnerability_name'],
+        'severity': severity_map[row['severity']],
+        'count': row['count']
+    } for row in top_vulnerabilities_data]
+    
+    # Toplam zafiyet sayıları
+    severity_info = [
+        {"name": "Kritik", "color": "#e74c3c", "key": "total_critical", "value": 4},
+        {"name": "Yüksek", "color": "#e67e22", "key": "total_high", "value": 3},
+        {"name": "Orta", "color": "#f1c40f", "key": "total_medium", "value": 2},
+        {"name": "Düşük", "color": "#2ecc71", "key": "total_low", "value": 1},
+        {"name": "Bilgi", "color": "#3498db", "key": "total_info", "value": 0}
+    ]
+    
+    total_vulnerabilities = [
+        html.Div([
+            html.H4(info["name"], style={'color': info["color"], 'margin': '0', 'fontSize': '18px'}),
+            html.P(total_vulnerabilities_data[info["key"]], style={
+                'fontSize': '36px', 
+                'fontWeight': 'bold', 
+                'margin': '10px 0',
+                'color': info["color"]
+            })
+        ], style={
+            'textAlign': 'center', 
+            'backgroundColor': '#34495e', 
+            'padding': '15px', 
+            'borderRadius': '10px', 
+            'margin': '10px',
+            'minWidth': '120px',
+            'boxShadow': '0 4px 8px 0 rgba(0,0,0,0.2)',
+            'cursor': 'pointer'
+        })
+        for info in severity_info
+    ]
+    
+    # Son güncelleme zamanını oluştur
+    last_updated = f"Son Güncelleme: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+    # Tarama dropdown seçeneklerini oluştur
+    scan_options = [{'label': scan, 'value': scan} for scan in scan_list]
+
+    # Veri kontrolü
+    if not top_vulnerabilities_data:
+        # Eğer veri yoksa, boş bir grafik döndür
+        top_vulnerabilities_graph = go.Figure()
+        top_vulnerabilities_graph.add_annotation(text="Veri bulunamadı", showarrow=False)
+        return summary_table_data, vulnerability_distribution, vulnerability_table_data, top_vulnerabilities_table_data, top_vulnerabilities_graph, total_vulnerabilities[0], total_vulnerabilities[1], total_vulnerabilities[2], total_vulnerabilities[3], total_vulnerabilities[4], last_updated, scan_options, severity
+
+    # En çok görülen 10 zafiyet daire grafiği
+    top_vulnerabilities_graph = go.Figure(
+        go.Sunburst(
+            ids=['Most Occurent 10 Vulnerabilities'] + [f"vuln_{i}" for i in range(len(top_vulnerabilities_data))],
+            labels=['Most Occurent 10 Vulnerabilities'] + [f"{row['vulnerability_name'][:20]}..." if len(row['vulnerability_name']) > 20 else row['vulnerability_name'] for row in top_vulnerabilities_data],
+            parents=[''] + ['Most Occurent 10 Vulnerabilities'] * len(top_vulnerabilities_data),
+            values=[sum(row['count'] for row in top_vulnerabilities_data)] + [row['count'] for row in top_vulnerabilities_data],
+            branchvalues="total",
+            marker=dict(
+                colors=['#2c3e50'] + [
+                    '#e74c3c' if row['severity'] == 4 else
+                    '#e67e22' if row['severity'] == 3 else
+                    '#f1c40f' if row['severity'] == 2 else
+                    '#2ecc71' if row['severity'] == 1 else
+                    '#3498db' if row['severity'] == 0 else
+                    '#95a5a6' for row in top_vulnerabilities_data
+                ]
+            ),
+            textinfo='label',
+            hovertemplate='<b>%{customdata}</b><br>Count: %{value}<br><extra></extra>',
+            insidetextorientation='radial',
+            textfont=dict(size=10, color='white'),
+            customdata=['Most Occurent 10 Vulnerabilities'] + [row['vulnerability_name'] for row in top_vulnerabilities_data],
+        )
+    )
+
     top_vulnerabilities_graph.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
         paper_bgcolor='#2c3e50',
@@ -947,4 +1291,4 @@ def close_popup(n_clicks):
 server = app.server
 
 if __name__ == '__main__':
-    serve(server, host='127.0.0.1', port=8080)
+    serve (server, host='127.0.0.1', port=8080)
