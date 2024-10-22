@@ -1370,33 +1370,3 @@ if 'server' not in globals():
 
 if __name__ == '__main__':
     serve(server, host='127.0.0.1', port=8080)
-        return popup_content, {
-            'display': 'flex',
-            'justifyContent': 'center',
-            'alignItems': 'center',
-            'position': 'fixed',
-            'top': 0,
-            'left': 0,
-            'right': 0,
-            'bottom': 0,
-            'backgroundColor': 'rgba(0,0,0,0.5)',
-            'zIndex': 1000
-        }
-    return dash.no_update, {'display': 'none'}
-
-@app.callback(
-    Output('vulnerability-popup-container', 'style', allow_duplicate=True),
-    [Input('close-popup', 'n_clicks')],
-    prevent_initial_call=True
-)
-def close_popup(n_clicks):
-    if n_clicks:
-        return {'display': 'none'}
-    return dash.no_update
-
-# Server'ı başlat
-if 'server' not in globals():
-    server = app.server
-
-if __name__ == '__main__':
-    serve(server, host='127.0.0.1', port=8080)
