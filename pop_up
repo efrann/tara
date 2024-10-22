@@ -646,7 +646,7 @@ def create_detailed_analysis_layout():
                 {"name": "Tarama Adı", "id": "scan_name"},
                 {"name": "Host IP", "id": "host_ip"},
                 {"name": "Host FQDN", "id": "host_fqdn"},
-                {"name": "Zafiyet Adı", "id": "vulnerability_name"},
+                {"name": "Zafiyet Adı", "id": "vulnerability_name", "presentation": "markdown"},
                 {"name": "Önem Derecesi", "id": "severity_text"},
                 {"name": "Plugin Ailesi", "id": "plugin_family"},
                 {"name": "Port", "id": "port"},
@@ -702,7 +702,9 @@ def create_detailed_analysis_layout():
                 },
                 {
                     'if': {'column_id': 'vulnerability_name'},
-                    'cursor': 'pointer'
+                    'cursor': 'pointer',
+                    'textDecoration': 'underline',
+                    'color': '#3498db'
                 }
             ],
             sort_action="native",
@@ -1257,19 +1259,6 @@ if 'server' not in globals():
 
 if __name__ == '__main__':
     serve(server, host='127.0.0.1', port=8080)
-def show_vulnerability_details(active_cell, table_data):
-    if active_cell and active_cell['column_id'] == 'vulnerability_name':
-        row = table_data[active_cell['row']]
-        
-        severity_colors = {
-            'Kritik': '#e74c3c',
-            'Yüksek': '#e67e22',
-            'Orta': '#f1c40f',
-            'Düşük': '#2ecc71',
-            'Bilgi': '#3498db'
-        }
-        
-        severity_color = severity_colors.get(row['severity_text'], '#95a5a6')
         
         popup_content = html.Div([
             html.Button("×", id="close-popup", style={
