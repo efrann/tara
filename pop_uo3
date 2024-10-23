@@ -1228,26 +1228,26 @@ def show_vulnerability_details(active_cell, table_data):
                 html.H3(row['vulnerability_name'], className="popup-title"),
                 html.Div([
                     html.Div([
-                        html.Span("CVSS3 Skoru: ", className="label"),
+                        html.Span("CVSS3 Skoru", className="label"),
                         html.Span(cvss3_base_score, className="cvss-score", style={'backgroundColor': cvss_color})
                     ], className="info-item"),
                     html.Div([
-                        html.Span("CVSS3 Vektör: ", className="label"),
-                        html.Span(cvss3_vector)
+                        html.Span("CVSS3 Vektör", className="label"),
+                        html.Span(cvss3_vector, className="info-value")
                     ], className="info-item"),
                     html.Div([
-                        html.Span("Referanslar: ", className="label"),
-                        html.Span(ref)
+                        html.Span("Yayın Tarihi", className="label"),
+                        html.Span(pub_date, className="info-value")
                     ], className="info-item"),
                     html.Div([
-                        html.Span("Yayın Tarihi: ", className="label"),
-                        html.Span(pub_date)
-                    ], className="info-item"),
-                    html.Div([
-                        html.Span("Güncelleme Tarihi: ", className="label"),
-                        html.Span(mod_date)
+                        html.Span("Güncelleme Tarihi", className="label"),
+                        html.Span(mod_date, className="info-value")
                     ], className="info-item"),
                 ], className="info-container"),
+                html.Div([
+                    html.Span("Referanslar", className="label"),
+                    html.Div(ref, className="references")
+                ], className="info-item full-width"),
                 dbc.Tabs([
                     dbc.Tab(label="Açıklama", children=[
                         dcc.Markdown(description, className="tab-content")
