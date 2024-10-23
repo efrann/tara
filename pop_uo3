@@ -1189,107 +1189,6 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     
     return f'/detailed-analysis?{urlencode(params)}'
 
-def create_vulnerability_popup(row):
-    cvss3_base_score = row.get('cvss3_base_score', 'N/A')
-    cvss_color = get_cvss_color(cvss3_base_score)
-
-    popup_content = html.Div([
-        # Header
-        html.Div([
-            html.Button("×", id="close-popup", className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl"),
-            html.Div([
-                html.I(className="fas fa-exclamation-triangle text-orange-500 text-2xl mr-2"),
-                html.H2(row['vulnerability_name'], className="text-xl font-bold text-white")
-            ], className="flex items-center")
-        ], className="relative p-4 border-b border-gray-700 bg-gray-800"),
-
-        # CVSS Score Banner
-        html.Div([
-            html.Div([
-                html.Div([
-                    html.Span(cvss3_base_score, className=f"text-2xl font-bold text-white p-2 rounded {cvss_color}"),
-                    html.Div([
-                        html.P("CVSS3 Score", className="text-sm text-gray-400"),
-                        html.P(row.get('cvss3_vector', 'N/A'), className="text-xs text-white font-mono mt-1")
-                    ], className="ml-3")
-                ], className="flex items-center"),
-                html.Div([
-                    html.Div([
-                        html.I(className="fas fa-calendar-alt text-gray-400 mr-2"),
-                        html.Span(f"Published: {row.get('pub_date', 'N/A')}", className="text-sm text-gray-400")
-                    ], className="flex items-center mr-4"),
-                    html.Div([
-                        html.I(className="fas fa-sync text-gray-400 mr-2"),
-                        html.Span(f"Modified: {row.get('mod_date', 'N/A')}", className="text-sm text-gray-400")
-                    ], className="flex items-center")
-                ], className="flex")
-            ], className="flex justify-between items-center")
-        ], className="bg-gray-800 p-4"),
-
-        # Navigation Tabs
-        dbc.Tabs([
-            dbc.Tab(label="Description", tab_id="description"),
-            dbc.Tab(label="Solution", tab_id="solution"),
-            dbc.Tab(label="References", tab_id="references"),
-        ], id="vulnerability-tabs", active_tab="description", className="mt-4"),
-
-        # Content Area
-        html.Div([
-            html.Div([
-                html.Div([
-                    html.I(className="fas fa-exclamation-triangle text-orange-500 mr-2"),
-                    html.H3("Vulnerability Description", className="font-medium text-orange-500")
-                ], className="flex items-center mb-3"),
-                html.P(row.get('description', 'No description available.'), className="text-gray-300 leading-relaxed")
-            ], id="description-content", className="space-y-4"),
-            html.Div([
-                html.Div([
-                    html.I(className="fas fa-shield-alt text-green-500 mr-2"),
-                    html.H3("Recommended Solution", className="font-medium text-green-500")
-                ], className="flex items-center mb-3"),
-                html.P(row.get('solution', 'No solution available.'), className="text-gray-300 leading-relaxed")
-            ], id="solution-content", className="space-y-4 hidden"),
-            html.Div([
-                html.Div([
-                    html.I(className="fas fa-link text-purple-500 mr-2"),
-                    html.H3("Related References", className="font-medium text-purple-500")
-                ], className="flex items-center mb-3"),
-                html.Div([
-                    html.Div([
-                        html.I(className="fas fa-arrow-right text-purple-500 mr-2"),
-                        html.Span(ref.strip(), className="text-gray-300 hover:text-white cursor-pointer")
-                    ], className="flex items-center bg-gray-800 bg-opacity-50 p-2 rounded")
-                    for ref in row.get('ref', 'No references available.').split(',')
-                ], className="space-y-2")
-            ], id="references-content", className="space-y-4 hidden")
-        ], className="p-4 bg-gray-900"),
-
-        # Footer
-        html.Div([
-            html.Div([
-                dbc.Button("Close", id="close-vulnerability-popup", color="secondary", className="mr-2"),
-                dbc.Button("Take Action", color="primary", className="flex items-center")
-            ], className="flex justify-end")
-        ], className="border-t border-gray-700 p-4 bg-gray-800 bg-opacity-50")
-    ], className="w-full max-w-4xl bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-2xl overflow-hidden")
-
-    return popup_content
-
-def get_cvss_color(score):
-    try:
-        score = float(score)
-        if score >= 9.0:
-            return "bg-red-500"
-        elif score >= 7.0:
-            return "bg-orange-500"
-        elif score >= 4.0:
-            return "bg-yellow-500"
-        else:
-            return "bg-green-500"
-    except ValueError:
-        return "bg-gray-500"
-
-# Callback'i güncelle
 @app.callback(
     [Output('vulnerability-popup', 'children'),
      Output('vulnerability-popup-container', 'style')],
@@ -1299,26 +1198,246 @@ def get_cvss_color(score):
 def show_vulnerability_details(active_cell, table_data):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
-        popup_content = create_vulnerability_popup(row)
-        return popup_content, {'display': 'flex'}
+        
+        # CVSS skoru için renk belirleme
+        def get_cvss_color(score):
+            try:
+                score = float(score)
+                if score >= 9.0: return "#e74c3c"  # Kritik - Kırmızı
+                if score >= 7.0: return "#e67e22"  # Yüksek - Turuncu
+                if score >= 4.0: return "#f1c40f"  # Orta - Sarı
+                return "#2ecc71"  # Düşük - Yeşil
+            except:
+                return "#95a5a6"  # Geçersiz skor - Gri
+
+        # Severity için ikon ve renk belirleme
+        severity_info = {
+            'Kritik': {'icon': '⚠️', 'color': '#e74c3c'},
+            'Yüksek': {'icon': '⚡', 'color': '#e67e22'},
+            'Orta': {'icon': '⚪', 'color': '#f1c40f'},
+            'Düşük': {'icon': '✓', 'color': '#2ecc71'},
+            'Bilgi': {'icon': 'ℹ️', 'color': '#3498db'}
+        }
+        
+        severity_style = severity_info.get(row['severity_text'], {'icon': '❔', 'color': '#95a5a6'})
+        cvss_color = get_cvss_color(row.get('cvss3_base_score', 0))
+
+        popup_content = html.Div([
+            # Close Button
+            html.Button(
+                "×",
+                id="close-popup",
+                style={
+                    'position': 'absolute',
+                    'right': '20px',
+                    'top': '20px',
+                    'border': 'none',
+                    'background': 'none',
+                    'fontSize': '24px',
+                    'color': '#ffffff',
+                    'cursor': 'pointer',
+                    'padding': '5px 10px',
+                    'borderRadius': '5px',
+                    'transition': 'background-color 0.3s',
+                    'zIndex': '1',
+                },
+                className='hover-bg-dark'
+            ),
+
+            # Header Section
+            html.Div([
+                html.Div([
+                    html.Span(severity_style['icon'], 
+                             style={'fontSize': '24px', 'marginRight': '10px'}),
+                    html.H2(
+                        row['vulnerability_name'].replace(' ℹ️', ''),
+                        style={
+                            'color': 'white',
+                            'margin': '0',
+                            'fontSize': '24px',
+                            'fontWeight': '600'
+                        }
+                    ),
+                ], style={'display': 'flex', 'alignItems': 'center'}),
+                
+                # CVSS Score Badge
+                html.Div([
+                    html.Div([
+                        html.Span("CVSS Score", 
+                                 style={'fontSize': '12px', 'opacity': '0.8'}),
+                        html.Div(
+                            str(row.get('cvss3_base_score', 'N/A')),
+                            style={
+                                'fontSize': '24px',
+                                'fontWeight': 'bold',
+                                'color': 'white'
+                            }
+                        )
+                    ], style={
+                        'backgroundColor': cvss_color,
+                        'padding': '10px 15px',
+                        'borderRadius': '8px',
+                        'textAlign': 'center',
+                        'color': 'white'
+                    })
+                ])
+            ], style={
+                'display': 'flex',
+                'justifyContent': 'space-between',
+                'alignItems': 'center',
+                'padding': '20px',
+                'background': 'linear-gradient(to right, #2c3e50, #3498db)',
+                'borderTopLeftRadius': '10px',
+                'borderTopRightRadius': '10px',
+            }),
+
+            # Content Container
+            html.Div([
+                # Info Grid
+                html.Div([
+                    # Vector String
+                    html.Div([
+                        html.Label("CVSS3 Vector", 
+                                 style={'color': '#3498db', 'fontWeight': '600', 'display': 'block', 'marginBottom': '5px'}),
+                        html.Code(
+                            row.get('cvss3_vector', 'N/A'),
+                            style={
+                                'display': 'block',
+                                'padding': '8px 12px',
+                                'backgroundColor': '#2c3e50',
+                                'borderRadius': '6px',
+                                'color': '#ecf0f1',
+                                'fontFamily': 'monospace',
+                                'fontSize': '14px',
+                                'overflowX': 'auto'
+                            }
+                        )
+                    ], style={'marginBottom': '20px'}),
+
+                    # Dates and References
+                    html.Div([
+                        html.Div([
+                            html.Label("Published", style={'color': '#3498db', 'fontWeight': '600'}),
+                            html.Div(row.get('pub_date', 'N/A'), style={'color': '#ecf0f1'})
+                        ], style={'flex': '1'}),
+                        html.Div([
+                            html.Label("Modified", style={'color': '#3498db', 'fontWeight': '600'}),
+                            html.Div(row.get('mod_date', 'N/A'), style={'color': '#ecf0f1'})
+                        ], style={'flex': '1'}),
+                    ], style={'display': 'flex', 'gap': '20px', 'marginBottom': '20px'}),
+
+                    # References
+                    html.Div([
+                        html.Label("References", style={'color': '#3498db', 'fontWeight': '600', 'display': 'block', 'marginBottom': '10px'}),
+                        html.Div([
+                            html.A(
+                                ref.strip(),
+                                href="#",
+                                style={
+                                    'display': 'inline-block',
+                                    'padding': '5px 10px',
+                                    'backgroundColor': '#34495e',
+                                    'color': '#3498db',
+                                    'borderRadius': '4px',
+                                    'margin': '0 5px 5px 0',
+                                    'fontSize': '14px',
+                                    'textDecoration': 'none',
+                                    'transition': 'background-color 0.3s'
+                                }
+                            ) for ref in row.get('ref', 'N/A').split(',')
+                        ])
+                    ]),
+                ], style={'marginBottom': '30px'}),
+
+                # Tabs
+                dbc.Tabs([
+                    dbc.Tab([
+                        html.Div(
+                            dcc.Markdown(row.get('description', 'No description available.')),
+                            style={
+                                'backgroundColor': '#2c3e50',
+                                'padding': '20px',
+                                'borderRadius': '8px',
+                                'color': '#ecf0f1',
+                                'marginTop': '15px'
+                            }
+                        )
+                    ], label="Description", tab_style={'color': '#ecf0f1'}, label_style={'color': '#ecf0f1'}),
+                    
+                    dbc.Tab([
+                        html.Div(
+                            dcc.Markdown(row.get('solution', 'No solution available.')),
+                            style={
+                                'backgroundColor': '#2c3e50',
+                                'padding': '20px',
+                                'borderRadius': '8px',
+                                'color': '#ecf0f1',
+                                'marginTop': '15px'
+                            }
+                        )
+                    ], label="Solution", tab_style={'color': '#ecf0f1'}, label_style={'color': '#ecf0f1'}),
+                ], style={
+                    'marginTop': '20px',
+                }),
+            ], style={
+                'padding': '20px',
+                'backgroundColor': '#34495e',
+            }),
+
+        ], style={
+            'position': 'relative',
+            'width': '90%',
+            'maxWidth': '900px',
+            'backgroundColor': '#34495e',
+            'borderRadius': '10px',
+            'boxShadow': '0 25px 50px -12px rgba(0,0,0,0.5)',
+            'overflow': 'hidden'
+        })
+
+        # CSS stil tanımlamaları
+        custom_style = html.Style("""
+            .hover-bg-dark:hover {
+                background-color: rgba(255,255,255,0.1) !important;
+            }
+            
+            /* Tab stilleri */
+            .nav-tabs {
+                border-bottom: 1px solid #2c3e50 !important;
+            }
+            .nav-tabs .nav-link {
+                color: #ecf0f1 !important;
+                border: none !important;
+                padding: 10px 20px !important;
+                margin-right: 5px !important;
+                border-radius: 5px 5px 0 0 !important;
+            }
+            .nav-tabs .nav-link.active {
+                background-color: #2c3e50 !important;
+                color: #3498db !important;
+                border-bottom: 2px solid #3498db !important;
+            }
+            .nav-tabs .nav-link:hover:not(.active) {
+                background-color: rgba(44, 62, 80, 0.5) !important;
+            }
+        """)
+
+        return [html.Div([custom_style, popup_content]), {
+            'display': 'flex',
+            'justifyContent': 'center',
+            'alignItems': 'center',
+            'position': 'fixed',
+            'top': 0,
+            'left': 0,
+            'right': 0,
+            'bottom': 0,
+            'backgroundColor': 'rgba(0,0,0,0.8)',
+            'zIndex': 1000,
+            'backdropFilter': 'blur(5px)'
+        }]
+
     return dash.no_update, {'display': 'none'}
 
-# Yeni callback ekle
-@app.callback(
-    [Output('description-content', 'className'),
-     Output('solution-content', 'className'),
-     Output('references-content', 'className')],
-    [Input('vulnerability-tabs', 'active_tab')]
-)
-def update_tab_content(active_tab):
-    tab_contents = {
-        'description': 'space-y-4',
-        'solution': 'space-y-4 hidden',
-        'references': 'space-y-4 hidden'
-    }
-    tab_contents[active_tab] = tab_contents[active_tab].replace(' hidden', '')
-    return tab_contents['description'], tab_contents['solution'], tab_contents['references']
-
+# Popup kapatma callback'i
 @app.callback(
     Output('vulnerability-popup-container', 'style', allow_duplicate=True),
     [Input('close-popup', 'n_clicks')],
