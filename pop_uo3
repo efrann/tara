@@ -1189,6 +1189,107 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     
     return f'/detailed-analysis?{urlencode(params)}'
 
+def create_vulnerability_popup(row):
+    cvss3_base_score = row.get('cvss3_base_score', 'N/A')
+    cvss_color = get_cvss_color(cvss3_base_score)
+
+    popup_content = html.Div([
+        # Header
+        html.Div([
+            html.Button("×", id="close-popup", className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl"),
+            html.Div([
+                html.I(className="fas fa-exclamation-triangle text-orange-500 text-2xl mr-2"),
+                html.H2(row['vulnerability_name'], className="text-xl font-bold text-white")
+            ], className="flex items-center")
+        ], className="relative p-4 border-b border-gray-700 bg-gray-800"),
+
+        # CVSS Score Banner
+        html.Div([
+            html.Div([
+                html.Div([
+                    html.Span(cvss3_base_score, className=f"text-2xl font-bold text-white p-2 rounded {cvss_color}"),
+                    html.Div([
+                        html.P("CVSS3 Score", className="text-sm text-gray-400"),
+                        html.P(row.get('cvss3_vector', 'N/A'), className="text-xs text-white font-mono mt-1")
+                    ], className="ml-3")
+                ], className="flex items-center"),
+                html.Div([
+                    html.Div([
+                        html.I(className="fas fa-calendar-alt text-gray-400 mr-2"),
+                        html.Span(f"Published: {row.get('pub_date', 'N/A')}", className="text-sm text-gray-400")
+                    ], className="flex items-center mr-4"),
+                    html.Div([
+                        html.I(className="fas fa-sync text-gray-400 mr-2"),
+                        html.Span(f"Modified: {row.get('mod_date', 'N/A')}", className="text-sm text-gray-400")
+                    ], className="flex items-center")
+                ], className="flex")
+            ], className="flex justify-between items-center")
+        ], className="bg-gray-800 p-4"),
+
+        # Navigation Tabs
+        dbc.Tabs([
+            dbc.Tab(label="Description", tab_id="description"),
+            dbc.Tab(label="Solution", tab_id="solution"),
+            dbc.Tab(label="References", tab_id="references"),
+        ], id="vulnerability-tabs", active_tab="description", className="mt-4"),
+
+        # Content Area
+        html.Div([
+            html.Div([
+                html.Div([
+                    html.I(className="fas fa-exclamation-triangle text-orange-500 mr-2"),
+                    html.H3("Vulnerability Description", className="font-medium text-orange-500")
+                ], className="flex items-center mb-3"),
+                html.P(row.get('description', 'No description available.'), className="text-gray-300 leading-relaxed")
+            ], id="description-content", className="space-y-4"),
+            html.Div([
+                html.Div([
+                    html.I(className="fas fa-shield-alt text-green-500 mr-2"),
+                    html.H3("Recommended Solution", className="font-medium text-green-500")
+                ], className="flex items-center mb-3"),
+                html.P(row.get('solution', 'No solution available.'), className="text-gray-300 leading-relaxed")
+            ], id="solution-content", className="space-y-4 hidden"),
+            html.Div([
+                html.Div([
+                    html.I(className="fas fa-link text-purple-500 mr-2"),
+                    html.H3("Related References", className="font-medium text-purple-500")
+                ], className="flex items-center mb-3"),
+                html.Div([
+                    html.Div([
+                        html.I(className="fas fa-arrow-right text-purple-500 mr-2"),
+                        html.Span(ref.strip(), className="text-gray-300 hover:text-white cursor-pointer")
+                    ], className="flex items-center bg-gray-800 bg-opacity-50 p-2 rounded")
+                    for ref in row.get('ref', 'No references available.').split(',')
+                ], className="space-y-2")
+            ], id="references-content", className="space-y-4 hidden")
+        ], className="p-4 bg-gray-900"),
+
+        # Footer
+        html.Div([
+            html.Div([
+                dbc.Button("Close", id="close-vulnerability-popup", color="secondary", className="mr-2"),
+                dbc.Button("Take Action", color="primary", className="flex items-center")
+            ], className="flex justify-end")
+        ], className="border-t border-gray-700 p-4 bg-gray-800 bg-opacity-50")
+    ], className="w-full max-w-4xl bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-2xl overflow-hidden")
+
+    return popup_content
+
+def get_cvss_color(score):
+    try:
+        score = float(score)
+        if score >= 9.0:
+            return "bg-red-500"
+        elif score >= 7.0:
+            return "bg-orange-500"
+        elif score >= 4.0:
+            return "bg-yellow-500"
+        else:
+            return "bg-green-500"
+    except ValueError:
+        return "bg-gray-500"
+
+# Callback'i güncelle
 @app.callback(
     [Output('vulnerability-popup', 'children'),
      Output('vulnerability-popup-container', 'style')],
@@ -1198,124 +1299,25 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
 def show_vulnerability_details(active_cell, table_data):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
-        
-        # Veri kontrolü ve varsayılan değerler
-        description = row.get('description', 'Açıklama mevcut değil.')
-        solution = row.get('solution', 'Çözüm önerisi mevcut değil.')
-        cvss3_vector = row.get('cvss3_vector', 'CVSS3 vektörü mevcut değil.')
-        cvss3_base_score = row.get('cvss3_base_score', 'N/A')
-        ref = row.get('ref', 'Referans mevcut değil.')
-        pub_date = row.get('pub_date', 'Yayın tarihi belirtilmemiş.')
-        mod_date = row.get('mod_date', 'Güncelleme tarihi belirtilmemiş.')
-
-        # CVSS skoru için renk belirleme
-        cvss_color = "#2ecc71"  # Varsayılan yeşil (düşük risk)
-        if cvss3_base_score != 'N/A' and cvss3_base_score is not None:
-            try:
-                score = float(cvss3_base_score)
-                if score >= 9.0:
-                    cvss_color = "#e74c3c"  # Kırmızı (kritik)
-                elif score >= 7.0:
-                    cvss_color = "#e67e22"  # Turuncu (yüksek)
-                elif score >= 4.0:
-                    cvss_color = "#f1c40f"  # Sarı (orta)
-            except ValueError:
-                cvss3_base_score = 'N/A'
-
-        popup_content = html.Div([
-            html.Button("×", id="close-popup", style={
-                'position': 'absolute',
-                'top': '15px',
-                'right': '20px',
-                'fontSize': '28px',
-                'border': 'none',
-                'background': 'none',
-                'cursor': 'pointer',
-                'color': '#34495e',
-                'transition': 'color 0.3s'
-            }),
-            html.Div([
-                html.H3(row['vulnerability_name'], style={
-                    'color': '#2c3e50',
-                    'marginBottom': '20px',
-                    'fontSize': '24px',
-                    'fontWeight': 'bold'
-                }),
-                html.Div([
-                    html.Span("CVSS3 Skoru: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-                    html.Span(cvss3_base_score, style={
-                        'backgroundColor': cvss_color,
-                        'color': 'white',
-                        'padding': '5px 10px',
-                        'borderRadius': '20px',
-                        'fontWeight': 'bold'
-                    })
-                ], style={'marginBottom': '15px'}),
-                html.Div([
-                    html.Span("CVSS3 Vektör: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-                    html.Span(cvss3_vector, style={'backgroundColor': '#f0f0f0', 'padding': '5px 10px', 'borderRadius': '5px'})
-                ], style={'marginBottom': '15px'}),
-                html.Div([
-                    html.Span("Referanslar: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-                    html.Span(ref, style={'wordBreak': 'break-all'})
-                ], style={'marginBottom': '15px'}),
-                html.Div([
-                    html.Span("Yayın Tarihi: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-                    html.Span(pub_date)
-                ], style={'marginBottom': '15px'}),
-                html.Div([
-                    html.Span("Güncelleme Tarihi: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-                    html.Span(mod_date)
-                ], style={'marginBottom': '20px'}),
-            ], style={'backgroundColor': '#f8f9fa', 'padding': '20px', 'borderRadius': '10px', 'marginBottom': '20px'}),
-            dbc.Tabs([
-                dbc.Tab(label="Açıklama", children=[
-                    dcc.Markdown(description, style={
-                        "whiteSpace": "pre-wrap",
-                        'backgroundColor': '#ffffff',
-                        'padding': '20px',
-                        'borderRadius': '10px',
-                        'boxShadow': '0 2px 4px rgba(0,0,0,0.1)',
-                        'marginTop': '15px'
-                    })
-                ]),
-                dbc.Tab(label="Çözüm", children=[
-                    dcc.Markdown(solution, style={
-                        "whiteSpace": "pre-wrap",
-                        'backgroundColor': '#ffffff',
-                        'padding': '20px',
-                        'borderRadius': '10px',
-                        'boxShadow': '0 2px 4px rgba(0,0,0,0.1)',
-                        'marginTop': '15px'
-                    })
-                ]),
-            ], style={'marginTop': '20px'}),
-        ], style={
-            'position': 'relative',
-            'padding': '30px',
-            'backgroundColor': '#ffffff',
-            'borderRadius': '15px',
-            'boxShadow': '0 10px 30px rgba(0, 0, 0, 0.1)',
-            'maxWidth': '800px',
-            'width': '100%',
-            'maxHeight': '80vh',
-            'overflowY': 'auto'
-        })
-
-        return popup_content, {
-            'display': 'flex',
-            'justifyContent': 'center',
-            'alignItems': 'center',
-            'position': 'fixed',
-            'top': 0,
-            'left': 0,
-            'right': 0,
-            'bottom': 0,
-            'backgroundColor': 'rgba(0,0,0,0.5)',
-            'zIndex': 1000,
-            'backdropFilter': 'blur(5px)'
-        }
+        popup_content = create_vulnerability_popup(row)
+        return popup_content, {'display': 'flex'}
     return dash.no_update, {'display': 'none'}
+
+# Yeni callback ekle
+@app.callback(
+    [Output('description-content', 'className'),
+     Output('solution-content', 'className'),
+     Output('references-content', 'className')],
+    [Input('vulnerability-tabs', 'active_tab')]
+)
+def update_tab_content(active_tab):
+    tab_contents = {
+        'description': 'space-y-4',
+        'solution': 'space-y-4 hidden',
+        'references': 'space-y-4 hidden'
+    }
+    tab_contents[active_tab] = tab_contents[active_tab].replace(' hidden', '')
+    return tab_contents['description'], tab_contents['solution'], tab_contents['references']
 
 @app.callback(
     Output('vulnerability-popup-container', 'style', allow_duplicate=True),
