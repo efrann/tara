@@ -1,9 +1,4 @@
 .popup-content {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     background-color: #ffffff;
     width: 80%;
     max-width: 900px;
@@ -12,12 +7,11 @@
     border-radius: 20px;
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
     animation: zoomIn 0.3s ease-out;
-    z-index: 1000;
 }
 
 @keyframes zoomIn {
-    from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
-    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 .popup-header {
@@ -171,16 +165,4 @@
 
 .popup-content::-webkit-scrollbar-thumb:hover {
     background: #2980b9;
-}
-
-/* Arka plan karartma için yeni bir sınıf */
-.popup-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    display: none;
 }
