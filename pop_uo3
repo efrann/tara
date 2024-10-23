@@ -1254,8 +1254,10 @@ def show_vulnerability_details(active_cell, table_data):
                 ], style={'marginBottom': '20px'}),
             ], style={'fontSize': '14px', 'color': '#000000'}),
             html.Div([
-                dbc.Button("Açıklama", id="description-button", color="dark", className="mr-2", style={'width': '48%'}),
-                dbc.Button("Solution", id="solution-button", outline=True, color="dark", style={'width': '48%'}),
+                dbc.Button("Açıklama", id="description-button", color="dark", className="mr-2", 
+                           style={'width': '48%', 'backgroundColor': '#333', 'borderColor': '#333'}),
+                dbc.Button("Solution", id="solution-button", outline=True, color="dark", 
+                           style={'width': '48%', 'borderColor': '#333', 'color': '#333'}),
             ], style={'display': 'flex', 'justifyContent': 'space-between'}),
             html.Div(id="popup-content", style={'marginTop': '20px'})
         ], style={
@@ -1263,7 +1265,6 @@ def show_vulnerability_details(active_cell, table_data):
             'padding': '20px',
             'backgroundColor': '#c1f0c1',
             'borderRadius': '10px',
-            'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)',
             'maxWidth': '400px',
             'width': '90%',
             'maxHeight': '80vh',
