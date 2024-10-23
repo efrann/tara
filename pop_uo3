@@ -1190,8 +1190,7 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     return f'/detailed-analysis?{urlencode(params)}'
 
 @app.callback(
-    [Output('vulnerability-popup', 'children'),
-     Output('vulnerability-popup-container', 'style')],
+    Output('vulnerability-popup-container', 'children'),
     [Input('vulnerability-table', 'active_cell')],
     [State('vulnerability-table', 'data')]
 )
@@ -1222,57 +1221,68 @@ def show_vulnerability_details(active_cell, table_data):
 
         popup_content = html.Div([
             html.Div([
-                html.H3(row['vulnerability_name'], className="popup-title"),
-                html.Button("×", id="close-popup", className="close-button"),
-            ], className="popup-header"),
-            html.Div([
+                html.Div([
+                    html.H3(row['vulnerability_name'], className="popup-title"),
+                    html.Button("×", id="close-popup", className="close-button"),
+                ], className="popup-header"),
                 html.Div([
                     html.Div([
-                        html.Span("CVSS3 Skoru", className="label"),
-                        html.Span(cvss3_base_score, className="cvss-score", style={'backgroundColor': cvss_color})
-                    ], className="info-item"),
+                        html.Div([
+                            html.Span("CVSS3 Skoru", className="label"),
+                            html.Span(cvss3_base_score, className="cvss-score", style={'backgroundColor': cvss_color})
+                        ], className="info-item"),
+                        html.Div([
+                            html.Span("CVSS3 Vektör", className="label"),
+                            html.Span(cvss3_vector, className="info-value")
+                        ], className="info-item"),
+                        html.Div([
+                            html.Span("Yayın Tarihi", className="label"),
+                            html.Span(pub_date, className="info-value")
+                        ], className="info-item"),
+                        html.Div([
+                            html.Span("Güncelleme Tarihi", className="label"),
+                            html.Span(mod_date, className="info-value")
+                        ], className="info-item"),
+                        html.Div([
+                            html.Span("Referanslar", className="label"),
+                            html.Div(ref, className="references")
+                        ], className="info-item"),
+                    ], className="popup-info"),
                     html.Div([
-                        html.Span("CVSS3 Vektör", className="label"),
-                        html.Span(cvss3_vector, className="info-value")
-                    ], className="info-item"),
-                    html.Div([
-                        html.Span("Yayın Tarihi", className="label"),
-                        html.Span(pub_date, className="info-value")
-                    ], className="info-item"),
-                    html.Div([
-                        html.Span("Güncelleme Tarihi", className="label"),
-                        html.Span(mod_date, className="info-value")
-                    ], className="info-item"),
-                    html.Div([
-                        html.Span("Referanslar", className="label"),
-                        html.Div(ref, className="references")
-                    ], className="info-item"),
-                ], className="popup-info"),
-                html.Div([
-                    dbc.Tabs([
-                        dbc.Tab(label="Açıklama", children=[
-                            dcc.Markdown(description, className="tab-content")
-                        ]),
-                        dbc.Tab(label="Çözüm", children=[
-                            dcc.Markdown(solution, className="tab-content")
-                        ]),
-                    ], className="custom-tabs"),
-                ], className="popup-tabs")
-            ], className="popup-body")
-        ], className="popup-content")
+                        dbc.Tabs([
+                            dbc.Tab(label="Açıklama", children=[
+                                dcc.Markdown(description, className="tab-content")
+                            ]),
+                            dbc.Tab(label="Çözüm", children=[
+                                dcc.Markdown(solution, className="tab-content")
+                            ]),
+                        ], className="custom-tabs"),
+                    ], className="popup-tabs")
+                ], className="popup-body")
+            ], className="popup-content")
+        ], className="popup-overlay")
 
-        return popup_content, {'display': 'flex'}
-    return dash.no_update, {'display': 'none'}
+        return popup_content
+    return None
 
 @app.callback(
-    Output('vulnerability-popup-container', 'style', allow_duplicate=True),
-    [Input('close-popup', 'n_clicks')],
-    prevent_initial_call=True
+    Output('vulnerability-popup-container', 'style'),
+    [Input('vulnerability-table', 'active_cell'),
+     Input('close-popup', 'n_clicks')]
 )
-def close_popup(n_clicks):
-    if n_clicks:
+def toggle_popup_visibility(active_cell, n_clicks):
+    ctx = dash.callback_context
+    if not ctx.triggered:
         return {'display': 'none'}
-    return dash.no_update
+    
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if trigger_id == 'vulnerability-table' and active_cell and active_cell['column_id'] == 'vulnerability_name':
+        return {'display': 'block'}
+    elif trigger_id == 'close-popup':
+        return {'display': 'none'}
+    
+    return {'display': 'none'}
 
 # Server'ı başlat
 if 'server' not in globals():
