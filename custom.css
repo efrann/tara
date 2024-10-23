@@ -7,6 +7,7 @@
     border-radius: 20px;
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
     animation: zoomIn 0.3s ease-out;
+    transform: translateY(-50%);
 }
 
 @keyframes zoomIn {
@@ -133,6 +134,7 @@
     .popup-content {
         width: 95%;
         max-height: 95vh;
+        transform: translateY(-25%);  // Mobil cihazlarda daha az yukarı taşı
     }
     
     .info-container {
