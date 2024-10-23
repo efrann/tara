@@ -1223,9 +1223,11 @@ def show_vulnerability_details(active_cell, table_data):
                 cvss3_base_score = 'N/A'
 
         popup_content = html.Div([
-            html.Button("×", id="close-popup", className="close-button"),
             html.Div([
                 html.H3(row['vulnerability_name'], className="popup-title"),
+                html.Button("×", id="close-popup", className="close-button"),
+            ], className="popup-header"),
+            html.Div([
                 html.Div([
                     html.Div([
                         html.Span("CVSS3 Skoru", className="label"),
@@ -1248,6 +1250,8 @@ def show_vulnerability_details(active_cell, table_data):
                     html.Span("Referanslar", className="label"),
                     html.Div(ref, className="references")
                 ], className="info-item full-width"),
+            ], className="popup-info"),
+            html.Div([
                 dbc.Tabs([
                     dbc.Tab(label="Açıklama", children=[
                         dcc.Markdown(description, className="tab-content")
@@ -1256,7 +1260,7 @@ def show_vulnerability_details(active_cell, table_data):
                         dcc.Markdown(solution, className="tab-content")
                     ]),
                 ], className="custom-tabs"),
-            ], className="popup-inner")
+            ], className="popup-tabs")
         ], className="popup-content")
 
         return popup_content, {'display': 'flex'}
