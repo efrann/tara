@@ -1193,7 +1193,7 @@ def show_vulnerability_details(active_cell, table_data):
                 'border': 'none',
                 'background': 'none',
                 'cursor': 'pointer',
-                'color': '#000000'
+                'color': '#000000'a
             }),
             html.H3(vulnerability_name, style={
                 'color': '#000000',
@@ -1237,20 +1237,22 @@ def show_vulnerability_details(active_cell, table_data):
             ], style={'display': 'flex', 'justifyContent': 'space-between'}),
             html.Div(id="popup-content", style={'marginTop': '20px'})
         ], style={
-            'position': 'relative',
+            'position': 'fixed',
+            'top': '50%',
+            'left': '50%',
+            'transform': 'translate(-50%, -50%)',
             'padding': '20px',
             'backgroundColor': '#c1f0c1',
             'borderRadius': '10px',
             'maxWidth': '400px',
             'width': '90%',
             'maxHeight': '80vh',
-            'overflowY': 'auto'
+            'overflowY': 'auto',
+            'zIndex': 1001
         })
 
         return popup_content, {
-            'display': 'flex',
-            'justifyContent': 'center',
-            'alignItems': 'center',
+            'display': 'block',
             'position': 'fixed',
             'top': 0,
             'left': 0,
