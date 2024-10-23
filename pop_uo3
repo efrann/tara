@@ -1199,7 +1199,7 @@ def show_vulnerability_details(active_cell, table_data):
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
         
-        # Veri kontrolü ve varsayılan değerler
+        vulnerability_name = row.get('vulnerability_name', 'Bilinmeyen Zafiyet').replace(' ℹ️', '')
         description = row.get('description', 'Açıklama mevcut değil.')
         solution = row.get('solution', 'Çözüm önerisi mevcut değil.')
         cvss3_vector = row.get('cvss3_vector', 'CVSS3 vektörü mevcut değil.')
@@ -1207,20 +1207,6 @@ def show_vulnerability_details(active_cell, table_data):
         ref = row.get('ref', 'Referans mevcut değil.')
         pub_date = row.get('pub_date', 'Yayın tarihi belirtilmemiş.')
         mod_date = row.get('mod_date', 'Güncelleme tarihi belirtilmemiş.')
-
-        # CVSS skoru için renk belirleme
-        cvss_color = "#2ecc71"  # Varsayılan yeşil (düşük risk)
-        if cvss3_base_score != 'N/A' and cvss3_base_score is not None:
-            try:
-                score = float(cvss3_base_score)
-                if score >= 9.0:
-                    cvss_color = "#e74c3c"  # Kırmızı (kritik)
-                elif score >= 7.0:
-                    cvss_color = "#e67e22"  # Turuncu (yüksek)
-                elif score >= 4.0:
-                    cvss_color = "#f1c40f"  # Sarı (orta)
-            except ValueError:
-                cvss3_base_score = 'N/A'
 
         popup_content = html.Div([
             html.Button("×", id="close-popup", style={
@@ -1231,47 +1217,51 @@ def show_vulnerability_details(active_cell, table_data):
                 'border': 'none',
                 'background': 'none',
                 'cursor': 'pointer',
-                'color': '#34495e'
+                'color': '#000000'
             }),
+            html.H3(vulnerability_name, style={
+                'color': '#000000',
+                'margin': '0 0 20px 0',
+                'fontSize': '24px',
+                'fontWeight': 'bold'
+            }),
+            html.P("To enable essential and secure site functionality and performance. By clicking a button below, you consent to our vulnerability assessment policy.", 
+                   style={
+                       'color': '#000000',
+                       'fontSize': '14px',
+                       'marginBottom': '20px'
+                   }),
             html.Div([
-                html.Img(src="/assets/cookie_icon.png", style={'width': '50px', 'height': '50px', 'marginRight': '10px'}),
-                html.H3("We use cookies", style={'color': '#2c3e50', 'margin': '0'})
-            ], style={'display': 'flex', 'alignItems': 'center', 'marginBottom': '20px'}),
+                html.Div([
+                    html.Span("CVSS3 Skoru: ", style={'fontWeight': 'bold', 'marginRight': '5px'}),
+                    html.Span(cvss3_base_score)
+                ], style={'marginBottom': '5px'}),
+                html.Div([
+                    html.Span("CVSS3 Vektör: ", style={'fontWeight': 'bold', 'marginRight': '5px'}),
+                    html.Span(cvss3_vector)
+                ], style={'marginBottom': '5px'}),
+                html.Div([
+                    html.Span("Referanslar: ", style={'fontWeight': 'bold', 'marginRight': '5px'}),
+                    html.Span(ref)
+                ], style={'marginBottom': '5px'}),
+                html.Div([
+                    html.Span("Yayın Tarihi: ", style={'fontWeight': 'bold', 'marginRight': '5px'}),
+                    html.Span(pub_date)
+                ], style={'marginBottom': '5px'}),
+                html.Div([
+                    html.Span("Güncelleme Tarihi: ", style={'fontWeight': 'bold', 'marginRight': '5px'}),
+                    html.Span(mod_date)
+                ], style={'marginBottom': '20px'}),
+            ], style={'fontSize': '14px', 'color': '#000000'}),
             html.Div([
-                html.Span("CVSS3 Skoru: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-                html.Span(cvss3_base_score, style={
-                    'backgroundColor': cvss_color,
-                    'color': 'white',
-                    'padding': '5px 10px',
-                    'borderRadius': '5px',
-                    'fontWeight': 'bold'
-                })
-            ], style={'marginBottom': '10px'}),
-            html.Div([
-                html.Span("CVSS3 Vektör: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-                html.Span(cvss3_vector)
-            ], style={'marginBottom': '10px'}),
-            html.Div([
-                html.Span("Referanslar: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-                html.Span(ref)
-            ], style={'marginBottom': '10px'}),
-            html.Div([
-                html.Span("Yayın Tarihi: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-                html.Span(pub_date)
-            ], style={'marginBottom': '10px'}),
-            html.Div([
-                html.Span("Güncelleme Tarihi: ", style={'fontWeight': 'bold', 'marginRight': '10px'}),
-                html.Span(mod_date)
-            ], style={'marginBottom': '20px'}),
-            html.Div([
-                dbc.Button("Açıklama", id="description-button", color="primary", className="mr-2"),
-                dbc.Button("Solution", id="solution-button", color="success"),
+                dbc.Button("Açıklama", id="description-button", color="dark", className="mr-2", style={'width': '48%'}),
+                dbc.Button("Solution", id="solution-button", outline=True, color="dark", style={'width': '48%'}),
             ], style={'display': 'flex', 'justifyContent': 'space-between'}),
             html.Div(id="popup-content", style={'marginTop': '20px'})
         ], style={
             'position': 'relative',
             'padding': '20px',
-            'backgroundColor': '#fff',
+            'backgroundColor': '#c1f0c1',
             'borderRadius': '10px',
             'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)',
             'maxWidth': '400px',
