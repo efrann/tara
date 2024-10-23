@@ -1200,6 +1200,7 @@ def show_vulnerability_details(active_cell, table_data):
         row = table_data[active_cell['row']]
         
         # Veri kontrolü ve varsayılan değerler
+        vulnerability_name = row.get('vulnerability_name', 'Bilinmeyen Zafiyet').replace(' ℹ️', '')
         description = row.get('description', 'Açıklama mevcut değil.')
         solution = row.get('solution', 'Çözüm önerisi mevcut değil.')
         cvss3_vector = row.get('cvss3_vector', 'CVSS3 vektörü mevcut değil.')
@@ -1227,7 +1228,7 @@ def show_vulnerability_details(active_cell, table_data):
         popup_content = html.Div([
             html.Div([
                 html.Span("⚠️", style={'fontSize': '24px', 'marginRight': '10px'}),
-                html.H3("SQL Injection Vulnerability", style={'display': 'inline', 'color': 'white', 'marginBottom': '0'}),
+                html.H3(vulnerability_name, style={'display': 'inline', 'color': 'white', 'marginBottom': '0'}),
                 html.Button("×", id="close-popup", style={
                     'position': 'absolute',
                     'top': '10px',
