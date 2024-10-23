@@ -1277,7 +1277,9 @@ def show_vulnerability_details(active_cell, table_data):
                             'backgroundColor': '#f8f9fa',
                             'padding': '15px',
                             'borderRadius': '5px',
-                            'marginTop': '10px'
+                            'marginTop': '10px',
+                            'maxHeight': '300px',  # Maksimum yükseklik
+                            'overflowY': 'auto'  # Dikey kaydırma çubuğu
                         })
                     ]),
                     dbc.Tab(label="Solution", children=[
@@ -1286,7 +1288,9 @@ def show_vulnerability_details(active_cell, table_data):
                             'backgroundColor': '#f8f9fa',
                             'padding': '15px',
                             'borderRadius': '5px',
-                            'marginTop': '10px'
+                            'marginTop': '10px',
+                            'maxHeight': '300px',  # Maksimum yükseklik
+                            'overflowY': 'auto'  # Dikey kaydırma çubuğu
                         })
                     ]),
                     dbc.Tab(label="References", children=[
@@ -1295,11 +1299,13 @@ def show_vulnerability_details(active_cell, table_data):
                             'backgroundColor': '#f8f9fa',
                             'padding': '15px',
                             'borderRadius': '5px',
-                            'marginTop': '10px'
+                            'marginTop': '10px',
+                            'maxHeight': '300px',  # Maksimum yükseklik
+                            'overflowY': 'auto'  # Dikey kaydırma çubuğu
                         })
                     ]),
                 ]),
-            ], style={'padding': '20px'}),
+            ], style={'padding': '20px', 'maxHeight': 'calc(80vh - 200px)', 'overflowY': 'auto'}),  # İçerik bölümü için maksimum yükseklik ve kaydırma
             html.Div([
                 dbc.Button("Close", id="close-button", color="secondary", className="mr-1"),
                 dbc.Button("Take Action", id="take-action-button", color="primary"),
@@ -1310,8 +1316,9 @@ def show_vulnerability_details(active_cell, table_data):
             'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)',
             'maxWidth': '800px',
             'width': '90%',
-            'maxHeight': '80vh',
-            'overflowY': 'auto'
+            'maxHeight': '80vh',  # Popup'ın maksimum yüksekliği
+            'display': 'flex',
+            'flexDirection': 'column'
         })
 
         return popup_content, {
