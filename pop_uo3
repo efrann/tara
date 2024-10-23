@@ -595,22 +595,8 @@ def create_main_layout():
         # Hidden div for storing clicked severity
         html.Div(id='clicked-severity', style={'display': 'none'}),
 
-        # Popup container'ı ekle
-        html.Div(id='vulnerability-popup-container', style={
-            'display': 'none',
-            'position': 'fixed',
-            'top': 0,
-            'left': 0,
-            'right': 0,
-            'bottom': 0,
-            'backgroundColor': 'rgba(0,0,0,0.5)',
-            'zIndex': 1000,
-            'display': 'flex',
-            'justifyContent': 'center',
-            'alignItems': 'center',
-        }, children=[
-            html.Div(id='vulnerability-popup', className="popup-content")
-        ])
+        # Pop-up'ı doğrudan ana sayfaya ekleyelim
+        html.Div(id='vulnerability-popup', className="popup-content", style={'display': 'none'})
     ])
 
 # Eğer app nesnesi daha önce tanımlanmamışsa, burada tanımlayın
@@ -1148,7 +1134,7 @@ def update_detailed_analysis(search, search_value):
                     ], style={'maxHeight': '150px', 'overflowY': 'auto'})
                 ], style={'marginBottom': '20px', 'backgroundColor': '#2c3e50', 'padding': '15px', 'borderRadius': '10px'})
             else:
-                ip_ports_info = html.Div(f"{ip_address} IP adresi için geçerli açık port bulunamadı.", 
+                ip_ports_info = html.Div(f"{ip_address} IP adresi için geçerli a��ık port bulunamadı.", 
                                          style={'color': '#e74c3c', 'marginBottom': '20px'})
 
     # Uygulanan filtreleri göster
@@ -1203,7 +1189,8 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
 
 @app.callback(
     [Output('vulnerability-popup', 'children'),
-     Output('vulnerability-popup-container', 'style')],
+     Output('vulnerability-popup', 'style'),
+     Output('popup-backdrop', 'style')],
     [Input('vulnerability-table', 'active_cell')],
     [State('vulnerability-table', 'data')]
 )
@@ -1275,11 +1262,11 @@ def show_vulnerability_details(active_cell, table_data):
             ], className="popup-tabs")
         ], className="popup-content")
 
-        return popup_content, {'display': 'flex'}
-    return dash.no_update, {'display': 'none'}
+        return popup_content, {'display': 'block'}, {'display': 'block'}
+    return dash.no_update, {'display': 'none'}, {'display': 'none'}
 
 @app.callback(
-    Output('vulnerability-popup-container', 'style', allow_duplicate=True),
+    Output('vulnerability-popup', 'style', allow_duplicate=True),
     [Input('close-popup', 'n_clicks')],
     prevent_initial_call=True
 )
