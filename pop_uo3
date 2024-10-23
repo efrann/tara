@@ -1196,6 +1196,7 @@ def update_detailed_analysis_link(severity, scan_name, vulnerability_name, ip_ad
     [State('vulnerability-table', 'data')]
 )
 def show_vulnerability_details(active_cell, table_data):
+    print(f"Callback triggered. Active cell: {active_cell}")  # Debug için print ekleyelim
     if active_cell and active_cell['column_id'] == 'vulnerability_name':
         row = table_data[active_cell['row']]
         
@@ -1422,14 +1423,15 @@ def show_vulnerability_details(active_cell, table_data):
         """)
 
         return [html.Div([custom_style, popup_content]), {
-            'display': 'flex',
-            'justifyContent': 'center',
-            'alignItems': 'center',
+            'display': 'block',  # 'flex' yerine 'block' kullanalım
             'position': 'fixed',
-            'top': 0,
-            'left': 0,
-            'right': 0,
-            'bottom': 0,
+            'top': '50%',
+            'left': '50%',
+            'transform': 'translate(-50%, -50%)',
+            'width': '90%',
+            'maxWidth': '900px',
+            'maxHeight': '90vh',
+            'overflowY': 'auto',
             'backgroundColor': 'rgba(0,0,0,0.8)',
             'zIndex': 1000,
             'backdropFilter': 'blur(5px)'
